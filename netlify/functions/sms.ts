@@ -1,5 +1,5 @@
+const axios = require('axios');
 const { Handler } = require('@netlify/functions');
-const Vonage = require('@vonage/server-sdk').default;
 const { Configuration, OpenAIApi } = require('openai');
 const { initializeApp } = require('firebase/app');
 const { getFirestore, collection, query, where, getDocs, addDoc } = require('firebase/firestore');
@@ -17,11 +17,20 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Initialize Vonage
-const vonage = new Vonage({
-  apiKey: process.env.VONAGE_API_KEY,
-  apiSecret: process.env.VONAGE_API_SECRET,
-});
+// Helper to send SMS via Vonage API
+async function sendSms({ apiKey, apiSecret, from, to, text }) {
+  const url = 'https://rest.nexmo.com/sms/json';
+  const response = await axios.post(url, null, {
+    params: {
+      api_key: apiKey,
+      api_secret: apiSecret,
+      to,
+      from,
+      text,
+    },
+  });
+  return response.data;
+}
 
 // Initialize OpenAI
 const configuration = new Configuration({
@@ -75,12 +84,14 @@ const handler = async (event) => {
     const responseTime = (Date.now() - startTime) / 1000; // Convert to seconds
     const aiResponse = completion.data.choices[0].message?.content || 'Sorry, I could not process your request.';
 
-    // Send SMS response
-    await vonage.message.sendSms(
-      process.env.VONAGE_PHONE_NUMBER,
-      from,
-      aiResponse
-    );
+    // Send SMS response via Vonage API
+    await sendSms({
+      apiKey: process.env.VONAGE_API_KEY,
+      apiSecret: process.env.VONAGE_API_SECRET,
+      from: process.env.VONAGE_PHONE_NUMBER,
+      to: from,
+      text: aiResponse,
+    });
 
     // Log the interaction
     await addDoc(collection(db, 'messages'), {
