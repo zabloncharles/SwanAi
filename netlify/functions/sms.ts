@@ -1,8 +1,8 @@
-import { Handler } from '@netlify/functions';
-import Vonage from '@vonage/server-sdk';
-import { Configuration, OpenAIApi } from 'openai';
-import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, query, where, getDocs, addDoc } from 'firebase/firestore';
+const { Handler } = require('@netlify/functions');
+const Vonage = require('@vonage/server-sdk');
+const { Configuration, OpenAIApi } = require('openai');
+const { initializeApp } = require('firebase/app');
+const { getFirestore, collection, query, where, getDocs, addDoc } = require('firebase/firestore');
 
 // Initialize Firebase
 const firebaseConfig = {
@@ -19,8 +19,8 @@ const db = getFirestore(app);
 
 // Initialize Vonage
 const vonage = new Vonage({
-  apiKey: process.env.VONAGE_API_KEY!,
-  apiSecret: process.env.VONAGE_API_SECRET!,
+  apiKey: process.env.VONAGE_API_KEY,
+  apiSecret: process.env.VONAGE_API_SECRET,
 });
 
 // Initialize OpenAI
@@ -29,7 +29,7 @@ const configuration = new Configuration({
 });
 const openai = new OpenAIApi(configuration);
 
-const handler: Handler = async (event) => {
+const handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
@@ -77,7 +77,7 @@ const handler: Handler = async (event) => {
 
     // Send SMS response
     await vonage.message.sendSms(
-      process.env.VONAGE_PHONE_NUMBER!,
+      process.env.VONAGE_PHONE_NUMBER,
       from,
       aiResponse
     );
@@ -104,4 +104,4 @@ const handler: Handler = async (event) => {
   }
 };
 
-export { handler }; 
+module.exports.handler = handler; 
