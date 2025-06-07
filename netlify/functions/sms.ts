@@ -1,6 +1,6 @@
 const axios = require('axios');
 const { Handler } = require('@netlify/functions');
-const { Configuration, OpenAIApi } = require('openai');
+const OpenAI = require('openai');
 const { initializeApp } = require('firebase/app');
 const { getFirestore, collection, query, where, getDocs, addDoc } = require('firebase/firestore');
 
@@ -32,11 +32,8 @@ async function sendSms({ apiKey, apiSecret, from, to, text }) {
   return response.data;
 }
 
-// Initialize OpenAI
-const configuration = new Configuration({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-const openai = new OpenAIApi(configuration);
+// Initialize OpenAI (v4+)
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const handler = async (event) => {
   if (event.httpMethod !== 'POST') {
@@ -67,7 +64,7 @@ const handler = async (event) => {
 
     // Get AI response
     const startTime = Date.now();
-    const completion = await openai.createChatCompletion({
+    const completion = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
         {
@@ -82,7 +79,7 @@ const handler = async (event) => {
     });
 
     const responseTime = (Date.now() - startTime) / 1000; // Convert to seconds
-    const aiResponse = completion.data.choices[0].message?.content || 'Sorry, I could not process your request.';
+    const aiResponse = completion.choices[0].message?.content || 'Sorry, I could not process your request.';
 
     // Send SMS response via Vonage API
     await sendSms({
