@@ -55,6 +55,14 @@ const handler = async (event) => {
     text = params.text;
   }
 
+  // Check for valid text
+  if (!text || typeof text !== 'string' || text.trim() === '') {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ error: 'No message content provided.' }),
+    };
+  }
+
   try {
     // Find user by phone number
     const usersRef = collection(db, 'users');
