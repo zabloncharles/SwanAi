@@ -1,5 +1,5 @@
 const { Handler } = require('@netlify/functions');
-const Vonage = require('@vonage/server-sdk');
+const Vonage = require('@vonage/server-sdk').default;
 const { Configuration, OpenAIApi } = require('openai');
 const { initializeApp } = require('firebase/app');
 const { getFirestore, collection, query, where, getDocs, addDoc } = require('firebase/firestore');
