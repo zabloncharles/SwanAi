@@ -36,17 +36,26 @@ async function sendSms({ apiKey, apiSecret, from, to, text }) {
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const handler = async (event) => {
-  if (event.httpMethod !== 'POST') {
+  if (event.httpMethod !== 'POST' && event.httpMethod !== 'GET') {
     return {
       statusCode: 405,
       body: 'Method Not Allowed',
     };
   }
 
-  try {
+  let from, text;
+  if (event.httpMethod === 'POST') {
     const body = JSON.parse(event.body || '{}');
-    const { from, text } = body;
+    from = body.from;
+    text = body.text;
+  } else {
+    // GET: Vonage sends params in the query string
+    const params = event.queryStringParameters || {};
+    from = params.msisdn || params.from;
+    text = params.text;
+  }
 
+  try {
     // Find user by phone number
     const usersRef = collection(db, 'users');
     const q = query(usersRef, where('phoneNumber', '==', from));
