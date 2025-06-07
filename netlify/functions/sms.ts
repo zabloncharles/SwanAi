@@ -91,13 +91,14 @@ const handler = async (event) => {
     const aiResponse = completion.choices[0].message?.content || 'Sorry, I could not process your request.';
 
     // Send SMS response via Vonage API
-    await sendSms({
+    const smsResponse = await sendSms({
       apiKey: process.env.VONAGE_API_KEY,
       apiSecret: process.env.VONAGE_API_SECRET,
       from: process.env.VONAGE_PHONE_NUMBER,
       to: from,
       text: aiResponse,
     });
+    console.log('Vonage SMS API response:', JSON.stringify(smsResponse));
 
     // Log the interaction
     await addDoc(collection(db, 'messages'), {
