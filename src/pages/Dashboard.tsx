@@ -6,61 +6,91 @@ import { doc, getDoc } from 'firebase/firestore';
 
 export default function Dashboard() {
   const [user] = useAuthState(auth);
+  const [profile, setProfile] = useState<any>(null);
+  const [summary, setSummary] = useState('');
+  const [history, setHistory] = useState<any[]>([]);
   const [userData, setUserData] = useState<{
     phoneNumber: string;
     personality: string;
-    summary: string;
-    profile: string;
     tokensUsed: number;
   }>({
     phoneNumber: '',
     personality: '',
-    summary: '',
-    profile: '',
     tokensUsed: 0,
   });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchUserData = async () => {
+    const fetchData = async () => {
       if (!user) return;
       const userRef = doc(db, 'users', user.uid);
       const userSnap = await getDoc(userRef);
       if (userSnap.exists()) {
         const data = userSnap.data();
+        setProfile(data.profile || {});
+        setSummary(data.summary || '');
+        setHistory(data.history || []);
         setUserData({
           phoneNumber: data.phoneNumber || '',
           personality: data.personality || '',
-          summary: data.summary || '',
-          profile: data.profile || '',
           tokensUsed: data.tokensUsed || 0,
         });
       }
       setLoading(false);
     };
-    fetchUserData();
+    fetchData();
   }, [user]);
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-      <div className="px-4 py-6 sm:px-0">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">
-          Welcome to AI Buddy
-        </h1>
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-2">Profile</h2>
-          <pre className="bg-gray-100 p-4 rounded mb-4 overflow-x-auto text-xs">{JSON.stringify(userData.profile, null, 2)}</pre>
-          <h2 className="text-xl font-semibold mb-2">Summary</h2>
-          <div className="bg-gray-100 p-4 rounded mb-4 text-sm">{userData.summary}</div>
-          <h2 className="text-xl font-semibold mb-2">Recent Chat History</h2>
-          <ul className="bg-gray-100 p-4 rounded text-sm">
-            {/* Assuming history is stored in userData */}
-          </ul>
-          <div className="mb-4">
-            <h3 className="text-lg font-semibold mb-2">Total Tokens Used</h3>
-            <p className="text-gray-600">{userData.tokensUsed}</p>
+    <div className="max-w-4xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="space-y-8">
+          <div className="bg-white p-6 rounded-xl shadow-sm">
+            <h2 className="text-xl font-semibold mb-4">Your AI Profile</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-600">Phone Number</label>
+                <p className="mt-1 text-gray-900">{userData.phoneNumber}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600">Personality</label>
+                <p className="mt-1 text-gray-900">{userData.personality}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600">Total Tokens Used</label>
+                <p className="mt-1 text-gray-900">{userData.tokensUsed}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-xl shadow-sm">
+            <h2 className="text-xl font-semibold mb-4">Conversation Summary</h2>
+            <p className="text-gray-600">{summary}</p>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl shadow-sm">
+          <h2 className="text-xl font-semibold mb-4">Recent Chat History</h2>
+          <div className="space-y-4">
+            {history.map((msg, i) => (
+              <div
+                key={i}
+                className={`p-4 rounded-lg ${
+                  msg.role === 'user' ? 'bg-indigo-50' : 'bg-gray-50'
+                }`}
+              >
+                <span className="text-sm font-medium text-gray-600">{msg.role}:</span>
+                <p className="mt-1 text-gray-900">{msg.content}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
