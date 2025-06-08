@@ -92,19 +92,21 @@ const handler = async (event) => {
     // Add new user message to history
     history.push({ role: 'user', content: text });
 
-    // If history is too long, summarize
+    // Always generate/update summary after every message
+    const summaryPrompt = [
+      { role: 'system', content: 'Summarize the following conversation for future context.' },
+      { role: 'user', content: summary },
+      ...history
+    ];
+    const summaryResult = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: summaryPrompt,
+    });
+    summary = summaryResult.choices[0].message.content;
+
+    // Trim history if needed
     if (history.length > MAX_HISTORY) {
-      const summaryPrompt = [
-        { role: 'system', content: 'Summarize the following conversation for future context.' },
-        { role: 'user', content: summary },
-        ...history
-      ];
-      const summaryResult = await openai.chat.completions.create({
-        model: 'gpt-3.5-turbo',
-        messages: summaryPrompt,
-      });
-      summary = summaryResult.choices[0].message.content;
-      history = history.slice(-MAX_HISTORY); // keep only the last N messages
+      history = history.slice(-MAX_HISTORY);
     }
 
     // Update profile using OpenAI
