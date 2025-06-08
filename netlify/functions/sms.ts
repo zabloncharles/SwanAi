@@ -2,7 +2,7 @@ const axios = require('axios');
 const { Handler } = require('@netlify/functions');
 const OpenAI = require('openai');
 const { initializeApp } = require('firebase/app');
-const { getFirestore, collection, query, where, getDocs, addDoc } = require('firebase/firestore');
+const { getFirestore, collection, query, where, getDocs, getDoc, doc, setDoc, addDoc } = require('firebase/firestore');
 
 // Initialize Firebase
 const firebaseConfig = {
@@ -34,6 +34,8 @@ async function sendSms({ apiKey, apiSecret, from, to, text }) {
 
 // Initialize OpenAI (v4+)
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+const MAX_HISTORY = 10;
 
 const handler = async (event) => {
   if (event.httpMethod !== 'POST' && event.httpMethod !== 'GET') {
@@ -78,25 +80,78 @@ const handler = async (event) => {
 
     const userDoc = querySnapshot.docs[0];
     const userData = userDoc.data();
+    const userId = userDoc.id;
+    const userRef = doc(db, 'users', userId);
+    const userSnap = await getDoc(userRef);
 
-    // Get AI response
+    // Fetch or initialize summary, history, and profile
+    let summary = userSnap.exists() && userSnap.data().summary ? userSnap.data().summary : '';
+    let history = userSnap.exists() && userSnap.data().history ? userSnap.data().history : [];
+    let profile = userSnap.exists() && userSnap.data().profile ? userSnap.data().profile : {};
+
+    // Add new user message to history
+    history.push({ role: 'user', content: text });
+
+    // If history is too long, summarize
+    if (history.length > MAX_HISTORY) {
+      const summaryPrompt = [
+        { role: 'system', content: 'Summarize the following conversation for future context.' },
+        { role: 'user', content: summary },
+        ...history
+      ];
+      const summaryResult = await openai.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: summaryPrompt,
+      });
+      summary = summaryResult.choices[0].message.content;
+      history = history.slice(-MAX_HISTORY); // keep only the last N messages
+    }
+
+    // Update profile using OpenAI
+    const profilePrompt = [
+      { role: 'system', content: 'You are an assistant that extracts and updates user profiles. Given the current profile and recent conversation, return an updated JSON profile.' },
+      { role: 'user', content: `Current profile: ${JSON.stringify(profile)}. Conversation: ${JSON.stringify(history)}` }
+    ];
+    const profileResult = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: profilePrompt,
+    });
+    try {
+      profile = JSON.parse(profileResult.choices[0].message.content);
+    } catch (e) {
+      // fallback: keep old profile if parsing fails
+      console.error('Failed to parse profile JSON:', profileResult.choices[0].message.content);
+    }
+
+    // Save updated summary, history, and profile
+    console.log('Saving to Firestore:', { summary, history, profile, userId });
+    await setDoc(userRef, { ...userSnap.data(), summary, history, profile }, { merge: true });
+    console.log('Saved to Firestore:', { summary, history, profile, userId });
+
+    // Use profile and summary in the system prompt, and integrate personality
+    const personality = userData.aiPersonality || 'friendly';
+    const chatPrompt = [
+      {
+        role: 'system',
+        content: `You are an AI assistant texting with the user. Your personality is: ${personality}. Always reply in a natural, friendly, and conversational style, like a real person would in a text message. Be concise, casual, and use everyday language. Feel free to use emojis or informal expressions if it fits the context. Avoid sounding robotic or overly formal. Here is what you know about the user: ${JSON.stringify(profile)}.`
+      },
+      { role: 'system', content: summary },
+      ...history
+    ];
     const startTime = Date.now();
     const completion = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
-      messages: [
-        {
-          role: 'system',
-          content: `You are an AI assistant with a ${userData.aiPersonality || 'friendly'} personality. Keep responses concise and helpful.`,
-        },
-        {
-          role: 'user',
-          content: text,
-        },
-      ],
+      messages: chatPrompt,
     });
 
     const responseTime = (Date.now() - startTime) / 1000; // Convert to seconds
     const aiResponse = completion.choices[0].message?.content || 'Sorry, I could not process your request.';
+
+    // Add AI response to history and save
+    history.push({ role: 'assistant', content: aiResponse });
+    console.log('Saving to Firestore (after AI):', { summary, history, profile, userId });
+    await setDoc(userRef, { ...userSnap.data(), summary, history, profile }, { merge: true });
+    console.log('Saved to Firestore (after AI):', { summary, history, profile, userId });
 
     // Send SMS response via Vonage API
     const smsResponse = await sendSms({
