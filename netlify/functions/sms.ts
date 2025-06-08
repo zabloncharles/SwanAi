@@ -148,12 +148,15 @@ const handler = async (event) => {
 
     const responseTime = (Date.now() - startTime) / 1000; // Convert to seconds
     const aiResponse = completion.choices[0].message?.content || 'Sorry, I could not process your request.';
+    const tokensUsed = completion.usage?.total_tokens || 0;
 
     // Add AI response to history and save
     history.push({ role: 'assistant', content: aiResponse });
-    console.log('Saving to Firestore (after AI):', { summary, history, profile, userId });
     await setDoc(userRef, { ...userSnap.data(), summary, history, profile }, { merge: true });
-    console.log('Saved to Firestore (after AI):', { summary, history, profile, userId });
+
+    // Update running total tokens used
+    const prevTokens = userSnap.data().tokensUsed || 0;
+    await setDoc(userRef, { ...userSnap.data(), tokensUsed: prevTokens + tokensUsed }, { merge: true });
 
     // Send SMS response via Vonage API
     const smsResponse = await sendSms({
@@ -165,13 +168,14 @@ const handler = async (event) => {
     });
     console.log('Vonage SMS API response:', JSON.stringify(smsResponse));
 
-    // Log the interaction
+    // Log the interaction with tokens used
     await addDoc(collection(db, 'messages'), {
       userId: userDoc.id,
       timestamp: new Date(),
       incomingMessage: text,
       outgoingMessage: aiResponse,
       responseTime,
+      tokensUsed,
     });
 
     return {

@@ -1,58 +1,47 @@
+import React from 'react';
 import { useState, useEffect } from 'react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '../config/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-
-interface QuickStats {
-  totalMessages: number;
-  averageResponseTime: number;
-  lastMessageTime: string | null;
-}
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function Dashboard() {
   const [user] = useAuthState(auth);
-  const [stats, setStats] = useState<QuickStats>({
-    totalMessages: 0,
-    averageResponseTime: 0,
-    lastMessageTime: null,
+  const [userData, setUserData] = useState<{
+    phoneNumber: string;
+    personality: string;
+    summary: string;
+    profile: string;
+    tokensUsed: number;
+  }>({
+    phoneNumber: '',
+    personality: '',
+    summary: '',
+    profile: '',
+    tokensUsed: 0,
   });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchUserData = async () => {
       if (!user) return;
-
-      try {
-        const messagesRef = collection(db, 'messages');
-        const q = query(messagesRef, where('userId', '==', user.uid));
-        const querySnapshot = await getDocs(q);
-
-        let total = 0;
-        let totalResponseTime = 0;
-        let lastMessage: any = null;
-
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          total++;
-          if (data.responseTime) {
-            totalResponseTime += data.responseTime;
-          }
-          if (!lastMessage || data.timestamp > lastMessage.timestamp) {
-            lastMessage = data;
-          }
+      const userRef = doc(db, 'users', user.uid);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        const data = userSnap.data();
+        setUserData({
+          phoneNumber: data.phoneNumber || '',
+          personality: data.personality || '',
+          summary: data.summary || '',
+          profile: data.profile || '',
+          tokensUsed: data.tokensUsed || 0,
         });
-
-        setStats({
-          totalMessages: total,
-          averageResponseTime: total > 0 ? totalResponseTime / total : 0,
-          lastMessageTime: lastMessage ? new Date(lastMessage.timestamp.toDate()).toLocaleString() : null,
-        });
-      } catch (error) {
-        console.error('Error fetching stats:', error);
       }
+      setLoading(false);
     };
-
-    fetchStats();
+    fetchUserData();
   }, [user]);
+
+  if (loading) return <div>Loading...</div>;
 
   return (
     <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
@@ -60,63 +49,18 @@ export default function Dashboard() {
         <h1 className="text-3xl font-bold text-gray-900 mb-8">
           Welcome to AI Buddy
         </h1>
-
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <dt className="text-sm font-medium text-gray-500 truncate">
-                Total Messages
-              </dt>
-              <dd className="mt-1 text-3xl font-semibold text-gray-900">
-                {stats.totalMessages}
-              </dd>
-            </div>
-          </div>
-
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <dt className="text-sm font-medium text-gray-500 truncate">
-                Average Response Time
-              </dt>
-              <dd className="mt-1 text-3xl font-semibold text-gray-900">
-                {stats.averageResponseTime.toFixed(2)}s
-              </dd>
-            </div>
-          </div>
-
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <dt className="text-sm font-medium text-gray-500 truncate">
-                Last Message
-              </dt>
-              <dd className="mt-1 text-3xl font-semibold text-gray-900">
-                {stats.lastMessageTime || 'No messages yet'}
-              </dd>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-8">
-          <div className="bg-white shadow sm:rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
-                Getting Started
-              </h3>
-              <div className="mt-2 max-w-xl text-sm text-gray-500">
-                <p>
-                  To start using your AI assistant, simply send a text message to your
-                  configured phone number. The AI will respond based on your settings.
-                </p>
-              </div>
-              <div className="mt-5">
-                <a
-                  href="/settings"
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  Configure Settings
-                </a>
-              </div>
-            </div>
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold mb-2">Profile</h2>
+          <pre className="bg-gray-100 p-4 rounded mb-4 overflow-x-auto text-xs">{JSON.stringify(userData.profile, null, 2)}</pre>
+          <h2 className="text-xl font-semibold mb-2">Summary</h2>
+          <div className="bg-gray-100 p-4 rounded mb-4 text-sm">{userData.summary}</div>
+          <h2 className="text-xl font-semibold mb-2">Recent Chat History</h2>
+          <ul className="bg-gray-100 p-4 rounded text-sm">
+            {/* Assuming history is stored in userData */}
+          </ul>
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold mb-2">Total Tokens Used</h3>
+            <p className="text-gray-600">{userData.tokensUsed}</p>
           </div>
         </div>
       </div>
