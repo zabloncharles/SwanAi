@@ -282,10 +282,25 @@ export default function Dashboard() {
       }
     }
 
+    // Find the matching relationship option
+    let relationshipValue = "";
+    if (userData.aiRelationship) {
+      const relationshipSelect = document.getElementById(
+        "aiRelationship"
+      ) as HTMLSelectElement;
+      if (relationshipSelect) {
+        Array.from(relationshipSelect.options).forEach((option) => {
+          if (option.text === userData.aiRelationship) {
+            relationshipValue = option.value;
+          }
+        });
+      }
+    }
+
     setProfileForm({
       phoneNumber: userData.phoneNumber,
       aiPersonality: personalityKey,
-      aiRelationship: userData.aiRelationship || "",
+      aiRelationship: relationshipValue,
       firstName: userData.firstName || "",
       lastName: userData.lastName || "",
       email: user?.email || "",
