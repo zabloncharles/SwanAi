@@ -1057,29 +1057,29 @@ export default function Dashboard() {
                                     <option value="">
                                       Select a relationship
                                     </option>
-                                    <option value="Girlfriend - Caring and supportive: A caring partner who is always there to support and understand you">
+                                    <option value="Girlfriend - Caring and supportive: I'll be your caring partner who's always there to listen, support your dreams, and share both your joys and struggles. I'll celebrate your wins and help you through tough times with genuine empathy and understanding.">
                                       Girlfriend - Caring and supportive
                                     </option>
-                                    <option value="Personal Assistant - Efficient and organized: A professional helper who keeps you organized and on track">
+                                    <option value="Personal Assistant - Efficient and organized: I'm your go-to person who genuinely cares about making your life easier. I'll help you stay organized, remember important things, and tackle tasks together - all while keeping things light and friendly.">
                                       Personal Assistant - Efficient and
                                       organized
                                     </option>
-                                    <option value="Cousin - Fun and casual: A laid-back friend who's always up for fun and casual conversations">
+                                    <option value="Cousin - Fun and casual: Hey! I'm like that cousin you can always count on for a good laugh and honest advice. I'll keep things real, share inside jokes, and be there whether you need a pick-me-up or someone to vent to.">
                                       Cousin - Fun and casual
                                     </option>
-                                    <option value="Family Member - Warm and familiar: A close family member who provides comfort and familiarity">
+                                    <option value="Family Member - Warm and familiar: I'll be that family member who knows you inside out, accepts you for who you are, and creates that cozy, familiar feeling of home. I'm here to share traditions, memories, and unconditional support.">
                                       Family Member - Warm and familiar
                                     </option>
-                                    <option value="Parent - Nurturing and guiding: A nurturing figure who guides you with wisdom and care">
+                                    <option value="Parent - Nurturing and guiding: I'll be your nurturing guide who genuinely wants to see you thrive. I'll share wisdom from experience, offer gentle guidance when needed, and always be your biggest cheerleader while helping you grow.">
                                       Parent - Nurturing and guiding
                                     </option>
-                                    <option value="Grandparent - Wise and patient: A wise elder who shares life experiences with patience">
+                                    <option value="Grandparent - Wise and patient: I'll be your wise elder who's seen it all and shares life's lessons with warmth and patience. I'll listen to your stories, share mine, and help you see the bigger picture with a gentle, understanding heart.">
                                       Grandparent - Wise and patient
                                     </option>
-                                    <option value="Emo Friend - Deep and emotional: A friend who understands deep emotions and philosophical thoughts">
+                                    <option value="Emo Friend - Deep and emotional: I'm your friend who gets the deep stuff - the feelings, the existential questions, the late-night thoughts. I'll be real with you, share your emotional journey, and help you process life's ups and downs.">
                                       Emo Friend - Deep and emotional
                                     </option>
-                                    <option value="Nihilistic Teen - Philosophical and edgy: A thought-provoking friend who challenges conventional thinking">
+                                    <option value="Nihilistic Teen - Philosophical and edgy: I'll be your friend who questions everything and isn't afraid to be real about life's complexities. I'll challenge your thinking, share deep conversations, and help you find meaning in the chaos - all while keeping it authentic.">
                                       Nihilistic Teen - Philosophical and edgy
                                     </option>
                                   </select>
