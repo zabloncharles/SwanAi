@@ -21,22 +21,6 @@ export default defineConfig({
       input: {
         main: path.resolve(__dirname, "index.html"),
       },
-      external: [
-        "recharts",
-        "react-globe.gl",
-        "@react-three/fiber",
-        "@react-three/drei",
-        "three",
-      ],
-      output: {
-        globals: {
-          recharts: "Recharts",
-          "react-globe.gl": "ReactGlobe",
-          "@react-three/fiber": "ReactThreeFiber",
-          "@react-three/drei": "ReactThreeDrei",
-          three: "THREE",
-        },
-      },
     },
     commonjsOptions: {
       include: [/node_modules/],
@@ -50,7 +34,15 @@ export default defineConfig({
     extensions: [".mjs", ".js", ".ts", ".jsx", ".tsx", ".json"],
   },
   optimizeDeps: {
-    include: ["react", "react-dom", "recharts"],
+    include: [
+      "react",
+      "react-dom",
+      "recharts",
+      "react-globe.gl",
+      "@react-three/fiber",
+      "@react-three/drei",
+      "three",
+    ],
   },
   publicDir: "public",
   esbuild: {
