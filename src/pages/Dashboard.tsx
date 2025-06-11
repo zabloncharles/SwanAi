@@ -264,6 +264,10 @@ export default function Dashboard() {
   // Update profile form when user data changes
   useEffect(() => {
     if (userData) {
+      console.log(
+        "Loading relationship value from Firebase:",
+        userData.aiRelationship
+      );
       setProfileForm({
         firstName: userData.firstName || "",
         lastName: userData.lastName || "",
@@ -352,36 +356,28 @@ export default function Dashboard() {
 
     try {
       const userRef = doc(db, "users", user.uid);
-      const selectedPersonality = profileForm.aiPersonality
-        ? personalityDefinitions[
-            profileForm.aiPersonality as keyof typeof personalityDefinitions
-          ]
-        : null;
-
       await updateDoc(userRef, {
         firstName: profileForm.firstName,
         lastName: profileForm.lastName,
         email: profileForm.email,
         phoneNumber: profileForm.phoneNumber,
-        personality: selectedPersonality
-          ? JSON.stringify(selectedPersonality.fullDefinition)
-          : "",
-        aiRelationship: profileForm.aiRelationship, // Save just the value
+        personality: profileForm.aiPersonality,
+        aiRelationship: profileForm.aiRelationship,
       });
 
+      // Update local state
       setUserData((prev) => ({
-        ...prev,
+        ...prev!,
         firstName: profileForm.firstName,
         lastName: profileForm.lastName,
         email: profileForm.email,
         phoneNumber: profileForm.phoneNumber,
-        personality: selectedPersonality
-          ? JSON.stringify(selectedPersonality.fullDefinition)
-          : "",
-        aiRelationship: profileForm.aiRelationship, // Update local state with value
+        personality: profileForm.aiPersonality,
+        aiRelationship: profileForm.aiRelationship,
       }));
 
-      setSuccessMessage("Profile updated successfully");
+      console.log("Saved relationship value:", profileForm.aiRelationship);
+      setSuccessMessage("Profile updated successfully!");
       setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -467,6 +463,17 @@ export default function Dashboard() {
   // Add a handler to hide the modal after success
   const handleModalClose = () => {
     setModalVisible(false);
+  };
+
+  // Add debug log for select change
+  const handleRelationshipChange = (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    console.log("Selected relationship value:", e.target.value);
+    setProfileForm({
+      ...profileForm,
+      aiRelationship: e.target.value,
+    });
   };
 
   if (loading.userData || loading.analytics) {
@@ -950,12 +957,7 @@ export default function Dashboard() {
                                     id="aiRelationship"
                                     name="aiRelationship"
                                     value={profileForm.aiRelationship}
-                                    onChange={(e) =>
-                                      setProfileForm({
-                                        ...profileForm,
-                                        aiRelationship: e.target.value,
-                                      })
-                                    }
+                                    onChange={handleRelationshipChange}
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                                   >
                                     <option value="">
