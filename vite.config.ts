@@ -15,7 +15,13 @@ export default defineConfig({
       input: {
         main: path.resolve(__dirname, "index.html"),
       },
-      external: ["recharts"],
+      external: [
+        "recharts",
+        "react-globe.gl",
+        "@react-three/fiber",
+        "@react-three/drei",
+        "three",
+      ],
     },
     commonjsOptions: {
       include: [/node_modules/],
