@@ -383,7 +383,7 @@ export default function Dashboard() {
         personality: selectedPersonality
           ? JSON.stringify(selectedPersonality.fullDefinition)
           : "",
-        aiRelationship: profileForm.aiRelationship || "",
+        aiRelationship: profileForm.aiRelationship, // Save the exact value from the picker
       });
 
       setUserData((prev) => ({
@@ -395,7 +395,7 @@ export default function Dashboard() {
         personality: selectedPersonality
           ? JSON.stringify(selectedPersonality.fullDefinition)
           : "",
-        aiRelationship: profileForm.aiRelationship || "",
+        aiRelationship: profileForm.aiRelationship, // Update local state with exact value
       }));
 
       setSuccessMessage("Profile updated successfully");
