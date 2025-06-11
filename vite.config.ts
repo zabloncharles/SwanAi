@@ -24,9 +24,7 @@ export default defineConfig({
     extensions: [".mjs", ".js", ".ts", ".jsx", ".tsx", ".json"],
   },
   optimizeDeps: {
-    esbuildOptions: {
-      target: "esnext",
-    },
+    include: ["react", "react-dom"],
   },
   publicDir: "public",
 });
