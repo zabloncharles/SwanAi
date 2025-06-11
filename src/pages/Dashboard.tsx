@@ -100,6 +100,7 @@ interface NotificationMessage {
 interface UserData {
   phoneNumber: string;
   personality: string;
+  aiRelationship?: string;
   tokensUsed: number;
   responseTime?: number;
   notifications?: boolean;
@@ -130,6 +131,7 @@ export default function Dashboard() {
   const [profileForm, setProfileForm] = useState({
     phoneNumber: "",
     aiPersonality: "",
+    aiRelationship: "",
     firstName: "",
     lastName: "",
     email: "",
@@ -195,6 +197,7 @@ export default function Dashboard() {
     setProfileForm({
       phoneNumber: userData.phoneNumber,
       aiPersonality: userData.personality || "",
+      aiRelationship: userData.aiRelationship || "",
       firstName: userData.firstName || "",
       lastName: userData.lastName || "",
       email: user?.email || "",
@@ -285,6 +288,7 @@ export default function Dashboard() {
           email: profileForm.email,
           phoneNumber: profileForm.phoneNumber,
           personality: profileForm.aiPersonality,
+          aiRelationship: profileForm.aiRelationship,
         });
 
         setMessage({
@@ -336,6 +340,7 @@ export default function Dashboard() {
         phoneNumber: phone,
         firstName: firstName,
         lastName: lastName,
+        aiRelationship: profileForm.aiRelationship,
       });
       setUserData((prev: any) => ({ ...prev, phoneNumber: phone }));
     } catch (err: any) {
@@ -855,6 +860,56 @@ export default function Dashboard() {
                                   </p>
                                 </div>
                               </div>
+                            </div>
+
+                            <div className="mt-6">
+                              <label
+                                htmlFor="aiRelationship"
+                                className="block text-sm font-medium text-gray-700 mb-1"
+                              >
+                                AI Relationship
+                              </label>
+                              <select
+                                id="aiRelationship"
+                                name="aiRelationship"
+                                value={profileForm.aiRelationship}
+                                onChange={(e) =>
+                                  setProfileForm({
+                                    ...profileForm,
+                                    aiRelationship: e.target.value,
+                                  })
+                                }
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                              >
+                                <option value="">Select a relationship</option>
+                                <option value="girlfriend">
+                                  Girlfriend - Caring and supportive
+                                </option>
+                                <option value="personal_assistant">
+                                  Personal Assistant - Efficient and organized
+                                </option>
+                                <option value="cousin">
+                                  Cousin - Fun and casual
+                                </option>
+                                <option value="family_member">
+                                  Family Member - Warm and familiar
+                                </option>
+                                <option value="parent">
+                                  Parent - Nurturing and guiding
+                                </option>
+                                <option value="grandparent">
+                                  Grandparent - Wise and patient
+                                </option>
+                                <option value="emo_friend">
+                                  Emo Friend - Deep and emotional
+                                </option>
+                                <option value="nihilistic_teen">
+                                  Nihilistic Teen - Philosophical and edgy
+                                </option>
+                              </select>
+                              <p className="mt-2 text-sm text-gray-500">
+                                Choose how your AI assistant relates to you
+                              </p>
                             </div>
                           </div>
 
