@@ -428,18 +428,18 @@ export default function Dashboard() {
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
-      console.error("No user found");
+      // console.error("No user found");
       return;
     }
 
-    console.log("Starting profile update...", {
-      firstName: profileForm.firstName,
-      lastName: profileForm.lastName,
-      email: profileForm.email,
-      phoneNumber: profileForm.phoneNumber,
-      personality: profileForm.aiPersonality,
-      aiRelationship: profileForm.aiRelationship,
-    });
+    // console.log("Starting profile update...", {
+    //   firstName: profileForm.firstName,
+    //   lastName: profileForm.lastName,
+    //   email: profileForm.email,
+    //   phoneNumber: profileForm.phoneNumber,
+    //   personality: profileForm.aiPersonality,
+    //   aiRelationship: profileForm.aiRelationship
+    // });
 
     setIsSaving(true);
     setSuccessMessage("");
@@ -456,7 +456,7 @@ export default function Dashboard() {
         aiRelationship: profileForm.aiRelationship,
       };
 
-      console.log("Updating Firestore with:", updateData);
+      // console.log("Updating Firestore with:", updateData);
       await updateDoc(userRef, updateData);
 
       // Update local state
@@ -471,7 +471,7 @@ export default function Dashboard() {
           personality: profileForm.aiPersonality,
           aiRelationship: profileForm.aiRelationship,
         };
-        console.log("Updated local state:", updated);
+        // console.log("Updated local state:", updated);
         return updated;
       });
 
@@ -496,7 +496,7 @@ export default function Dashboard() {
         }, 500);
       }, 5000);
     } catch (error) {
-      console.error("Error updating profile:", error);
+      // console.error("Error updating profile:", error);
       const errorMsg = "Failed to update profile. Please try again.";
       setErrorMessage(errorMsg);
 
