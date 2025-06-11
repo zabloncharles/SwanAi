@@ -17,15 +17,24 @@ export default defineConfig({
       },
       external: ["recharts"],
     },
+    commonjsOptions: {
+      include: [/node_modules/],
+      extensions: [".js", ".cjs"],
+    },
   },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
     extensions: [".mjs", ".js", ".ts", ".jsx", ".tsx", ".json"],
+    preserveSymlinks: true,
+    dedupe: ["react", "react-dom"],
   },
   optimizeDeps: {
     include: ["react", "react-dom"],
+    esbuildOptions: {
+      target: "esnext",
+    },
   },
   publicDir: "public",
   esbuild: {
