@@ -28,7 +28,7 @@ export default defineConfig({
     },
     commonjsOptions: {
       include: [/node_modules/],
-      extensions: [".js", ".cjs"],
+      extensions: [".js", ".cjs", ".ts", ".tsx"],
     },
   },
   resolve: {
