@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -7,16 +7,17 @@ import {
   useLocation,
 } from "react-router-dom";
 import { useAuthState } from "react-firebase-hooks/auth";
+import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./config/firebase";
 import Navbar from "./components/Navbar";
-import Home from "./pages/Home";
-import Dashboard from "./pages/Dashboard";
-import Analytics from "./pages/Analytics";
-import Login from "./pages/Login";
-import DashboardAdmin from "./pages/DashboardAdmin";
+import Home from "./pages/Home.tsx";
+import Dashboard from "./pages/Dashboard.tsx";
+import Analytics from "./pages/Analytics.tsx";
+import Login from "./pages/Login.tsx";
+import DashboardAdmin from "./pages/DashboardAdmin.tsx";
 import Docs from "./pages/Docs.tsx";
-import Privacy from "./pages/Privacy";
-import About from "./pages/About";
+import Privacy from "./pages/Privacy.tsx";
+import About from "./pages/About.tsx";
 
 function AppContent() {
   const [user, loading] = useAuthState(auth);
