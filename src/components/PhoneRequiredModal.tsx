@@ -63,6 +63,18 @@ export default function PhoneRequiredModal({
     setLastName(initialLastName);
   }, [initialLastName]);
 
+  // Prevent background scrolling when modal is open
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [open]);
+
   // Dismiss after 4 seconds if success
   useEffect(() => {
     if (success && onClose) {
