@@ -104,12 +104,14 @@ const getStateFromCoords = async (
     const response = await fetch(
       `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=5&addressdetails=1`
     );
-    if (!response.ok) return null;
     const data = await response.json();
-    console.log("Nominatim response for", lat, lng, data); // Debug log
-    return (
-      data.address.state || data.address.region || data.address.county || null
-    );
+    // console.log("Nominatim response for", lat, lng, data); // Debug log
+    if (data && data.address) {
+      return (
+        data.address.state || data.address.region || data.address.county || null
+      );
+    }
+    return null;
   } catch (e) {
     console.error("Nominatim error for", lat, lng, e);
     return null;
@@ -661,7 +663,7 @@ const DashboardAdmin: React.FC = () => {
                         pointsMerge={false}
                         pointsTransitionDuration={1000}
                         onPointClick={(point) => {
-                          console.log("Clicked point:", point);
+                          // console.log("Clicked point:", point);
                         }}
                         onPointHover={(point) => {
                           if (point) {
