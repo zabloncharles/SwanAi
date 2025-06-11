@@ -427,7 +427,19 @@ export default function Dashboard() {
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user) {
+      console.error("No user found");
+      return;
+    }
+
+    console.log("Starting profile update...", {
+      firstName: profileForm.firstName,
+      lastName: profileForm.lastName,
+      email: profileForm.email,
+      phoneNumber: profileForm.phoneNumber,
+      personality: profileForm.aiPersonality,
+      aiRelationship: profileForm.aiRelationship,
+    });
 
     setIsSaving(true);
     setSuccessMessage("");
@@ -435,25 +447,33 @@ export default function Dashboard() {
 
     try {
       const userRef = doc(db, "users", user.uid);
-      await updateDoc(userRef, {
+      const updateData = {
         firstName: profileForm.firstName,
         lastName: profileForm.lastName,
         email: profileForm.email,
         phoneNumber: profileForm.phoneNumber,
         personality: profileForm.aiPersonality,
         aiRelationship: profileForm.aiRelationship,
-      });
+      };
+
+      console.log("Updating Firestore with:", updateData);
+      await updateDoc(userRef, updateData);
 
       // Update local state
-      setUserData((prev) => ({
-        ...prev!,
-        firstName: profileForm.firstName,
-        lastName: profileForm.lastName,
-        email: profileForm.email,
-        phoneNumber: profileForm.phoneNumber,
-        personality: profileForm.aiPersonality,
-        aiRelationship: profileForm.aiRelationship,
-      }));
+      setUserData((prev) => {
+        if (!prev) return prev;
+        const updated = {
+          ...prev,
+          firstName: profileForm.firstName,
+          lastName: profileForm.lastName,
+          email: profileForm.email,
+          phoneNumber: profileForm.phoneNumber,
+          personality: profileForm.aiPersonality,
+          aiRelationship: profileForm.aiRelationship,
+        };
+        console.log("Updated local state:", updated);
+        return updated;
+      });
 
       setSuccessMessage(
         "Profile updated successfully! Your AI assistant's personality and relationship have been updated."
