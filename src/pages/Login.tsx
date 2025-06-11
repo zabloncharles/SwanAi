@@ -16,6 +16,59 @@ import {
 import { db } from "../config/firebase";
 import { ArrowRightIcon, ArrowLeftIcon } from "@heroicons/react/24/outline";
 
+// Function to convert Firebase error codes to user-friendly messages
+const getFirebaseErrorMessage = (errorCode: string): string => {
+  const errorMessages: { [key: string]: string } = {
+    "auth/email-already-in-use":
+      "This email is already registered. Please try signing in instead.",
+    "auth/invalid-email": "Please enter a valid email address.",
+    "auth/operation-not-allowed":
+      "Email/password accounts are not enabled. Please contact support.",
+    "auth/weak-password":
+      "Please choose a stronger password (at least 6 characters).",
+    "auth/user-disabled":
+      "This account has been disabled. Please contact support.",
+    "auth/user-not-found":
+      "No account found with this email. Please check your email or sign up.",
+    "auth/wrong-password": "Incorrect password. Please try again.",
+    "auth/too-many-requests":
+      "Too many failed attempts. Please try again later.",
+    "auth/network-request-failed":
+      "Network error. Please check your internet connection.",
+    "auth/popup-closed-by-user": "Sign-in window was closed. Please try again.",
+    "auth/cancelled-popup-request": "Sign-in was cancelled. Please try again.",
+    "auth/popup-blocked":
+      "Pop-up was blocked by your browser. Please allow pop-ups for this site.",
+    "auth/account-exists-with-different-credential":
+      "An account already exists with the same email address but different sign-in credentials.",
+    "auth/credential-already-in-use":
+      "This credential is already associated with a different user account.",
+    "auth/requires-recent-login":
+      "Please sign out and sign in again to perform this action.",
+    "auth/invalid-credential": "Invalid login credentials. Please try again.",
+    "auth/invalid-verification-code":
+      "Invalid verification code. Please try again.",
+    "auth/invalid-verification-id":
+      "Invalid verification ID. Please try again.",
+    "auth/missing-verification-code": "Please enter the verification code.",
+    "auth/missing-verification-id":
+      "Verification ID is missing. Please try again.",
+    "auth/quota-exceeded": "Quota exceeded. Please try again later.",
+    "auth/unauthorized-domain":
+      "This domain is not authorized for OAuth operations.",
+    "auth/unsupported-persistence-type":
+      "The current environment does not support the requested persistence type.",
+    "auth/expired-action-code":
+      "The action code has expired. Please request a new one.",
+    "auth/invalid-action-code":
+      "The action code is invalid. Please request a new one.",
+    "auth/missing-action-code":
+      "The action code is missing. Please request a new one.",
+  };
+
+  return errorMessages[errorCode] || "An error occurred. Please try again.";
+};
+
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -137,7 +190,8 @@ export default function Login() {
       }
     } catch (err: any) {
       console.error("Auth error:", err);
-      setError(err.message);
+      const errorCode = err.code || "";
+      setError(getFirebaseErrorMessage(errorCode));
     } finally {
       setIsLoading(false);
     }
