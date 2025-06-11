@@ -6,13 +6,18 @@
   <link rel="icon" type="image/png" href="/images/swanlogo.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self' https:; font-src 'self' data: https:; style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; img-src 'self' data: https:; connect-src 'self' https:;" />
+    content="default-src 'self' https:; font-src 'self' data: https:; style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; img-src 'self' data: https:; connect-src 'self' https:;" />
   <title>AI Buddy - Your SMS Assistant</title>
   <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet" />
 </head>
 
 <body>
   <div id="root"></div>
+  <script src="https://unpkg.com/recharts/umd/Recharts.min.js"></script>
+  <script src="https://unpkg.com/three@0.157.0/build/three.min.js"></script>
+  <script src="https://unpkg.com/@react-three/fiber@8.13.6/dist/react-three-fiber.umd.js"></script>
+  <script src="https://unpkg.com/@react-three/drei@9.80.0/dist/drei.umd.js"></script>
+  <script src="https://unpkg.com/react-globe.gl@2.28.0/dist/react-globe.gl.min.js"></script>
   <script type="module" src="/src/main.tsx"></script>
 </body>
 
