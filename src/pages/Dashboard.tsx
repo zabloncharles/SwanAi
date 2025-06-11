@@ -282,25 +282,10 @@ export default function Dashboard() {
       }
     }
 
-    // Find the matching relationship option
-    let relationshipValue = "";
-    if (userData.aiRelationship) {
-      const relationshipSelect = document.getElementById(
-        "aiRelationship"
-      ) as HTMLSelectElement;
-      if (relationshipSelect) {
-        Array.from(relationshipSelect.options).forEach((option) => {
-          if (option.text === userData.aiRelationship) {
-            relationshipValue = option.value;
-          }
-        });
-      }
-    }
-
     setProfileForm({
       phoneNumber: userData.phoneNumber,
       aiPersonality: personalityKey,
-      aiRelationship: relationshipValue,
+      aiRelationship: userData.aiRelationship || "",
       firstName: userData.firstName || "",
       lastName: userData.lastName || "",
       email: user?.email || "",
@@ -390,14 +375,6 @@ export default function Dashboard() {
           ]
         : null;
 
-      // Get the complete relationship value including description
-      const relationshipSelect = document.getElementById(
-        "aiRelationship"
-      ) as HTMLSelectElement;
-      const selectedOption =
-        relationshipSelect.options[relationshipSelect.selectedIndex];
-      const completeRelationship = selectedOption ? selectedOption.text : "";
-
       await updateDoc(userRef, {
         firstName: profileForm.firstName,
         lastName: profileForm.lastName,
@@ -406,7 +383,7 @@ export default function Dashboard() {
         personality: selectedPersonality
           ? JSON.stringify(selectedPersonality.fullDefinition)
           : "",
-        aiRelationship: completeRelationship, // Save the complete text including description
+        aiRelationship: profileForm.aiRelationship, // Save just the value
       });
 
       setUserData((prev) => ({
@@ -418,7 +395,7 @@ export default function Dashboard() {
         personality: selectedPersonality
           ? JSON.stringify(selectedPersonality.fullDefinition)
           : "",
-        aiRelationship: completeRelationship, // Update local state with complete text
+        aiRelationship: profileForm.aiRelationship, // Update local state with value
       }));
 
       setSuccessMessage("Profile updated successfully");
