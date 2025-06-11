@@ -102,7 +102,13 @@ const getStateFromCoords = async (
 ): Promise<string | null> => {
   try {
     const response = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=5&addressdetails=1`
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=5&addressdetails=1`,
+      {
+        headers: {
+          Accept: "application/json",
+          "User-Agent": "SwanAI/1.0",
+        },
+      }
     );
     const data = await response.json();
     // console.log("Nominatim response for", lat, lng, data); // Debug log
