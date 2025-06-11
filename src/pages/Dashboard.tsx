@@ -974,28 +974,28 @@ export default function Dashboard() {
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                               >
                                 <option value="">Select a relationship</option>
-                                <option value="girlfriend">
+                                <option value="Girlfriend">
                                   Girlfriend - Caring and supportive
                                 </option>
-                                <option value="personalassistant">
+                                <option value="Personal Assistant">
                                   Personal Assistant - Efficient and organized
                                 </option>
-                                <option value="cousin">
+                                <option value="Cousin">
                                   Cousin - Fun and casual
                                 </option>
-                                <option value="familymember">
+                                <option value="Family Member">
                                   Family Member - Warm and familiar
                                 </option>
-                                <option value="parent">
+                                <option value="Parent">
                                   Parent - Nurturing and guiding
                                 </option>
-                                <option value="grandparent">
+                                <option value="Grandparent">
                                   Grandparent - Wise and patient
                                 </option>
-                                <option value="emofriend">
+                                <option value="Emo Friend">
                                   Emo Friend - Deep and emotional
                                 </option>
-                                <option value="nihilisticteen">
+                                <option value="Nihilistic Teen">
                                   Nihilistic Teen - Philosophical and edgy
                                 </option>
                               </select>
