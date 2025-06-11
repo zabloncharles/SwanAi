@@ -343,32 +343,13 @@ export default function Dashboard() {
   // Update profile form when user data changes
   useEffect(() => {
     if (userData) {
-      // Parse the relationship JSON if it exists
-      let relationshipKey = "";
-      if (userData.aiRelationship) {
-        try {
-          const relationshipData = JSON.parse(userData.aiRelationship);
-          // Find the matching relationship key based on the full definition
-          Object.entries(relationshipDefinitions).forEach(([key, value]) => {
-            if (
-              JSON.stringify(value.fullDefinition) ===
-              JSON.stringify(relationshipData)
-            ) {
-              relationshipKey = key;
-            }
-          });
-        } catch (error) {
-          console.error("Error parsing relationship:", error);
-        }
-      }
-
       setProfileForm({
         firstName: userData.firstName || "",
         lastName: userData.lastName || "",
         email: userData.email || "",
         phoneNumber: userData.phoneNumber || "",
         aiPersonality: userData.personality || "",
-        aiRelationship: relationshipKey,
+        aiRelationship: userData.aiRelationship || "",
       });
     }
   }, [userData]);
@@ -450,21 +431,13 @@ export default function Dashboard() {
 
     try {
       const userRef = doc(db, "users", user.uid);
-      const selectedRelationship = profileForm.aiRelationship
-        ? relationshipDefinitions[
-            profileForm.aiRelationship as RelationshipType
-          ]
-        : null;
-
       await updateDoc(userRef, {
         firstName: profileForm.firstName,
         lastName: profileForm.lastName,
         email: profileForm.email,
         phoneNumber: profileForm.phoneNumber,
         personality: profileForm.aiPersonality,
-        aiRelationship: selectedRelationship
-          ? JSON.stringify(selectedRelationship.fullDefinition)
-          : "",
+        aiRelationship: profileForm.aiRelationship,
       });
 
       // Update local state
@@ -475,9 +448,7 @@ export default function Dashboard() {
         email: profileForm.email,
         phoneNumber: profileForm.phoneNumber,
         personality: profileForm.aiPersonality,
-        aiRelationship: selectedRelationship
-          ? JSON.stringify(selectedRelationship.fullDefinition)
-          : "",
+        aiRelationship: profileForm.aiRelationship,
       }));
 
       setSuccessMessage("Profile updated successfully!");
@@ -577,6 +548,21 @@ export default function Dashboard() {
       ...profileForm,
       aiRelationship: e.target.value,
     });
+  };
+
+  const handleNotificationsToggle = async () => {
+    if (user) {
+      const newValue = !userData.notificationsEnabled;
+      setUserData((prev) => ({
+        ...prev,
+        notificationsEnabled: newValue,
+      }));
+      if (user) {
+        updateDoc(doc(db, "users", user.uid), {
+          notificationsEnabled: newValue,
+        });
+      }
+    }
   };
 
   if (loading.userData || loading.analytics) {
@@ -1068,6 +1054,7 @@ export default function Dashboard() {
                                     }
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                                   >
+                                    <option value="">Select a relationship</option>
                                     <option value="">
                                       Select a relationship
                                     </option>
