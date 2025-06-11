@@ -263,34 +263,17 @@ export default function Dashboard() {
 
   // Update profile form when user data changes
   useEffect(() => {
-    // Parse the personality JSON if it exists
-    let personalityKey = "";
-    if (userData.personality) {
-      try {
-        const personalityData = JSON.parse(userData.personality);
-        // Find the matching personality key based on the full definition
-        Object.entries(personalityDefinitions).forEach(([key, value]) => {
-          if (
-            JSON.stringify(value.fullDefinition) ===
-            JSON.stringify(personalityData)
-          ) {
-            personalityKey = key;
-          }
-        });
-      } catch (error) {
-        console.error("Error parsing personality:", error);
-      }
+    if (userData) {
+      setProfileForm({
+        firstName: userData.firstName || "",
+        lastName: userData.lastName || "",
+        email: userData.email || "",
+        phoneNumber: userData.phoneNumber || "",
+        aiPersonality: userData.personality || "",
+        aiRelationship: userData.aiRelationship || "",
+      });
     }
-
-    setProfileForm({
-      phoneNumber: userData.phoneNumber,
-      aiPersonality: personalityKey,
-      aiRelationship: userData.aiRelationship || "",
-      firstName: userData.firstName || "",
-      lastName: userData.lastName || "",
-      email: user?.email || "",
-    });
-  }, [userData, user]);
+  }, [userData]);
 
   // Fetch analytics data
   useEffect(() => {
@@ -959,7 +942,7 @@ export default function Dashboard() {
                                 htmlFor="aiRelationship"
                                 className="block text-sm font-medium text-gray-700 mb-1"
                               >
-                                AI Relationship Style
+                                AI Relationship
                               </label>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
@@ -976,7 +959,7 @@ export default function Dashboard() {
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                                   >
                                     <option value="">
-                                      Select a relationship style
+                                      Select a relationship
                                     </option>
                                     <option value="Girlfriend">
                                       Girlfriend - Caring and supportive
@@ -1011,20 +994,19 @@ export default function Dashboard() {
                                       {profileForm.aiRelationship ? (
                                         <>
                                           <span className="font-medium">
-                                            Current Relationship Style:
+                                            Current Relationship:
                                           </span>{" "}
                                           {profileForm.aiRelationship}
                                         </>
                                       ) : (
-                                        "Select a relationship style to customize how your AI assistant relates to you"
+                                        "Select a relationship type to customize how your AI assistant relates to you"
                                       )}
                                     </p>
                                   </div>
                                 </div>
                               </div>
                               <p className="mt-2 text-sm text-gray-500">
-                                Choose how your AI assistant relates to you in
-                                conversations
+                                Choose how your AI assistant relates to you
                               </p>
                             </div>
                           </div>
