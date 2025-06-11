@@ -350,17 +350,18 @@ export default function Dashboard() {
 
     try {
       const userRef = doc(db, "users", user.uid);
-      const selectedPersonality =
-        personalityDefinitions[
-          profileForm.aiPersonality as keyof typeof personalityDefinitions
-        ];
+      const selectedPersonality = profileForm.aiPersonality
+        ? personalityDefinitions[
+            profileForm.aiPersonality as keyof typeof personalityDefinitions
+          ]
+        : null;
 
       await updateDoc(userRef, {
         firstName: profileForm.firstName,
         lastName: profileForm.lastName,
         email: profileForm.email,
         phoneNumber: profileForm.phoneNumber,
-        aiPersonality: selectedPersonality
+        personality: selectedPersonality
           ? JSON.stringify(selectedPersonality.fullDefinition)
           : "",
         aiRelationship: profileForm.aiRelationship || "",
@@ -372,7 +373,7 @@ export default function Dashboard() {
         lastName: profileForm.lastName,
         email: profileForm.email,
         phoneNumber: profileForm.phoneNumber,
-        aiPersonality: selectedPersonality
+        personality: selectedPersonality
           ? JSON.stringify(selectedPersonality.fullDefinition)
           : "",
         aiRelationship: profileForm.aiRelationship || "",
