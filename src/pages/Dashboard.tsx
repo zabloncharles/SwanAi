@@ -375,6 +375,14 @@ export default function Dashboard() {
           ]
         : null;
 
+      // Get the complete relationship value including description
+      const relationshipSelect = document.getElementById(
+        "aiRelationship"
+      ) as HTMLSelectElement;
+      const selectedOption =
+        relationshipSelect.options[relationshipSelect.selectedIndex];
+      const completeRelationship = selectedOption ? selectedOption.text : "";
+
       await updateDoc(userRef, {
         firstName: profileForm.firstName,
         lastName: profileForm.lastName,
@@ -383,7 +391,7 @@ export default function Dashboard() {
         personality: selectedPersonality
           ? JSON.stringify(selectedPersonality.fullDefinition)
           : "",
-        aiRelationship: profileForm.aiRelationship, // Save the exact value from the picker
+        aiRelationship: completeRelationship, // Save the complete text including description
       });
 
       setUserData((prev) => ({
@@ -395,7 +403,7 @@ export default function Dashboard() {
         personality: selectedPersonality
           ? JSON.stringify(selectedPersonality.fullDefinition)
           : "",
-        aiRelationship: profileForm.aiRelationship, // Update local state with exact value
+        aiRelationship: completeRelationship, // Update local state with complete text
       }));
 
       setSuccessMessage("Profile updated successfully");
