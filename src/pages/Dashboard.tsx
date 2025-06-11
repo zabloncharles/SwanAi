@@ -149,6 +149,8 @@ export default function Dashboard() {
   const [phoneLoading, setPhoneLoading] = useState(false);
   const [phoneError, setPhoneError] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   // Real-time user data subscription
   useEffect(() => {
@@ -277,33 +279,35 @@ export default function Dashboard() {
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSaving(true);
-    setMessage(null);
+    if (!user) return;
 
     try {
-      if (user) {
-        await updateDoc(doc(db, "users", user.uid), {
-          firstName: profileForm.firstName,
-          lastName: profileForm.lastName,
-          email: profileForm.email,
-          phoneNumber: profileForm.phoneNumber,
-          personality: profileForm.aiPersonality,
-          aiRelationship: profileForm.aiRelationship,
-        });
+      const userRef = doc(db, "users", user.uid);
+      await updateDoc(userRef, {
+        firstName: profileForm.firstName,
+        lastName: profileForm.lastName,
+        email: profileForm.email,
+        phoneNumber: profileForm.phoneNumber,
+        aiPersonality: profileForm.aiPersonality || "",
+        aiRelationship: profileForm.aiRelationship || "",
+      });
 
-        setMessage({
-          type: "success",
-          text: "Profile updated successfully!",
-        });
-      }
+      setUserData((prev) => ({
+        ...prev,
+        firstName: profileForm.firstName,
+        lastName: profileForm.lastName,
+        email: profileForm.email,
+        phoneNumber: profileForm.phoneNumber,
+        aiPersonality: profileForm.aiPersonality || "",
+        aiRelationship: profileForm.aiRelationship || "",
+      }));
+
+      setSuccessMessage("Profile updated successfully");
+      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
       console.error("Error updating profile:", error);
-      setMessage({
-        type: "error",
-        text: "Failed to update profile. Please try again.",
-      });
-    } finally {
-      setIsSaving(false);
+      setErrorMessage("Failed to update profile. Please try again.");
+      setTimeout(() => setErrorMessage(""), 3000);
     }
   };
 
