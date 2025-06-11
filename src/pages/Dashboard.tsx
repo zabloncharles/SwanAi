@@ -274,22 +274,33 @@ export default function Dashboard() {
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
     setIsSaving(true);
     setMessage(null);
+
     try {
-      await updateDoc(doc(db, "users", user.uid), {
-        phoneNumber: profileForm.phoneNumber,
-        aiPersonality: profileForm.aiPersonality,
-        firstName: profileForm.firstName,
-        lastName: profileForm.lastName,
-        email: profileForm.email,
+      if (user) {
+        await updateDoc(doc(db, "users", user.uid), {
+          firstName: profileForm.firstName,
+          lastName: profileForm.lastName,
+          email: profileForm.email,
+          phoneNumber: profileForm.phoneNumber,
+          personality: profileForm.aiPersonality,
+        });
+
+        setMessage({
+          type: "success",
+          text: "Profile updated successfully!",
+        });
+      }
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      setMessage({
+        type: "error",
+        text: "Failed to update profile. Please try again.",
       });
-      setMessage({ type: "success", text: "Profile updated successfully!" });
-    } catch (error: any) {
-      setMessage({ type: "error", text: error.message });
+    } finally {
+      setIsSaving(false);
     }
-    setIsSaving(false);
   };
 
   const handleProfileReset = async () => {
@@ -772,6 +783,78 @@ export default function Dashboard() {
                                 }
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                               />
+                            </div>
+                          </div>
+
+                          <div className="border-t border-gray-200 pt-6">
+                            <div className="flex items-center justify-between mb-6">
+                              <div>
+                                <h3 className="text-lg font-medium text-gray-900">
+                                  AI Personality
+                                </h3>
+                                <p className="text-sm text-gray-500">
+                                  Choose how your AI assistant communicates with
+                                  you
+                                </p>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div>
+                                <label
+                                  htmlFor="aiPersonality"
+                                  className="block text-sm font-medium text-gray-700 mb-1"
+                                >
+                                  Personality Type
+                                </label>
+                                <select
+                                  id="aiPersonality"
+                                  name="aiPersonality"
+                                  value={profileForm.aiPersonality}
+                                  onChange={(e) =>
+                                    setProfileForm({
+                                      ...profileForm,
+                                      aiPersonality: e.target.value,
+                                    })
+                                  }
+                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                >
+                                  <option value="">Select a personality</option>
+                                  <option value="professional">
+                                    Professional - Formal and business-like
+                                  </option>
+                                  <option value="friendly">
+                                    Friendly - Warm and approachable
+                                  </option>
+                                  <option value="casual">
+                                    Casual - Relaxed and informal
+                                  </option>
+                                  <option value="concise">
+                                    Concise - Brief and to the point
+                                  </option>
+                                  <option value="detailed">
+                                    Detailed - Thorough and comprehensive
+                                  </option>
+                                </select>
+                              </div>
+                              <div className="flex items-center justify-center">
+                                <div className="bg-gray-50 p-4 rounded-lg">
+                                  <p className="text-sm text-gray-600">
+                                    {profileForm.aiPersonality ? (
+                                      <>
+                                        <span className="font-medium">
+                                          Current Style:
+                                        </span>{" "}
+                                        {profileForm.aiPersonality
+                                          .charAt(0)
+                                          .toUpperCase() +
+                                          profileForm.aiPersonality.slice(1)}
+                                      </>
+                                    ) : (
+                                      "Select a personality type to customize your AI assistant's communication style"
+                                    )}
+                                  </p>
+                                </div>
+                              </div>
                             </div>
                           </div>
 
