@@ -977,13 +977,13 @@ export default function Dashboard() {
                                 <option value="girlfriend">
                                   Girlfriend - Caring and supportive
                                 </option>
-                                <option value="personal_assistant">
+                                <option value="personalassistant">
                                   Personal Assistant - Efficient and organized
                                 </option>
                                 <option value="cousin">
                                   Cousin - Fun and casual
                                 </option>
-                                <option value="family_member">
+                                <option value="familymember">
                                   Family Member - Warm and familiar
                                 </option>
                                 <option value="parent">
@@ -992,10 +992,10 @@ export default function Dashboard() {
                                 <option value="grandparent">
                                   Grandparent - Wise and patient
                                 </option>
-                                <option value="emo_friend">
+                                <option value="emofriend">
                                   Emo Friend - Deep and emotional
                                 </option>
-                                <option value="nihilistic_teen">
+                                <option value="nihilisticteen">
                                   Nihilistic Teen - Philosophical and edgy
                                 </option>
                               </select>
