@@ -263,9 +263,28 @@ export default function Dashboard() {
 
   // Update profile form when user data changes
   useEffect(() => {
+    // Parse the personality JSON if it exists
+    let personalityKey = "";
+    if (userData.personality) {
+      try {
+        const personalityData = JSON.parse(userData.personality);
+        // Find the matching personality key based on the full definition
+        Object.entries(personalityDefinitions).forEach(([key, value]) => {
+          if (
+            JSON.stringify(value.fullDefinition) ===
+            JSON.stringify(personalityData)
+          ) {
+            personalityKey = key;
+          }
+        });
+      } catch (error) {
+        console.error("Error parsing personality:", error);
+      }
+    }
+
     setProfileForm({
       phoneNumber: userData.phoneNumber,
-      aiPersonality: userData.personality || "",
+      aiPersonality: personalityKey,
       aiRelationship: userData.aiRelationship || "",
       firstName: userData.firstName || "",
       lastName: userData.lastName || "",
