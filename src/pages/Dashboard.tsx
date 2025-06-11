@@ -961,44 +961,67 @@ export default function Dashboard() {
                               >
                                 AI Relationship
                               </label>
-                              <select
-                                id="aiRelationship"
-                                name="aiRelationship"
-                                value={profileForm.aiRelationship}
-                                onChange={(e) =>
-                                  setProfileForm({
-                                    ...profileForm,
-                                    aiRelationship: e.target.value,
-                                  })
-                                }
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                              >
-                                <option value="">Select a relationship</option>
-                                <option value="Girlfriend">
-                                  Girlfriend - Caring and supportive
-                                </option>
-                                <option value="Personal Assistant">
-                                  Personal Assistant - Efficient and organized
-                                </option>
-                                <option value="Cousin">
-                                  Cousin - Fun and casual
-                                </option>
-                                <option value="Family Member">
-                                  Family Member - Warm and familiar
-                                </option>
-                                <option value="Parent">
-                                  Parent - Nurturing and guiding
-                                </option>
-                                <option value="Grandparent">
-                                  Grandparent - Wise and patient
-                                </option>
-                                <option value="Emo Friend">
-                                  Emo Friend - Deep and emotional
-                                </option>
-                                <option value="Nihilistic Teen">
-                                  Nihilistic Teen - Philosophical and edgy
-                                </option>
-                              </select>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                  <select
+                                    id="aiRelationship"
+                                    name="aiRelationship"
+                                    value={profileForm.aiRelationship}
+                                    onChange={(e) =>
+                                      setProfileForm({
+                                        ...profileForm,
+                                        aiRelationship: e.target.value,
+                                      })
+                                    }
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                  >
+                                    <option value="">
+                                      Select a relationship
+                                    </option>
+                                    <option value="Girlfriend">
+                                      Girlfriend - Caring and supportive
+                                    </option>
+                                    <option value="Personal Assistant">
+                                      Personal Assistant - Efficient and
+                                      organized
+                                    </option>
+                                    <option value="Cousin">
+                                      Cousin - Fun and casual
+                                    </option>
+                                    <option value="Family Member">
+                                      Family Member - Warm and familiar
+                                    </option>
+                                    <option value="Parent">
+                                      Parent - Nurturing and guiding
+                                    </option>
+                                    <option value="Grandparent">
+                                      Grandparent - Wise and patient
+                                    </option>
+                                    <option value="Emo Friend">
+                                      Emo Friend - Deep and emotional
+                                    </option>
+                                    <option value="Nihilistic Teen">
+                                      Nihilistic Teen - Philosophical and edgy
+                                    </option>
+                                  </select>
+                                </div>
+                                <div className="flex items-center justify-center">
+                                  <div className="bg-gray-50 p-4 rounded-lg">
+                                    <p className="text-sm text-gray-600">
+                                      {profileForm.aiRelationship ? (
+                                        <>
+                                          <span className="font-medium">
+                                            Current Relationship:
+                                          </span>{" "}
+                                          {profileForm.aiRelationship}
+                                        </>
+                                      ) : (
+                                        "Select a relationship type to customize how your AI assistant relates to you"
+                                      )}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
                               <p className="mt-2 text-sm text-gray-500">
                                 Choose how your AI assistant relates to you
                               </p>
