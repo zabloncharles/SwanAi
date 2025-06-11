@@ -112,6 +112,73 @@ interface UserData {
   history?: Message[];
 }
 
+const personalityDefinitions = {
+  professional: {
+    label: "Professional",
+    description: "Formal and business-like",
+    fullDefinition: {
+      tone: "formal and professional",
+      communication: "clear, concise, and structured",
+      vocabulary: "business-appropriate and technical",
+      responseStyle: "direct and solution-oriented",
+      emotionalRange: "moderate and controlled",
+      examples:
+        "uses proper titles, maintains professional distance, focuses on efficiency",
+    },
+  },
+  friendly: {
+    label: "Friendly",
+    description: "Warm and approachable",
+    fullDefinition: {
+      tone: "warm and welcoming",
+      communication: "conversational and engaging",
+      vocabulary: "accessible and inclusive",
+      responseStyle: "empathetic and supportive",
+      emotionalRange: "positive and encouraging",
+      examples:
+        "uses friendly greetings, shows genuine interest, maintains a positive atmosphere",
+    },
+  },
+  casual: {
+    label: "Casual",
+    description: "Relaxed and informal",
+    fullDefinition: {
+      tone: "relaxed and informal",
+      communication: "conversational and laid-back",
+      vocabulary: "everyday and colloquial",
+      responseStyle: "easy-going and natural",
+      emotionalRange: "light and playful",
+      examples:
+        "uses casual language, includes humor, maintains a relaxed atmosphere",
+    },
+  },
+  concise: {
+    label: "Concise",
+    description: "Brief and to the point",
+    fullDefinition: {
+      tone: "direct and efficient",
+      communication: "brief and focused",
+      vocabulary: "simple and clear",
+      responseStyle: "straightforward and practical",
+      emotionalRange: "neutral and focused",
+      examples:
+        "uses bullet points, avoids unnecessary details, focuses on key information",
+    },
+  },
+  detailed: {
+    label: "Detailed",
+    description: "Thorough and comprehensive",
+    fullDefinition: {
+      tone: "thorough and analytical",
+      communication: "comprehensive and detailed",
+      vocabulary: "precise and technical",
+      responseStyle: "in-depth and explanatory",
+      emotionalRange: "measured and thoughtful",
+      examples: "provides context, includes examples, explains reasoning",
+    },
+  },
+};
+
 export default function Dashboard() {
   const [user] = useAuthState(auth);
   const navigate = useNavigate();
@@ -283,12 +350,19 @@ export default function Dashboard() {
 
     try {
       const userRef = doc(db, "users", user.uid);
+      const selectedPersonality =
+        personalityDefinitions[
+          profileForm.aiPersonality as keyof typeof personalityDefinitions
+        ];
+
       await updateDoc(userRef, {
         firstName: profileForm.firstName,
         lastName: profileForm.lastName,
         email: profileForm.email,
         phoneNumber: profileForm.phoneNumber,
-        aiPersonality: profileForm.aiPersonality || "",
+        aiPersonality: selectedPersonality
+          ? JSON.stringify(selectedPersonality.fullDefinition)
+          : "",
         aiRelationship: profileForm.aiRelationship || "",
       });
 
@@ -298,7 +372,9 @@ export default function Dashboard() {
         lastName: profileForm.lastName,
         email: profileForm.email,
         phoneNumber: profileForm.phoneNumber,
-        aiPersonality: profileForm.aiPersonality || "",
+        aiPersonality: selectedPersonality
+          ? JSON.stringify(selectedPersonality.fullDefinition)
+          : "",
         aiRelationship: profileForm.aiRelationship || "",
       }));
 
@@ -828,21 +904,13 @@ export default function Dashboard() {
                                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                                 >
                                   <option value="">Select a personality</option>
-                                  <option value="professional">
-                                    Professional - Formal and business-like
-                                  </option>
-                                  <option value="friendly">
-                                    Friendly - Warm and approachable
-                                  </option>
-                                  <option value="casual">
-                                    Casual - Relaxed and informal
-                                  </option>
-                                  <option value="concise">
-                                    Concise - Brief and to the point
-                                  </option>
-                                  <option value="detailed">
-                                    Detailed - Thorough and comprehensive
-                                  </option>
+                                  {Object.entries(personalityDefinitions).map(
+                                    ([key, { label, description }]) => (
+                                      <option key={key} value={key}>
+                                        {label} - {description}
+                                      </option>
+                                    )
+                                  )}
                                 </select>
                               </div>
                               <div className="flex items-center justify-center">
