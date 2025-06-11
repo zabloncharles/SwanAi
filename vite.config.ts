@@ -4,6 +4,7 @@ import path from "path";
 
 export default defineConfig({
   plugins: [react()],
+  base: "/",
   server: {
     port: 3000,
     fs: {
@@ -36,14 +37,9 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
     extensions: [".mjs", ".js", ".ts", ".jsx", ".tsx", ".json"],
-    preserveSymlinks: true,
-    dedupe: ["react", "react-dom"],
   },
   optimizeDeps: {
     include: ["react", "react-dom"],
-    esbuildOptions: {
-      target: "esnext",
-    },
   },
   publicDir: "public",
   esbuild: {
