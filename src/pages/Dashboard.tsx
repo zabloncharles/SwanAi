@@ -1054,17 +1054,34 @@ export default function Dashboard() {
                                     }
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                                   >
-                                    <option value="">Select a relationship</option>
                                     <option value="">
                                       Select a relationship
                                     </option>
-                                    {Object.entries(
-                                      relationshipDefinitions
-                                    ).map(([key, value]) => (
-                                      <option key={key} value={key}>
-                                        {key} - {value.description}
-                                      </option>
-                                    ))}
+                                    <option value="Girlfriend - Caring and supportive: A caring partner who is always there to support and understand you">
+                                      Girlfriend - Caring and supportive
+                                    </option>
+                                    <option value="Personal Assistant - Efficient and organized: A professional helper who keeps you organized and on track">
+                                      Personal Assistant - Efficient and
+                                      organized
+                                    </option>
+                                    <option value="Cousin - Fun and casual: A laid-back friend who's always up for fun and casual conversations">
+                                      Cousin - Fun and casual
+                                    </option>
+                                    <option value="Family Member - Warm and familiar: A close family member who provides comfort and familiarity">
+                                      Family Member - Warm and familiar
+                                    </option>
+                                    <option value="Parent - Nurturing and guiding: A nurturing figure who guides you with wisdom and care">
+                                      Parent - Nurturing and guiding
+                                    </option>
+                                    <option value="Grandparent - Wise and patient: A wise elder who shares life experiences with patience">
+                                      Grandparent - Wise and patient
+                                    </option>
+                                    <option value="Emo Friend - Deep and emotional: A friend who understands deep emotions and philosophical thoughts">
+                                      Emo Friend - Deep and emotional
+                                    </option>
+                                    <option value="Nihilistic Teen - Philosophical and edgy: A thought-provoking friend who challenges conventional thinking">
+                                      Nihilistic Teen - Philosophical and edgy
+                                    </option>
                                   </select>
                                 </div>
                                 <div className="flex items-center justify-center">
@@ -1075,12 +1092,19 @@ export default function Dashboard() {
                                           <span className="font-medium">
                                             Current Relationship:
                                           </span>{" "}
-                                          {profileForm.aiRelationship} -{" "}
                                           {
-                                            relationshipDefinitions[
-                                              profileForm.aiRelationship as RelationshipType
-                                            ]?.description
+                                            profileForm.aiRelationship.split(
+                                              ":"
+                                            )[0]
                                           }
+                                          <br />
+                                          <span className="text-gray-500 italic">
+                                            {
+                                              profileForm.aiRelationship.split(
+                                                ":"
+                                              )[1]
+                                            }
+                                          </span>
                                         </>
                                       ) : (
                                         "Select a relationship type to customize how your AI assistant relates to you"
