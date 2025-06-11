@@ -99,31 +99,91 @@ interface NotificationMessage {
 }
 
 interface UserData {
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-  phoneNumber?: string;
-  personality?: string;
-  aiRelationship?: string;
-  createdAt?: Timestamp;
-  lastLogin?: Timestamp;
-  isAdmin?: boolean;
-  notificationsEnabled?: boolean;
-  tokensUsed?: number;
-  responseTime?: number;
-  notifications?: boolean;
-  summary?: string;
-  history?: Message[];
-}
-
-interface ProfileFormState {
   firstName: string;
   lastName: string;
   email: string;
   phoneNumber: string;
-  aiPersonality: string;
-  aiRelationship: string;
+  personality?: string;
+  aiRelationship?: string;
+  createdAt: Timestamp;
+  lastLogin: Timestamp;
+  isAdmin?: boolean;
+  notificationsEnabled?: boolean;
+  tokensUsed: number;
+  responseTime?: number;
+  summary?: string;
+  history?: Message[];
 }
+
+// Add relationship definitions
+const relationshipDefinitions = {
+  Girlfriend: {
+    description: "Caring and supportive",
+    fullDefinition: {
+      tone: "warm and affectionate",
+      style: "empathetic and understanding",
+      interaction: "close and personal",
+    },
+  },
+  "Personal Assistant": {
+    description: "Efficient and organized",
+    fullDefinition: {
+      tone: "professional and focused",
+      style: "direct and efficient",
+      interaction: "task-oriented",
+    },
+  },
+  Cousin: {
+    description: "Fun and casual",
+    fullDefinition: {
+      tone: "relaxed and friendly",
+      style: "informal and playful",
+      interaction: "easy-going",
+    },
+  },
+  "Family Member": {
+    description: "Warm and familiar",
+    fullDefinition: {
+      tone: "comfortable and caring",
+      style: "supportive and understanding",
+      interaction: "family-oriented",
+    },
+  },
+  Parent: {
+    description: "Nurturing and guiding",
+    fullDefinition: {
+      tone: "caring and instructive",
+      style: "protective and mentoring",
+      interaction: "guidance-focused",
+    },
+  },
+  Grandparent: {
+    description: "Wise and patient",
+    fullDefinition: {
+      tone: "experienced and calm",
+      style: "thoughtful and patient",
+      interaction: "wisdom-sharing",
+    },
+  },
+  "Emo Friend": {
+    description: "Deep and emotional",
+    fullDefinition: {
+      tone: "intense and expressive",
+      style: "emotionally aware",
+      interaction: "deeply connected",
+    },
+  },
+  "Nihilistic Teen": {
+    description: "Philosophical and edgy",
+    fullDefinition: {
+      tone: "cynical and questioning",
+      style: "thought-provoking",
+      interaction: "challenging",
+    },
+  },
+} as const;
+
+type RelationshipType = keyof typeof relationshipDefinitions;
 
 const personalityDefinitions = {
   professional: {
@@ -192,83 +252,6 @@ const personalityDefinitions = {
   },
 };
 
-const relationshipDefinitions = {
-  Girlfriend: {
-    description: "Caring and supportive",
-    fullDefinition: {
-      type: "Girlfriend",
-      tone: "caring",
-      style: "supportive",
-      traits: ["empathetic", "nurturing", "attentive"],
-    },
-  },
-  "Personal Assistant": {
-    description: "Efficient and organized",
-    fullDefinition: {
-      type: "Personal Assistant",
-      tone: "professional",
-      style: "efficient",
-      traits: ["organized", "punctual", "helpful"],
-    },
-  },
-  Cousin: {
-    description: "Fun and casual",
-    fullDefinition: {
-      type: "Cousin",
-      tone: "casual",
-      style: "friendly",
-      traits: ["playful", "relaxed", "familiar"],
-    },
-  },
-  "Family Member": {
-    description: "Warm and familiar",
-    fullDefinition: {
-      type: "Family Member",
-      tone: "warm",
-      style: "familiar",
-      traits: ["supportive", "understanding", "loving"],
-    },
-  },
-  Parent: {
-    description: "Nurturing and guiding",
-    fullDefinition: {
-      type: "Parent",
-      tone: "nurturing",
-      style: "guiding",
-      traits: ["protective", "wise", "caring"],
-    },
-  },
-  Grandparent: {
-    description: "Wise and patient",
-    fullDefinition: {
-      type: "Grandparent",
-      tone: "wise",
-      style: "patient",
-      traits: ["experienced", "calm", "understanding"],
-    },
-  },
-  "Emo Friend": {
-    description: "Deep and emotional",
-    fullDefinition: {
-      type: "Emo Friend",
-      tone: "emotional",
-      style: "deep",
-      traits: ["sensitive", "artistic", "philosophical"],
-    },
-  },
-  "Nihilistic Teen": {
-    description: "Philosophical and edgy",
-    fullDefinition: {
-      type: "Nihilistic Teen",
-      tone: "edgy",
-      style: "philosophical",
-      traits: ["questioning", "rebellious", "thoughtful"],
-    },
-  },
-} as const;
-
-type RelationshipType = keyof typeof relationshipDefinitions;
-
 export default function Dashboard() {
   const [user] = useAuthState(auth);
   const navigate = useNavigate();
@@ -276,8 +259,12 @@ export default function Dashboard() {
   const [summary, setSummary] = useState("");
   const [history, setHistory] = useState<Message[]>([]);
   const [userData, setUserData] = useState<UserData>({
+    firstName: "",
+    lastName: "",
+    email: "",
     phoneNumber: "",
-    personality: "",
+    createdAt: Timestamp.fromDate(new Date()),
+    lastLogin: Timestamp.fromDate(new Date()),
     tokensUsed: 0,
   });
   const [loading, setLoading] = useState({
@@ -285,13 +272,13 @@ export default function Dashboard() {
     analytics: true,
   });
   const [activeTab, setActiveTab] = useState("Overview");
-  const [profileForm, setProfileForm] = useState<ProfileFormState>({
-    phoneNumber: "",
-    aiPersonality: "",
-    aiRelationship: "",
+  const [profileForm, setProfileForm] = useState({
     firstName: "",
     lastName: "",
     email: "",
+    phoneNumber: "",
+    aiPersonality: "",
+    aiRelationship: "",
   });
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<NotificationMessage | null>(null);
@@ -322,15 +309,17 @@ export default function Dashboard() {
           setSummary(data.summary || "");
           setHistory(data.history || []);
           setUserData({
-            phoneNumber: data.phoneNumber || "",
-            personality: data.personality || "",
-            tokensUsed: data.tokensUsed || 0,
-            responseTime: data.responseTime,
-            notifications: data.notifications,
-            isAdmin: data.isAdmin,
             firstName: data.firstName || "",
             lastName: data.lastName || "",
             email: data.email || "",
+            phoneNumber: data.phoneNumber || "",
+            createdAt: data.createdAt || Timestamp.fromDate(new Date()),
+            lastLogin: data.lastLogin || Timestamp.fromDate(new Date()),
+            personality: data.personality || "",
+            aiRelationship: data.aiRelationship || "",
+            notificationsEnabled: data.notificationsEnabled,
+            tokensUsed: data.tokensUsed || 0,
+            responseTime: data.responseTime,
             summary: data.summary || "",
             history: data.history || [],
           });
@@ -1136,23 +1125,23 @@ export default function Dashboard() {
                                     const newValue = !userData.notifications;
                                     setUserData((prev) => ({
                                       ...prev,
-                                      notifications: newValue,
+                                      notificationsEnabled: newValue,
                                     }));
                                     if (user) {
                                       updateDoc(doc(db, "users", user.uid), {
-                                        notifications: newValue,
+                                        notificationsEnabled: newValue,
                                       });
                                     }
                                   }}
                                   className={`${
-                                    userData.notifications
+                                    userData.notificationsEnabled
                                       ? "bg-indigo-600"
                                       : "bg-gray-200"
                                   } relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2`}
                                 >
                                   <span
                                     className={`${
-                                      userData.notifications
+                                      userData.notificationsEnabled
                                         ? "translate-x-5"
                                         : "translate-x-0"
                                     } pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out`}
