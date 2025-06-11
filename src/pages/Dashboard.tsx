@@ -959,7 +959,7 @@ export default function Dashboard() {
                                 htmlFor="aiRelationship"
                                 className="block text-sm font-medium text-gray-700 mb-1"
                               >
-                                AI Relationship
+                                AI Relationship Style
                               </label>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
@@ -976,7 +976,7 @@ export default function Dashboard() {
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                                   >
                                     <option value="">
-                                      Select a relationship
+                                      Select a relationship style
                                     </option>
                                     <option value="Girlfriend">
                                       Girlfriend - Caring and supportive
@@ -1011,19 +1011,20 @@ export default function Dashboard() {
                                       {profileForm.aiRelationship ? (
                                         <>
                                           <span className="font-medium">
-                                            Current Relationship:
+                                            Current Relationship Style:
                                           </span>{" "}
                                           {profileForm.aiRelationship}
                                         </>
                                       ) : (
-                                        "Select a relationship type to customize how your AI assistant relates to you"
+                                        "Select a relationship style to customize how your AI assistant relates to you"
                                       )}
                                     </p>
                                   </div>
                                 </div>
                               </div>
                               <p className="mt-2 text-sm text-gray-500">
-                                Choose how your AI assistant relates to you
+                                Choose how your AI assistant relates to you in
+                                conversations
                               </p>
                             </div>
                           </div>
