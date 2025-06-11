@@ -14,7 +14,7 @@ import Dashboard from "./pages/Dashboard";
 import Analytics from "./pages/Analytics";
 import Login from "./pages/Login";
 import DashboardAdmin from "./pages/DashboardAdmin";
-import Docs from "./pages/Docs";
+import Docs from "./pages/Docs.tsx";
 import Privacy from "./pages/Privacy";
 import About from "./pages/About";
 
