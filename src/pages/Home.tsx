@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { ArrowRightIcon } from "@heroicons/react/24/solid";
-import Beams from "../components/Backgrounds/Beams/Beams";
+import { Beams } from "../components/Backgrounds/Beams/Beams";
 
 export default function Home() {
   return (

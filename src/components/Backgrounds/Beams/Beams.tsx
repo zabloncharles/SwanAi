@@ -2,9 +2,23 @@ import React from "react";
 
 interface BeamsProps {
   beamWidth?: number;
+  beamHeight?: number;
+  beamNumber?: number;
+  speed?: number;
+  noiseIntensity?: number;
+  scale?: number;
+  rotation?: number;
 }
 
-export const Beams: React.FC<BeamsProps> = ({ beamWidth = 1 }) => {
+export const Beams: React.FC<BeamsProps> = ({
+  beamWidth = 1,
+  beamHeight,
+  beamNumber,
+  speed,
+  noiseIntensity,
+  scale,
+  rotation,
+}) => {
   return (
     <div className="absolute inset-0 overflow-hidden">
       <div
