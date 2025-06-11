@@ -43,6 +43,7 @@ import { signOut } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import PhoneRequiredModal from "../components/PhoneRequiredModal";
 import SlimFooter from "../components/SlimFooter";
+import { Timestamp } from "firebase/firestore";
 
 const mainNav = [
   { label: "Overview", icon: HomeIcon },
@@ -98,18 +99,30 @@ interface NotificationMessage {
 }
 
 interface UserData {
-  phoneNumber: string;
-  personality: string;
-  aiRelationship?: string;
-  tokensUsed: number;
-  responseTime?: number;
-  notifications?: boolean;
-  isAdmin?: boolean;
   firstName?: string;
   lastName?: string;
   email?: string;
+  phoneNumber?: string;
+  personality?: string;
+  aiRelationship?: string;
+  createdAt?: Timestamp;
+  lastLogin?: Timestamp;
+  isAdmin?: boolean;
+  notificationsEnabled?: boolean;
+  tokensUsed?: number;
+  responseTime?: number;
+  notifications?: boolean;
   summary?: string;
   history?: Message[];
+}
+
+interface ProfileFormState {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber: string;
+  aiPersonality: string;
+  aiRelationship: string;
 }
 
 const personalityDefinitions = {
@@ -179,6 +192,83 @@ const personalityDefinitions = {
   },
 };
 
+const relationshipDefinitions = {
+  Girlfriend: {
+    description: "Caring and supportive",
+    fullDefinition: {
+      type: "Girlfriend",
+      tone: "caring",
+      style: "supportive",
+      traits: ["empathetic", "nurturing", "attentive"],
+    },
+  },
+  "Personal Assistant": {
+    description: "Efficient and organized",
+    fullDefinition: {
+      type: "Personal Assistant",
+      tone: "professional",
+      style: "efficient",
+      traits: ["organized", "punctual", "helpful"],
+    },
+  },
+  Cousin: {
+    description: "Fun and casual",
+    fullDefinition: {
+      type: "Cousin",
+      tone: "casual",
+      style: "friendly",
+      traits: ["playful", "relaxed", "familiar"],
+    },
+  },
+  "Family Member": {
+    description: "Warm and familiar",
+    fullDefinition: {
+      type: "Family Member",
+      tone: "warm",
+      style: "familiar",
+      traits: ["supportive", "understanding", "loving"],
+    },
+  },
+  Parent: {
+    description: "Nurturing and guiding",
+    fullDefinition: {
+      type: "Parent",
+      tone: "nurturing",
+      style: "guiding",
+      traits: ["protective", "wise", "caring"],
+    },
+  },
+  Grandparent: {
+    description: "Wise and patient",
+    fullDefinition: {
+      type: "Grandparent",
+      tone: "wise",
+      style: "patient",
+      traits: ["experienced", "calm", "understanding"],
+    },
+  },
+  "Emo Friend": {
+    description: "Deep and emotional",
+    fullDefinition: {
+      type: "Emo Friend",
+      tone: "emotional",
+      style: "deep",
+      traits: ["sensitive", "artistic", "philosophical"],
+    },
+  },
+  "Nihilistic Teen": {
+    description: "Philosophical and edgy",
+    fullDefinition: {
+      type: "Nihilistic Teen",
+      tone: "edgy",
+      style: "philosophical",
+      traits: ["questioning", "rebellious", "thoughtful"],
+    },
+  },
+} as const;
+
+type RelationshipType = keyof typeof relationshipDefinitions;
+
 export default function Dashboard() {
   const [user] = useAuthState(auth);
   const navigate = useNavigate();
@@ -195,7 +285,7 @@ export default function Dashboard() {
     analytics: true,
   });
   const [activeTab, setActiveTab] = useState("Overview");
-  const [profileForm, setProfileForm] = useState({
+  const [profileForm, setProfileForm] = useState<ProfileFormState>({
     phoneNumber: "",
     aiPersonality: "",
     aiRelationship: "",
@@ -264,17 +354,32 @@ export default function Dashboard() {
   // Update profile form when user data changes
   useEffect(() => {
     if (userData) {
-      console.log(
-        "Loading relationship value from Firebase:",
-        userData.aiRelationship
-      );
+      // Parse the relationship JSON if it exists
+      let relationshipKey = "";
+      if (userData.aiRelationship) {
+        try {
+          const relationshipData = JSON.parse(userData.aiRelationship);
+          // Find the matching relationship key based on the full definition
+          Object.entries(relationshipDefinitions).forEach(([key, value]) => {
+            if (
+              JSON.stringify(value.fullDefinition) ===
+              JSON.stringify(relationshipData)
+            ) {
+              relationshipKey = key;
+            }
+          });
+        } catch (error) {
+          console.error("Error parsing relationship:", error);
+        }
+      }
+
       setProfileForm({
         firstName: userData.firstName || "",
         lastName: userData.lastName || "",
         email: userData.email || "",
         phoneNumber: userData.phoneNumber || "",
         aiPersonality: userData.personality || "",
-        aiRelationship: userData.aiRelationship || "",
+        aiRelationship: relationshipKey,
       });
     }
   }, [userData]);
@@ -356,13 +461,21 @@ export default function Dashboard() {
 
     try {
       const userRef = doc(db, "users", user.uid);
+      const selectedRelationship = profileForm.aiRelationship
+        ? relationshipDefinitions[
+            profileForm.aiRelationship as RelationshipType
+          ]
+        : null;
+
       await updateDoc(userRef, {
         firstName: profileForm.firstName,
         lastName: profileForm.lastName,
         email: profileForm.email,
         phoneNumber: profileForm.phoneNumber,
         personality: profileForm.aiPersonality,
-        aiRelationship: profileForm.aiRelationship,
+        aiRelationship: selectedRelationship
+          ? JSON.stringify(selectedRelationship.fullDefinition)
+          : "",
       });
 
       // Update local state
@@ -373,10 +486,11 @@ export default function Dashboard() {
         email: profileForm.email,
         phoneNumber: profileForm.phoneNumber,
         personality: profileForm.aiPersonality,
-        aiRelationship: profileForm.aiRelationship,
+        aiRelationship: selectedRelationship
+          ? JSON.stringify(selectedRelationship.fullDefinition)
+          : "",
       }));
 
-      console.log("Saved relationship value:", profileForm.aiRelationship);
       setSuccessMessage("Profile updated successfully!");
       setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
@@ -957,37 +1071,24 @@ export default function Dashboard() {
                                     id="aiRelationship"
                                     name="aiRelationship"
                                     value={profileForm.aiRelationship}
-                                    onChange={handleRelationshipChange}
+                                    onChange={(e) =>
+                                      setProfileForm({
+                                        ...profileForm,
+                                        aiRelationship: e.target.value,
+                                      })
+                                    }
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                                   >
                                     <option value="">
                                       Select a relationship
                                     </option>
-                                    <option value="Girlfriend">
-                                      Girlfriend - Caring and supportive
-                                    </option>
-                                    <option value="Personal Assistant">
-                                      Personal Assistant - Efficient and
-                                      organized
-                                    </option>
-                                    <option value="Cousin">
-                                      Cousin - Fun and casual
-                                    </option>
-                                    <option value="Family Member">
-                                      Family Member - Warm and familiar
-                                    </option>
-                                    <option value="Parent">
-                                      Parent - Nurturing and guiding
-                                    </option>
-                                    <option value="Grandparent">
-                                      Grandparent - Wise and patient
-                                    </option>
-                                    <option value="Emo Friend">
-                                      Emo Friend - Deep and emotional
-                                    </option>
-                                    <option value="Nihilistic Teen">
-                                      Nihilistic Teen - Philosophical and edgy
-                                    </option>
+                                    {Object.entries(
+                                      relationshipDefinitions
+                                    ).map(([key, value]) => (
+                                      <option key={key} value={key}>
+                                        {key} - {value.description}
+                                      </option>
+                                    ))}
                                   </select>
                                 </div>
                                 <div className="flex items-center justify-center">
@@ -998,7 +1099,12 @@ export default function Dashboard() {
                                           <span className="font-medium">
                                             Current Relationship:
                                           </span>{" "}
-                                          {profileForm.aiRelationship}
+                                          {profileForm.aiRelationship} -{" "}
+                                          {
+                                            relationshipDefinitions[
+                                              profileForm.aiRelationship as RelationshipType
+                                            ]?.description
+                                          }
                                         </>
                                       ) : (
                                         "Select a relationship type to customize how your AI assistant relates to you"
