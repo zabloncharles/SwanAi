@@ -10,14 +10,14 @@ import { useAuthState } from "react-firebase-hooks/auth";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./config/firebase";
 import Navbar from "./components/Navbar";
-import Home from "@/pages/Home";
-import Dashboard from "@/pages/Dashboard";
-import Analytics from "@/pages/Analytics";
-import Login from "@/pages/Login";
-import DashboardAdmin from "@/pages/DashboardAdmin";
-import Docs from "@/pages/Docs";
-import Privacy from "@/pages/Privacy";
-import About from "@/pages/About";
+import Home from "./pages/Home";
+import Dashboard from "./pages/Dashboard";
+import Analytics from "./pages/Analytics";
+import Login from "./pages/Login";
+import DashboardAdmin from "./pages/DashboardAdmin";
+import Docs from "./pages/Docs";
+import Privacy from "./pages/Privacy";
+import About from "./pages/About";
 
 function AppContent() {
   const [user, loading] = useAuthState(auth);
