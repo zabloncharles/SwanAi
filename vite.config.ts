@@ -28,4 +28,9 @@ export default defineConfig({
     include: ["react", "react-dom"],
   },
   publicDir: "public",
+  esbuild: {
+    loader: "tsx",
+    include: /src\/.*\.[tj]sx?$/,
+    exclude: [],
+  },
 });
