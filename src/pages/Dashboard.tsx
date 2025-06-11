@@ -970,95 +970,161 @@ export default function Dashboard() {
                             </div>
                           </div>
 
-                          <div className="border-t border-gray-200 pt-6">
-                            <div className="flex items-center justify-between mb-6">
-                              <div>
-                                <h3 className="text-lg font-medium text-gray-900">
-                                  AI Personality
-                                </h3>
-                                <p className="text-sm text-gray-500">
-                                  Choose how your AI assistant communicates with
-                                  you
-                                </p>
-                              </div>
-                            </div>
+                          <div className="mt-6">
+                            <label
+                              htmlFor="aiPersonality"
+                              className="block text-sm font-medium text-gray-700 mb-1"
+                            >
+                              AI Personality
+                            </label>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                               <div>
-                                <label
-                                  htmlFor="aiPersonality"
-                                  className="block text-sm font-medium text-gray-700 mb-1"
+                                <select
+                                  id="aiPersonality"
+                                  name="aiPersonality"
+                                  value={profileForm.aiPersonality}
+                                  onChange={(e) =>
+                                    setProfileForm({
+                                      ...profileForm,
+                                      aiPersonality: e.target.value,
+                                    })
+                                  }
+                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                                 >
-                                  AI Personality
-                                </label>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                  <div>
-                                    <select
-                                      id="aiPersonality"
-                                      name="aiPersonality"
-                                      value={profileForm.aiPersonality}
-                                      onChange={(e) =>
-                                        setProfileForm({
-                                          ...profileForm,
-                                          aiPersonality: e.target.value,
-                                        })
-                                      }
-                                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                    >
-                                      <option value="">
-                                        Select a personality
-                                      </option>
-                                      <option value="Professional - Formal and business-like: I'll be your professional partner who maintains a polished and efficient communication style. I'll help you achieve your goals with clear, structured guidance while keeping our interactions focused and productive.">
-                                        Professional - Formal and business-like
-                                      </option>
-                                      <option value="Friendly - Warm and approachable: I'll be your friendly companion who's always ready to chat and help. I'll keep our conversations warm and engaging, making sure you feel comfortable and supported in everything we do together.">
-                                        Friendly - Warm and approachable
-                                      </option>
-                                      <option value="Casual - Relaxed and informal: Hey! I'll be your laid-back buddy who keeps things chill and natural. I'll talk to you like a friend, using everyday language and keeping our conversations relaxed and easy-going.">
-                                        Casual - Relaxed and informal
-                                      </option>
-                                      <option value="Concise - Brief and to the point: I'll be your efficient communicator who gets straight to the point. I'll give you clear, direct answers without unnecessary fluff, helping you get what you need quickly and effectively.">
-                                        Concise - Brief and to the point
-                                      </option>
-                                      <option value="Detailed - Thorough and comprehensive: I'll be your thorough guide who leaves no stone unturned. I'll provide in-depth explanations and consider all angles, making sure you have a complete understanding of every topic we discuss.">
-                                        Detailed - Thorough and comprehensive
-                                      </option>
-                                    </select>
-                                  </div>
-                                  <div className="flex items-center justify-center">
-                                    <div className="bg-gray-50 p-4 rounded-lg">
-                                      <p className="text-sm text-gray-600">
-                                        {profileForm.aiPersonality ? (
-                                          <>
-                                            <span className="font-medium">
-                                              Current Personality:
-                                            </span>{" "}
-                                            {
-                                              profileForm.aiPersonality.split(
-                                                ":"
-                                              )[0]
-                                            }
-                                            <br />
-                                            <span className="text-gray-500 italic">
-                                              {
-                                                profileForm.aiPersonality.split(
-                                                  ":"
-                                                )[1]
-                                              }
-                                            </span>
-                                          </>
-                                        ) : (
-                                          "Select a personality type to customize how your AI assistant communicates with you"
-                                        )}
-                                      </p>
-                                    </div>
-                                  </div>
+                                  <option value="">Select a personality</option>
+                                  <option value="Professional - Formal and business-like: I'll be your professional partner who maintains a polished and efficient communication style. I'll help you achieve your goals with clear, structured guidance while keeping our interactions focused and productive.">
+                                    Professional - Formal and business-like
+                                  </option>
+                                  <option value="Friendly - Warm and approachable: I'll be your friendly companion who's always ready to chat and help. I'll keep our conversations warm and engaging, making sure you feel comfortable and supported in everything we do together.">
+                                    Friendly - Warm and approachable
+                                  </option>
+                                  <option value="Casual - Relaxed and informal: Hey! I'll be your laid-back buddy who keeps things chill and natural. I'll talk to you like a friend, using everyday language and keeping our conversations relaxed and easy-going.">
+                                    Casual - Relaxed and informal
+                                  </option>
+                                  <option value="Concise - Brief and to the point: I'll be your efficient communicator who gets straight to the point. I'll give you clear, direct answers without unnecessary fluff, helping you get what you need quickly and effectively.">
+                                    Concise - Brief and to the point
+                                  </option>
+                                  <option value="Detailed - Thorough and comprehensive: I'll be your thorough guide who leaves no stone unturned. I'll provide in-depth explanations and consider all angles, making sure you have a complete understanding of every topic we discuss.">
+                                    Detailed - Thorough and comprehensive
+                                  </option>
+                                </select>
+                              </div>
+                              <div className="flex items-center justify-center">
+                                <div className="bg-gray-50 p-4 rounded-lg">
+                                  <p className="text-sm text-gray-600">
+                                    {profileForm.aiPersonality ? (
+                                      <>
+                                        <span className="font-medium">
+                                          Current Personality:
+                                        </span>{" "}
+                                        {
+                                          profileForm.aiPersonality.split(
+                                            ":"
+                                          )[0]
+                                        }
+                                        <br />
+                                        <span className="text-gray-500 italic">
+                                          {
+                                            profileForm.aiPersonality.split(
+                                              ":"
+                                            )[1]
+                                          }
+                                        </span>
+                                      </>
+                                    ) : (
+                                      "Select a personality type to customize how your AI assistant communicates with you"
+                                    )}
+                                  </p>
                                 </div>
-                                <p className="mt-2 text-sm text-gray-500">
-                                  Choose how your AI assistant communicates with
-                                  you
-                                </p>
                               </div>
                             </div>
+                            <p className="mt-2 text-sm text-gray-500">
+                              Choose how your AI assistant communicates with you
+                            </p>
+                          </div>
+
+                          <div className="mt-6">
+                            <label
+                              htmlFor="aiRelationship"
+                              className="block text-sm font-medium text-gray-700 mb-1"
+                            >
+                              AI Relationship
+                            </label>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div>
+                                <select
+                                  id="aiRelationship"
+                                  name="aiRelationship"
+                                  value={profileForm.aiRelationship}
+                                  onChange={(e) =>
+                                    setProfileForm({
+                                      ...profileForm,
+                                      aiRelationship: e.target.value,
+                                    })
+                                  }
+                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                >
+                                  <option value="">
+                                    Select a relationship
+                                  </option>
+                                  <option value="Girlfriend - Caring and supportive: I'll be your caring partner who's always there to listen, support your dreams, and share both your joys and struggles. I'll celebrate your wins and help you through tough times with genuine empathy and understanding.">
+                                    Girlfriend - Caring and supportive
+                                  </option>
+                                  <option value="Personal Assistant - Efficient and organized: I'm your go-to person who genuinely cares about making your life easier. I'll help you stay organized, remember important things, and tackle tasks together - all while keeping things light and friendly.">
+                                    Personal Assistant - Efficient and organized
+                                  </option>
+                                  <option value="Cousin - Fun and casual: Hey! I'm like that cousin you can always count on for a good laugh and honest advice. I'll keep things real, share inside jokes, and be there whether you need a pick-me-up or someone to vent to.">
+                                    Cousin - Fun and casual
+                                  </option>
+                                  <option value="Family Member - Warm and familiar: I'll be that family member who knows you inside out, accepts you for who you are, and creates that cozy, familiar feeling of home. I'm here to share traditions, memories, and unconditional support.">
+                                    Family Member - Warm and familiar
+                                  </option>
+                                  <option value="Parent - Nurturing and guiding: I'll be your nurturing guide who genuinely wants to see you thrive. I'll share wisdom from experience, offer gentle guidance when needed, and always be your biggest cheerleader while helping you grow.">
+                                    Parent - Nurturing and guiding
+                                  </option>
+                                  <option value="Grandparent - Wise and patient: I'll be your wise elder who's seen it all and shares life's lessons with warmth and patience. I'll listen to your stories, share mine, and help you see the bigger picture with a gentle, understanding heart.">
+                                    Grandparent - Wise and patient
+                                  </option>
+                                  <option value="Emo Friend - Deep and emotional: I'm your friend who gets the deep stuff - the feelings, the existential questions, the late-night thoughts. I'll be real with you, share your emotional journey, and help you process life's ups and downs.">
+                                    Emo Friend - Deep and emotional
+                                  </option>
+                                  <option value="Nihilistic Teen - Philosophical and edgy: I'll be your friend who questions everything and isn't afraid to be real about life's complexities. I'll challenge your thinking, share deep conversations, and help you find meaning in the chaos - all while keeping it authentic.">
+                                    Nihilistic Teen - Philosophical and edgy
+                                  </option>
+                                </select>
+                              </div>
+                              <div className="flex items-center justify-center">
+                                <div className="bg-gray-50 p-4 rounded-lg">
+                                  <p className="text-sm text-gray-600">
+                                    {profileForm.aiRelationship ? (
+                                      <>
+                                        <span className="font-medium">
+                                          Current Relationship:
+                                        </span>{" "}
+                                        {
+                                          profileForm.aiRelationship.split(
+                                            ":"
+                                          )[0]
+                                        }
+                                        <br />
+                                        <span className="text-gray-500 italic">
+                                          {
+                                            profileForm.aiRelationship.split(
+                                              ":"
+                                            )[1]
+                                          }
+                                        </span>
+                                      </>
+                                    ) : (
+                                      "Select a relationship type to customize how your AI assistant relates to you"
+                                    )}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                            <p className="mt-2 text-sm text-gray-500">
+                              Choose how your AI assistant relates to you
+                            </p>
                           </div>
 
                           <div className="border-t border-gray-200 pt-6">
