@@ -1,38 +1,70 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth } from './config/firebase';
-import Navbar from './components/Navbar';
-import Home from './pages/Home';
-import Dashboard from './pages/Dashboard';
-import Settings from './pages/Settings';
-import Login from './pages/Login';
+import React from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
+import { useAuthState } from "react-firebase-hooks/auth";
+import { auth } from "./config/firebase";
+import Navbar from "./components/Navbar";
+import Home from "./pages/Home";
+import Dashboard from "./pages/Dashboard";
+import Analytics from "./pages/Analytics";
+import Login from "./pages/Login";
+import DashboardAdmin from "./pages/DashboardAdmin";
+import Docs from "./pages/Docs";
+import Privacy from "./pages/Privacy";
+import About from "./pages/About";
 
-function App() {
+function AppContent() {
   const [user, loading] = useAuthState(auth);
+  const location = useLocation();
+  const isLoginPage = location.pathname === "/login";
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
       </div>
     );
   }
 
   return (
+    <div className="min-h-screen">
+      {!isLoginPage && <Navbar />}
+      <main className={`container mx-auto px-4 ${isLoginPage ? "" : "py-8"}`}>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route
+            path="/dashboard"
+            element={user ? <Dashboard /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/analytics"
+            element={user ? <Analytics /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/login"
+            element={!user ? <Login /> : <Navigate to="/dashboard" />}
+          />
+          <Route path="/dashboardadmin" element={<DashboardAdmin />} />
+          <Route path="/docs" element={<Docs />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/about" element={<About />} />
+        </Routes>
+      </main>
+    </div>
+  );
+}
+
+function App() {
+  return (
     <Router>
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
-        <Navbar />
-        <main className="container mx-auto px-4 py-8">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/login" />} />
-            <Route path="/settings" element={user ? <Settings /> : <Navigate to="/login" />} />
-            <Route path="/login" element={!user ? <Login /> : <Navigate to="/dashboard" />} />
-          </Routes>
-        </main>
-      </div>
+      <AppContent />
     </Router>
   );
 }
 
-export default App; 
+export default App;

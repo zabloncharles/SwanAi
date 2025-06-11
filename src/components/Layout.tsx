@@ -1,16 +1,15 @@
-import { Outlet, Link, useLocation } from 'react-router-dom';
-import { auth } from '../config/firebase';
-import { signOut } from 'firebase/auth';
+import { Outlet, Link, useLocation } from "react-router-dom";
+import { auth } from "../config/firebase";
+import { signOut } from "firebase/auth";
 import {
   HomeIcon,
   Cog6ToothIcon,
   ChartBarIcon,
-} from '@heroicons/react/24/outline';
+} from "@heroicons/react/24/outline";
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
-  { name: 'Settings', href: '/settings', icon: Cog6ToothIcon },
-  { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
+  { name: "Dashboard", href: "/dashboard", icon: HomeIcon },
+  { name: "Analytics", href: "/analytics", icon: ChartBarIcon },
 ];
 
 export default function Layout() {
@@ -20,7 +19,7 @@ export default function Layout() {
     try {
       await signOut(auth);
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error("Error signing out:", error);
     }
   };
 
@@ -42,8 +41,8 @@ export default function Layout() {
                       to={item.href}
                       className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
                         isActive
-                          ? 'border-blue-500 text-gray-900'
-                          : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                          ? "border-blue-500 text-gray-900"
+                          : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
                       }`}
                     >
                       <item.icon className="h-5 w-5 mr-2" />
@@ -70,4 +69,4 @@ export default function Layout() {
       </main>
     </div>
   );
-} 
+}
