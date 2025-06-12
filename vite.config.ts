@@ -40,15 +40,7 @@ export default defineConfig({
     extensions: [".mjs", ".js", ".ts", ".jsx", ".tsx", ".json"],
   },
   optimizeDeps: {
-    include: [
-      "react",
-      "react-dom",
-      "recharts",
-      "react-globe.gl",
-      "@react-three/fiber",
-      "@react-three/drei",
-      "three",
-    ],
+    include: ["react", "react-dom", "recharts"],
   },
   publicDir: "public",
   esbuild: {
