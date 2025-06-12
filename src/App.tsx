@@ -14,7 +14,6 @@ import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import Analytics from "./pages/Analytics";
 import Login from "./pages/Login";
-import DashboardAdmin from "./pages/DashboardAdmin";
 import Docs from "./pages/Docs";
 import Privacy from "./pages/Privacy";
 import About from "./pages/About";
@@ -38,19 +37,9 @@ function AppContent() {
       <main className={`container mx-auto px-4 ${isLoginPage ? "" : "py-8"}`}>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route
-            path="/dashboard"
-            element={user ? <Dashboard /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/analytics"
-            element={user ? <Analytics /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/login"
-            element={!user ? <Login /> : <Navigate to="/dashboard" />}
-          />
-          <Route path="/dashboardadmin" element={<DashboardAdmin />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/analytics" element={<Analytics />} />
+          <Route path="/login" element={<Login />} />
           <Route path="/docs" element={<Docs />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/about" element={<About />} />
