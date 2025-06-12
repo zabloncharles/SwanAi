@@ -622,17 +622,19 @@ export default function Dashboard() {
   };
 
   const handleNotificationsToggle = async () => {
-    if (user) {
-      const newValue = !userData.notificationsEnabled;
+    if (!user) return;
+    const newValue = !userData.notificationsEnabled;
+    try {
+      const userRef = doc(db, "users", user.uid);
+      await updateDoc(userRef, {
+        notificationsEnabled: newValue,
+      });
       setUserData((prev) => ({
-        ...prev,
+        ...prev!,
         notificationsEnabled: newValue,
       }));
-      if (user) {
-        updateDoc(doc(db, "users", user.uid), {
-          notificationsEnabled: newValue,
-        });
-      }
+    } catch (error) {
+      console.error("Error toggling notifications:", error);
     }
   };
 
@@ -820,8 +822,8 @@ export default function Dashboard() {
                         <div className="text-xs text-gray-400 font-medium">
                           Notifications
                         </div>
-                        <div className="text-2xl font-bold {userData.notifications ? 'text-green-600' : 'text-red-500'}">
-                          {userData.notifications ? "On" : "Off"}
+                        <div className="text-2xl font-bold {userData.notificationsEnabled ? 'text-green-600' : 'text-red-500'}">
+                          {userData.notificationsEnabled ? "On" : "Off"}
                         </div>
                       </div>
                     </div>
@@ -868,7 +870,7 @@ export default function Dashboard() {
                           <span className="font-medium text-gray-700">
                             Notifications:
                           </span>{" "}
-                          {userData.notifications ? "On" : "Off"}
+                          {userData.notificationsEnabled ? "On" : "Off"}
                         </div>
                       </div>
                       {/* Conversation Summary */}
@@ -1207,18 +1209,7 @@ export default function Dashboard() {
                               <div className="flex items-center">
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    const newValue = !userData.notifications;
-                                    setUserData((prev) => ({
-                                      ...prev,
-                                      notificationsEnabled: newValue,
-                                    }));
-                                    if (user) {
-                                      updateDoc(doc(db, "users", user.uid), {
-                                        notificationsEnabled: newValue,
-                                      });
-                                    }
-                                  }}
+                                  onClick={handleNotificationsToggle}
                                   className={`${
                                     userData.notificationsEnabled
                                       ? "bg-indigo-600"

@@ -12,6 +12,7 @@ import {
   increment,
   runTransaction,
   arrayUnion,
+  serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../config/firebase";
 import { ArrowRightIcon, ArrowLeftIcon } from "@heroicons/react/24/outline";
@@ -107,29 +108,24 @@ export default function Login() {
         const coords = await getUserCoordinates();
 
         // Create the user document in Firestore
-        const userDoc = {
-          email: user.email,
-          createdAt: new Date(),
-          location: coords,
-          type: "free",
-          uid: user.uid,
-          displayName: user.displayName || email.split("@")[0],
-          lastLogin: new Date(),
-          status: "active",
-          aiPersonality: "",
-          history: [],
-          notifications: null,
+        const userData = {
+          firstName: "",
+          lastName: "",
+          email: user.email || "",
           phoneNumber: "",
-          responseTime: null,
-          summary: "",
-          tokens: null,
+          createdAt: serverTimestamp(),
+          lastLogin: serverTimestamp(),
+          isAdmin: false,
+          notificationsEnabled: false,
+          tokensUsed: 0,
+          locationData: [],
         };
 
         // Use a transaction to update both user document and analytics
         await runTransaction(db, async (transaction) => {
           // Set user document
           const userRef = doc(db, "users", user.uid);
-          transaction.set(userRef, userDoc, { merge: true });
+          transaction.set(userRef, userData, { merge: true });
 
           // Update analytics
           const today = new Date().toISOString().split("T")[0];
