@@ -1,0 +1,23 @@
+{
+  "totalUsers": 1234,
+  "activeUsers": 210,
+  "totalMessages": 56789,
+  "messagesToday": 1200,
+  "messagesThisMonth": 32000,
+  "totalCountries": 22,
+  "newUsersThisMonth": 45,
+  "churnedUsersThisMonth": 3,
+  "totalTokensUsed": 1500000,
+  "totalApiCalls": 80000,
+  "averageResponseTime": 1.2,
+  "uptimePercent": 99.99,
+  "totalRevenue": 12000,
+  "activeSubscriptions": 80,
+  "lastUpdated": "2024-05-20T12:00:00Z",
+  "topStates": [{ "NJ": "US", "count": 500 }],
+  "messagesByDay": {
+    "2024-05-18": 1000,
+    "2024-05-19": 1200,
+    "2024-05-20": 1100
+  }
+}

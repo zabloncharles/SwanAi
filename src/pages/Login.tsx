@@ -142,7 +142,7 @@ export default function Login() {
               usersByDay: {
                 [today]: increment(1),
               },
-              // Add location data to the array with the format expected by DashboardAdmin
+              // Add location data to the array
               locationData: arrayUnion({
                 lat: coords.lat,
                 lng: coords.lng,

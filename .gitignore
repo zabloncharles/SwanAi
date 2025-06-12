@@ -30,5 +30,3 @@ netlify/functions/*.js
 netlify/functions/*.js.map 
 # Local Netlify folder
 .netlify
-
-src/pages/DashboardAdmin.tsx

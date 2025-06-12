@@ -2,7 +2,6 @@
   command = "npm run build"
   publish = "dist"
   functions = "netlify/functions"
-  base = "/"
 
 [dev]
   command = "npm run dev"
@@ -21,7 +20,4 @@
   external_node_modules = ["@vonage/server-sdk"]
 
 [build.environment]
-  NODE_VERSION = "18"
-  NPM_FLAGS = "--legacy-peer-deps"
-  NPM_TOKEN = ""
-  NPM_CONFIG_PRODUCTION = "false" 
+  NODE_VERSION = "18" 

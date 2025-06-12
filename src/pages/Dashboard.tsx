@@ -38,8 +38,7 @@ import {
   ExclamationCircleIcon,
 } from "@heroicons/react/24/outline";
 import { Line, Bar } from "react-chartjs-2";
-import { signOut } from "firebase/auth";
-import { useNavigate } from "react-router-dom";
+import Login from "./Login";
 import PhoneRequiredModal from "../components/PhoneRequiredModal";
 import SlimFooter from "../components/SlimFooter";
 import { Timestamp } from "firebase/firestore";
@@ -108,7 +107,6 @@ interface UserData {
   lastLogin: Timestamp;
   isAdmin?: boolean;
   notificationsEnabled?: boolean;
-  notifications?: NotificationMessage[];
   tokensUsed: number;
   responseTime?: number;
   summary?: string;
@@ -298,6 +296,12 @@ export default function Dashboard() {
 
   // Real-time user data subscription
   useEffect(() => {
+    if (!user) {
+      navigate("/login");
+    }
+  }, [user, navigate]);
+
+  useEffect(() => {
     if (!user) return;
 
     const unsubscribe = onSnapshot(
@@ -318,18 +322,12 @@ export default function Dashboard() {
             personality: data.personality || "",
             aiRelationship: data.aiRelationship || "",
             notificationsEnabled: data.notificationsEnabled,
-            notifications: data.notifications || [],
             tokensUsed: data.tokensUsed || 0,
             responseTime: data.responseTime,
             summary: data.summary || "",
             history: data.history || [],
           });
           setLoading((prev) => ({ ...prev, userData: false }));
-
-          // Redirect to admin dashboard if user is admin
-          if (data.type === "admin") {
-            navigate("/dashboardadmin");
-          }
         }
       },
       (error) => {
@@ -1179,8 +1177,7 @@ export default function Dashboard() {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    const newValue =
-                                      !userData.notificationsEnabled;
+                                    const newValue = !userData.notifications;
                                     setUserData((prev) => ({
                                       ...prev,
                                       notificationsEnabled: newValue,

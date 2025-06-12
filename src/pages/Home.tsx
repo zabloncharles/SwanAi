@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { ArrowRightIcon } from "@heroicons/react/24/solid";
-import { Beams } from "../components/Backgrounds/Beams/Beams";
+import Beams from "../Backgrounds/Beams/Beams";
 
 export default function Home() {
   return (
@@ -18,7 +18,6 @@ export default function Home() {
         >
           <source src="/images/blueorb.mp4" type="video/mp4" />
         </video>
-        <Beams />
         <div className="absolute inset-0 bg-white/60 z-0" />
         {/* Left: Headline and CTA */}
         <div className="flex-1 flex flex-col items-start justify-center max-w-xl z-10">
