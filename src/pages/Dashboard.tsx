@@ -38,7 +38,6 @@ import {
   ExclamationCircleIcon,
 } from "@heroicons/react/24/outline";
 import { Line, Bar } from "react-chartjs-2";
-import DashboardAdmin from "./DashboardAdmin";
 import { signOut } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import PhoneRequiredModal from "../components/PhoneRequiredModal";
@@ -109,6 +108,7 @@ interface UserData {
   lastLogin: Timestamp;
   isAdmin?: boolean;
   notificationsEnabled?: boolean;
+  notifications?: NotificationMessage[];
   tokensUsed: number;
   responseTime?: number;
   summary?: string;
@@ -318,6 +318,7 @@ export default function Dashboard() {
             personality: data.personality || "",
             aiRelationship: data.aiRelationship || "",
             notificationsEnabled: data.notificationsEnabled,
+            notifications: data.notifications || [],
             tokensUsed: data.tokensUsed || 0,
             responseTime: data.responseTime,
             summary: data.summary || "",
@@ -637,11 +638,6 @@ export default function Dashboard() {
   const displayName = user?.displayName || "SwanAI User";
   const displayEmail = user?.email || "user@swanai.com";
   const avatarUrl = profile?.avatarUrl || "/images/avatar-placeholder.png";
-
-  // If user is an admin, render DashboardAdmin
-  if (userData.isAdmin) {
-    return <DashboardAdmin />;
-  }
 
   return (
     <>
@@ -1183,7 +1179,8 @@ export default function Dashboard() {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    const newValue = !userData.notifications;
+                                    const newValue =
+                                      !userData.notificationsEnabled;
                                     setUserData((prev) => ({
                                       ...prev,
                                       notificationsEnabled: newValue,
