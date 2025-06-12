@@ -16,6 +16,8 @@ import Login from "./pages/Login";
 import Docs from "./pages/Docs";
 import Privacy from "./pages/Privacy";
 import About from "./pages/About";
+import Support from "./pages/Support";
+import Pricing from "./pages/Pricing";
 
 function AppContent() {
   const [user, loading] = useAuthState(auth);
@@ -51,6 +53,8 @@ function AppContent() {
           <Route path="/docs" element={<Docs />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/about" element={<About />} />
+          <Route path="/support" element={<Support />} />
+          <Route path="/pricing" element={<Pricing />} />
         </Routes>
       </main>
     </div>

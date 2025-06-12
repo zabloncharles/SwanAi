@@ -126,12 +126,6 @@ export default function Home() {
             <div className="absolute inset-0">
               {/* Left message (floating, frosted glass) */}
               <div className="absolute -left-32 top-8 flex items-end z-20">
-                <svg
-                  className="w-4 h-4 text-white/60 -mr-1 mb-1"
-                  viewBox="0 0 10 10"
-                >
-                  <polygon points="0,0 10,5 0,10" fill="white" opacity="0.6" />
-                </svg>
                 <div className="bg-white/60 backdrop-blur-md rounded-2xl px-4 py-3 text-gray-900 text-sm shadow-xl max-w-[16rem] border border-white/30">
                   Hi Mr.Smith, how would you rate our services? We'd love to
                   hear your feedback!
@@ -148,16 +142,6 @@ export default function Home() {
                   <span className="block text-xs text-indigo-100 text-right mt-1">
                     11:22 AM
                   </span>
-                  <svg
-                    className="w-4 h-4 text-indigo-400/60 absolute -right-3 bottom-2"
-                    viewBox="0 0 10 10"
-                  >
-                    <polygon
-                      points="10,0 0,5 10,10"
-                      fill="#818cf8"
-                      opacity="0.6"
-                    />
-                  </svg>
                 </div>
               </div>
             </div>
@@ -280,18 +264,17 @@ export default function Home() {
             {/* Right: Text (right-aligned) */}
             <div className="flex flex-col items-end justify-center text-right">
               <h2 className="text-3xl md:text-4xl font-extrabold text-black mb-4">
-                See SwanAI in Action
+                Real Results for Real Teams
               </h2>
               <p className="text-lg text-black mb-6 max-w-lg">
-                <span className="font-semibold text-black">Example:</span>{" "}
-                Sarah, a small business owner, uses SwanAI to automatically
-                respond to customer SMS inquiries, send appointment reminders,
-                and track engagement—all from her phone.
+                Teams use SwanAI to automate follow-ups, gather feedback, and
+                keep customers engaged—saving hours every week and boosting
+                satisfaction.
               </p>
               <div className="bg-[#18181b] border border-white/10 rounded-2xl p-6 text-white shadow-xl text-right">
                 <div className="mb-2 font-bold">
-                  "Hi Sarah, your appointment is confirmed for tomorrow at 2pm.
-                  Reply YES to confirm or NO to reschedule."
+                  "Hi Alex, thanks for your feedback! As a valued customer, you
+                  get 10% off your next order. Reply YES to claim."
                 </div>
                 <div className="text-gray-400 text-sm">
                   — Automated SMS from SwanAI

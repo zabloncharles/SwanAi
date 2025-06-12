@@ -6,42 +6,40 @@ import { signOut } from "firebase/auth";
 import {
   Bars3Icon,
   XMarkIcon,
-  ChevronDownIcon,
+  StarIcon,
+  TagIcon,
+  InformationCircleIcon,
 } from "@heroicons/react/24/outline";
 
 export default function Navbar() {
   const [user] = useAuthState(auth);
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
   const isActive = (path: string) => location.pathname === path;
 
   const navLinks = [
     {
       name: "Features",
-      href: "#features",
-      dropdown: [
-        { name: "AI Chat", href: "#ai-chat" },
-        { name: "Analytics", href: "#analytics" },
-        { name: "Integrations", href: "#integrations" },
-      ],
+      href: "/docs",
+      icon: <StarIcon className="w-5 h-5 mr-2" />,
     },
     {
       name: "Pricing",
-      href: "#pricing",
-      dropdown: [
-        { name: "Free Plan", href: "#free" },
-        { name: "Pro Plan", href: "#pro" },
-        { name: "Enterprise", href: "#enterprise" },
-      ],
+      href: "/pricing",
+      icon: <TagIcon className="w-5 h-5 mr-2" />,
     },
-    { name: "About", href: "#about" },
+    {
+      name: "About",
+      href: "/about",
+      icon: <InformationCircleIcon className="w-5 h-5 mr-2" />,
+    },
   ];
 
   const authLinks = [
     { name: "Dashboard", path: "/dashboard" },
     { name: "Analytics", path: "/analytics" },
+    { name: "About", path: "/about" },
   ];
 
   return (
@@ -74,6 +72,12 @@ export default function Navbar() {
             >
               Docs
             </Link>
+            <Link
+              to="/about"
+              className="text-gray-700 hover:text-indigo-600 font-medium"
+            >
+              About
+            </Link>
             <button className="hover:text-indigo-600">
               <svg
                 className="w-7 h-7"
@@ -93,32 +97,14 @@ export default function Navbar() {
         ) : (
           <div className="hidden md:flex items-center space-x-1">
             {navLinks.map((link) => (
-              <div key={link.name} className="relative group">
-                <a
-                  href={link.href}
-                  className="px-4 py-2 rounded-lg font-medium text-sm text-gray-700 hover:text-indigo-600 hover:bg-gray-50 transition flex items-center"
-                  onMouseEnter={() => setActiveDropdown(link.name)}
-                  onMouseLeave={() => setActiveDropdown(null)}
-                >
-                  {link.name}
-                  {link.dropdown && (
-                    <ChevronDownIcon className="w-4 h-4 ml-1 group-hover:rotate-180 transition-transform" />
-                  )}
-                </a>
-                {link.dropdown && activeDropdown === link.name && (
-                  <div className="absolute left-0 mt-2 w-48 rounded-lg bg-white shadow-lg border border-gray-100 py-2">
-                    {link.dropdown.map((item) => (
-                      <a
-                        key={item.name}
-                        href={item.href}
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 transition"
-                      >
-                        {item.name}
-                      </a>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <Link
+                key={link.name}
+                to={link.href}
+                className="flex items-center px-4 py-2 rounded-lg font-medium text-sm text-gray-700 hover:text-indigo-600 hover:bg-gray-50 transition"
+              >
+                {link.icon && link.icon}
+                {link.name}
+              </Link>
             ))}
             <Link
               to="/login"
@@ -163,13 +149,6 @@ export default function Navbar() {
                   {item.name}
                 </Link>
               ))}
-              <Link
-                to="/dashboard"
-                className="block mt-2 px-5 py-2 rounded-lg bg-indigo-600 text-white font-semibold text-sm shadow-sm hover:bg-indigo-700 transition"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Dashboard
-              </Link>
               <button
                 onClick={() => {
                   signOut(auth);
@@ -183,29 +162,15 @@ export default function Navbar() {
           ) : (
             <>
               {navLinks.map((link) => (
-                <div key={link.name}>
-                  <a
-                    href={link.href}
-                    className="block px-4 py-2 rounded-lg font-medium text-sm bg-gray-50 text-gray-700 hover:bg-gray-100 transition"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    {link.name}
-                  </a>
-                  {link.dropdown && (
-                    <div className="pl-4 mt-1 space-y-1">
-                      {link.dropdown.map((item) => (
-                        <a
-                          key={item.name}
-                          href={item.href}
-                          className="block px-4 py-2 text-sm text-gray-600 hover:text-indigo-600 hover:bg-gray-50 rounded-lg transition"
-                          onClick={() => setIsMobileMenuOpen(false)}
-                        >
-                          {item.name}
-                        </a>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <Link
+                  key={link.name}
+                  to={link.href}
+                  className="flex items-center px-4 py-2 rounded-lg font-medium text-sm text-gray-700 hover:text-indigo-600 hover:bg-gray-50 transition"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  {link.icon && link.icon}
+                  {link.name}
+                </Link>
               ))}
               <Link
                 to="/login"

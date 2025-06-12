@@ -23,9 +23,12 @@ export default function SlimFooter() {
           <Link to="/docs" className="hover:underline">
             Docs
           </Link>
-          <a href="mailto:support@swanai.com" className="hover:underline">
-            Support
-          </a>
+          <Link to="/about" className="hover:underline">
+            About
+          </Link>
+          <Link to="/support" className="hover:underline">
+            About
+          </Link>
         </div>
         <div className="text-xs text-gray-400 text-center md:text-right">
           &copy; {new Date().getFullYear()} SwanAI. All rights reserved.
