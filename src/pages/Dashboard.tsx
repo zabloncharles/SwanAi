@@ -42,6 +42,8 @@ import Login from "./Login";
 import PhoneRequiredModal from "../components/PhoneRequiredModal";
 import SlimFooter from "../components/SlimFooter";
 import { Timestamp } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
+import { signOut } from "firebase/auth";
 
 const mainNav = [
   { label: "Overview", icon: HomeIcon },
@@ -89,6 +91,7 @@ const statDown = "text-red-500";
 interface Message {
   role: string;
   content: string;
+  timestamp: any;
 }
 
 interface NotificationMessage {
@@ -103,14 +106,19 @@ interface UserData {
   phoneNumber: string;
   personality?: string;
   aiRelationship?: string;
-  createdAt: Timestamp;
-  lastLogin: Timestamp;
+  createdAt: any;
+  lastLogin: any;
   isAdmin?: boolean;
   notificationsEnabled?: boolean;
   tokensUsed: number;
   responseTime?: number;
   summary?: string;
   history?: Message[];
+  locationData?: Array<{
+    lat: number;
+    lng: number;
+    timestamp: any;
+  }>;
 }
 
 // Add relationship definitions
@@ -271,12 +279,13 @@ export default function Dashboard() {
   });
   const [activeTab, setActiveTab] = useState("Overview");
   const [profileForm, setProfileForm] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phoneNumber: "",
-    aiPersonality: "",
-    aiRelationship: "",
+    firstName: userData?.firstName || "",
+    lastName: userData?.lastName || "",
+    email: userData?.email || "",
+    phoneNumber: userData?.phoneNumber || "",
+    aiPersonality: userData?.personality || "",
+    aiRelationship: userData?.aiRelationship || "",
+    notificationsEnabled: userData?.notificationsEnabled || false,
   });
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<NotificationMessage | null>(null);
@@ -349,6 +358,7 @@ export default function Dashboard() {
         phoneNumber: userData.phoneNumber || "",
         aiPersonality: userData.personality || "",
         aiRelationship: userData.aiRelationship || "",
+        notificationsEnabled: userData.notificationsEnabled || false,
       });
     }
   }, [userData]);
@@ -453,6 +463,7 @@ export default function Dashboard() {
         phoneNumber: profileForm.phoneNumber,
         personality: profileForm.aiPersonality,
         aiRelationship: profileForm.aiRelationship,
+        notificationsEnabled: profileForm.notificationsEnabled,
       };
 
       // console.log("Updating Firestore with:", updateData);
@@ -469,6 +480,7 @@ export default function Dashboard() {
           phoneNumber: profileForm.phoneNumber,
           personality: profileForm.aiPersonality,
           aiRelationship: profileForm.aiRelationship,
+          notificationsEnabled: profileForm.notificationsEnabled,
         };
         // console.log("Updated local state:", updated);
         return updated;
@@ -1161,6 +1173,25 @@ export default function Dashboard() {
                             <p className="mt-2 text-sm text-gray-500">
                               Choose how your AI assistant relates to you
                             </p>
+                          </div>
+
+                          <div className="mt-6">
+                            <label className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                checked={profileForm.notificationsEnabled}
+                                onChange={(e) =>
+                                  setProfileForm((prev) => ({
+                                    ...prev,
+                                    notificationsEnabled: e.target.checked,
+                                  }))
+                                }
+                                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                              />
+                              <span className="text-sm text-gray-700">
+                                Enable notifications
+                              </span>
+                            </label>
                           </div>
 
                           <div className="border-t border-gray-200 pt-6">
