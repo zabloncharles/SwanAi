@@ -1,5 +1,7 @@
-import React from 'react';
-import { Bar } from 'react-chartjs-2';
+import React, { useEffect, useState } from "react";
+import { Bar, Line } from "react-chartjs-2";
+import { collection, getDocs, Timestamp } from "firebase/firestore";
+import { db } from "../../config/firebase";
 
 interface AdminAnalyticsProps {
   usersByDay: { [date: string]: number };
@@ -19,7 +21,9 @@ export default function AdminAnalytics({
   const tokensByDayData = tokensByDayDates.map((date) => tokensByDay[date]);
 
   const messagesByDayDates = Object.keys(messagesByDay).sort();
-  const messagesByDayData = messagesByDayDates.map((date) => messagesByDay[date]);
+  const messagesByDayData = messagesByDayDates.map(
+    (date) => messagesByDay[date]
+  );
 
   const calculateTotalTokens = (tokensByDay: { [date: string]: number }) => {
     return Object.values(tokensByDay).reduce((sum, value) => sum + value, 0);
@@ -30,33 +34,264 @@ export default function AdminAnalytics({
     return ((current - previous) / previous) * 100;
   };
 
+  // State for top states
+  const [topStates, setTopStates] = useState<
+    { state: string; count: number }[]
+  >([]);
+
+  // State for user type breakdown per day
+  const [userTypePerDay, setUserTypePerDay] = useState<any>({});
+  const [allDates, setAllDates] = useState<string[]>([]);
+  const [userTypes, setUserTypes] = useState<string[]>([]);
+
+  // State for users per day
+  const [usersPerDay, setUsersPerDay] = useState<{ [date: string]: number }>(
+    {}
+  );
+  const [usersPerDayDates, setUsersPerDayDates] = useState<string[]>([]);
+  const [usersPerDayCounts, setUsersPerDayCounts] = useState<number[]>([]);
+
+  // State for users per day by type from analytics
+  const [usersPerDayByType, setUsersPerDayByType] = useState<any>({});
+  const [usersPerDayTypes, setUsersPerDayTypes] = useState<string[]>([]);
+
+  useEffect(() => {
+    async function fetchUsersAndAggregateStates() {
+      const usersRef = collection(db, "users");
+      const snapshot = await getDocs(usersRef);
+      const stateCounts: { [state: string]: number } = {};
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.state) {
+          const state = data.state;
+          stateCounts[state] = (stateCounts[state] || 0) + 1;
+        }
+      });
+      // Convert to array and sort by count desc
+      const sorted = Object.entries(stateCounts)
+        .map(([state, count]) => ({ state, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5); // Top 5 states
+      setTopStates(sorted);
+    }
+    fetchUsersAndAggregateStates();
+  }, []);
+
+  useEffect(() => {
+    async function fetchUsersAndAggregateTypes() {
+      const usersRef = collection(db, "users");
+      const snapshot = await getDocs(usersRef);
+      const typeDateCounts: { [type: string]: { [date: string]: number } } = {};
+      const dateSet = new Set<string>();
+      const typeSet = new Set<string>();
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        const type = data.type || "free";
+        let createdAt = data.createdAt;
+        if (createdAt instanceof Timestamp) {
+          createdAt = createdAt.toDate();
+        } else if (createdAt && createdAt.seconds) {
+          createdAt = new Date(createdAt.seconds * 1000);
+        } else {
+          createdAt = new Date();
+        }
+        const dateStr = createdAt.toISOString().split("T")[0];
+        if (!typeDateCounts[type]) typeDateCounts[type] = {};
+        typeDateCounts[type][dateStr] =
+          (typeDateCounts[type][dateStr] || 0) + 1;
+        dateSet.add(dateStr);
+        typeSet.add(type);
+      });
+      // Sort dates
+      const sortedDates = Array.from(dateSet).sort();
+      setAllDates(sortedDates);
+      setUserTypes(Array.from(typeSet));
+      setUserTypePerDay(typeDateCounts);
+    }
+    fetchUsersAndAggregateTypes();
+  }, []);
+
+  useEffect(() => {
+    async function fetchUsersPerDay() {
+      const usersRef = collection(db, "users");
+      const snapshot = await getDocs(usersRef);
+      const perDay: { [date: string]: number } = {};
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        let createdAt = data.createdAt;
+        if (createdAt instanceof Timestamp) {
+          createdAt = createdAt.toDate();
+        } else if (createdAt && createdAt.seconds) {
+          createdAt = new Date(createdAt.seconds * 1000);
+        } else {
+          createdAt = new Date();
+        }
+        const dateStr = createdAt.toISOString().split("T")[0];
+        perDay[dateStr] = (perDay[dateStr] || 0) + 1;
+      });
+      const sortedDates = Object.keys(perDay).sort();
+      setUsersPerDay(perDay);
+      setUsersPerDayDates(sortedDates);
+      setUsersPerDayCounts(sortedDates.map((date) => perDay[date]));
+    }
+    fetchUsersPerDay();
+  }, []);
+
+  useEffect(() => {
+    async function fetchUsersPerDayByType() {
+      // Fetch from analytics/global
+      const analyticsRef = collection(db, "analytics");
+      const snapshot = await getDocs(analyticsRef);
+      let usersPerDay = {};
+      snapshot.forEach((doc) => {
+        if (doc.id === "global") {
+          const data = doc.data();
+          if (data.usersPerDay) {
+            usersPerDay = data.usersPerDay;
+          }
+        }
+      });
+      // Get all dates and types
+      const allDates = Object.keys(usersPerDay).sort();
+      const typeSet = new Set<string>();
+      allDates.forEach((date) => {
+        Object.keys(usersPerDay[date] || {}).forEach((type) =>
+          typeSet.add(type)
+        );
+      });
+      setUsersPerDayByType(usersPerDay);
+      setUsersPerDayDates(allDates);
+      setUsersPerDayTypes(Array.from(typeSet));
+    }
+    fetchUsersPerDayByType();
+  }, []);
+
   return (
     <>
       <div className="bg-white rounded-2xl shadow border border-gray-100 p-8 mb-8">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-6">
           <div>
-            <div className="text-gray-500 text-sm mb-1">
-              Total Tokens Used
-            </div>
+            <div className="text-gray-500 text-sm mb-1">Total Tokens Used</div>
             <div className="flex items-end gap-3">
               <span className="text-4xl font-extrabold text-gray-900">
                 {calculateTotalTokens(tokensByDay).toLocaleString()}
               </span>
               {(() => {
-                const currentTokens = tokensByDayData[tokensByDayData.length - 1] || 0;
-                const previousTokens = tokensByDayData[tokensByDayData.length - 2] || 0;
-                const percentageChange = calculatePercentageChange(currentTokens, previousTokens);
+                const currentTokens =
+                  tokensByDayData[tokensByDayData.length - 1] || 0;
+                const previousTokens =
+                  tokensByDayData[tokensByDayData.length - 2] || 0;
+                const percentageChange = calculatePercentageChange(
+                  currentTokens,
+                  previousTokens
+                );
                 return (
-                  <span className={`font-semibold text-lg ${percentageChange >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                    {percentageChange >= 0 ? '+' : ''}{percentageChange.toFixed(1)}%
+                  <span
+                    className={`font-semibold text-lg ${
+                      percentageChange >= 0 ? "text-green-600" : "text-red-500"
+                    }`}
+                  >
+                    {percentageChange >= 0 ? "+" : ""}
+                    {percentageChange.toFixed(1)}%
                   </span>
                 );
               })()}
-              <span className="text-gray-400 text-sm mb-1">
-                Last 24 hours
-              </span>
+              <span className="text-gray-400 text-sm mb-1">Last 24 hours</span>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Admin-only Active Users Section */}
+      <div className="bg-white rounded-2xl shadow border border-gray-100 p-8 mb-8">
+        <div className="mb-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-1">
+            Active users by type per day
+          </h2>
+          <p className="text-gray-500 text-sm mb-4">
+            How many users of each type joined per day.
+          </p>
+          <div className="h-[260px]">
+            <Line
+              data={{
+                labels: allDates,
+                datasets: userTypes.map((type, idx) => ({
+                  label: type.charAt(0).toUpperCase() + type.slice(1),
+                  data: allDates.map(
+                    (date) => userTypePerDay[type]?.[date] || 0
+                  ),
+                  borderColor: idx === 0 ? "#6366f1" : "#f59e42",
+                  backgroundColor: "rgba(99, 102, 241, 0.1)",
+                  tension: 0.4,
+                  pointRadius: 5,
+                  pointBackgroundColor: "#fff",
+                  pointBorderColor: idx === 0 ? "#6366f1" : "#f59e42",
+                  pointBorderWidth: 2,
+                })),
+              }}
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: {
+                    display: true,
+                    position: "top",
+                  },
+                  tooltip: {
+                    enabled: true,
+                  },
+                },
+                scales: {
+                  x: {
+                    grid: { display: false },
+                  },
+                  y: {
+                    beginAtZero: true,
+                    grid: { color: "#F3F4F6" },
+                  },
+                },
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Users Per Day By Type Chart */}
+      <div className="bg-white rounded-2xl shadow border border-gray-100 p-8 mb-8">
+        <h2 className="text-lg font-bold text-gray-900 mb-2">
+          Users Per Day (by Type)
+        </h2>
+        <div className="h-[260px]">
+          <Line
+            data={{
+              labels: usersPerDayDates,
+              datasets: usersPerDayTypes.map((type, idx) => ({
+                label: type.charAt(0).toUpperCase() + type.slice(1),
+                data: usersPerDayDates.map(
+                  (date) => usersPerDayByType[date]?.[type] || 0
+                ),
+                borderColor: idx === 0 ? "#6366f1" : "#f59e42",
+                backgroundColor: "rgba(99, 102, 241, 0.1)",
+                tension: 0.4,
+                pointRadius: 5,
+                pointBackgroundColor: "#fff",
+                pointBorderColor: idx === 0 ? "#6366f1" : "#f59e42",
+                pointBorderWidth: 2,
+              })),
+            }}
+            options={{
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: true, position: "top" },
+                tooltip: { enabled: true },
+              },
+              scales: {
+                x: { grid: { display: false } },
+                y: { beginAtZero: true, grid: { color: "#F3F4F6" } },
+              },
+            }}
+          />
         </div>
       </div>
 
@@ -64,7 +299,9 @@ export default function AdminAnalytics({
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">Users per Day</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Users per Day
+              </h3>
               <p className="text-sm text-gray-500">Daily user growth</p>
             </div>
           </div>
@@ -87,7 +324,9 @@ export default function AdminAnalytics({
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">Messages by Day</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Messages by Day
+              </h3>
               <p className="text-sm text-gray-500">Daily message activity</p>
             </div>
           </div>
@@ -101,13 +340,18 @@ export default function AdminAnalytics({
                     data: messagesByDayData,
                     backgroundColor: (context) => {
                       const chart = context.chart;
-                      const {ctx, chartArea} = chart;
+                      const { ctx, chartArea } = chart;
                       if (!chartArea) {
-                        return 'rgba(99, 102, 241, 0.8)';
+                        return "rgba(99, 102, 241, 0.8)";
                       }
-                      const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
-                      gradient.addColorStop(0, 'rgba(99, 102, 241, 0.2)');
-                      gradient.addColorStop(1, 'rgba(99, 102, 241, 0.8)');
+                      const gradient = ctx.createLinearGradient(
+                        0,
+                        chartArea.bottom,
+                        0,
+                        chartArea.top
+                      );
+                      gradient.addColorStop(0, "rgba(99, 102, 241, 0.2)");
+                      gradient.addColorStop(1, "rgba(99, 102, 241, 0.8)");
                       return gradient;
                     },
                     borderRadius: 0,
@@ -124,4 +368,4 @@ export default function AdminAnalytics({
       </div>
     </>
   );
-} 
+}

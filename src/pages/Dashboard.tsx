@@ -63,33 +63,62 @@ export default function Dashboard() {
     analytics: true,
   });
   const [activeTab, setActiveTab] = useState("Overview");
-  const [messageStats, setMessageStats] = useState<{ date: string; count: number }[]>([]);
-  const [responseTimeStats, setResponseTimeStats] = useState<{ date: string; averageTime: number }[]>([]);
+  const [messageStats, setMessageStats] = useState<
+    { date: string; count: number }[]
+  >([]);
+  const [responseTimeStats, setResponseTimeStats] = useState<
+    { date: string; averageTime: number }[]
+  >([]);
   const [totalMessages, setTotalMessages] = useState(0);
   const [averageResponseTime, setAverageResponseTime] = useState(0);
   const [phoneLoading, setPhoneLoading] = useState(false);
   const [phoneError, setPhoneError] = useState("");
-  const [modalVisible, setModalVisible] = useState(true);
+  const [modalVisible, setModalVisible] = useState(false);
   const [usersByDay, setUsersByDay] = useState<{ [date: string]: number }>({});
-  const [tokensByDay, setTokensByDay] = useState<{ [date: string]: number }>({});
-  const [messagesByDay, setMessagesByDay] = useState<{ [date: string]: number }>({});
+  const [tokensByDay, setTokensByDay] = useState<{ [date: string]: number }>(
+    {}
+  );
+  const [messagesByDay, setMessagesByDay] = useState<{
+    [date: string]: number;
+  }>({});
 
   // Fetch user data
   useEffect(() => {
     const fetchUserData = async () => {
-      if (!user) return;
+      if (!user) {
+        console.log("No user found, returning");
+        return;
+      }
+      console.log("Fetching user data for:", user.uid);
       try {
         const userRef = doc(db, "users", user.uid);
         const userSnap = await getDoc(userRef);
+        console.log("User snapshot exists:", userSnap.exists());
         if (userSnap.exists()) {
           const data = userSnap.data() as UserData;
-          setUserData({
+          console.log("User data:", data);
+          const updatedUserData = {
             ...data,
             uid: user.uid,
             personality: data.personality || "",
             aiRelationship: data.aiRelationship || "",
-            notificationsEnabled: data.notificationsEnabled || false
-          });
+            notificationsEnabled: data.notificationsEnabled || false,
+          };
+          console.log("Updated user data:", updatedUserData);
+          setUserData(updatedUserData);
+
+          // Wait 5 seconds before checking and setting modal visibility
+          setTimeout(() => {
+            // Check if any required fields are empty
+            const hasEmptyFields =
+              !data.firstName?.trim() ||
+              !data.lastName?.trim() ||
+              !data.phoneNumber?.trim();
+            console.log("Has empty fields:", hasEmptyFields);
+            setModalVisible(hasEmptyFields);
+          }, 5000);
+        } else {
+          console.log("No user document found in Firestore");
         }
         setLoading((prev) => ({ ...prev, userData: false }));
       } catch (error) {
@@ -181,7 +210,11 @@ export default function Dashboard() {
     }
   };
 
-  const handleSavePhone = async (phone: string, firstName: string, lastName: string) => {
+  const handleSavePhone = async (
+    phone: string,
+    firstName: string,
+    lastName: string
+  ) => {
     if (!user) return;
     setPhoneLoading(true);
     setPhoneError("");
@@ -208,7 +241,7 @@ export default function Dashboard() {
   };
 
   const handleSettingsUpdate = (updatedData: any) => {
-      setUserData((prev) => ({
+    setUserData((prev) => ({
       ...prev,
       ...updatedData,
     }));
@@ -252,7 +285,10 @@ export default function Dashboard() {
             onSignOut={handleSignOut}
           />
           <div className="flex-1 flex justify-center">
-            <div className="flex w-full max-w-7xl" style={{ maxWidth: "80rem" }}>
+            <div
+              className="flex w-full max-w-7xl"
+              style={{ maxWidth: "80rem" }}
+            >
               <main className="flex-1 flex flex-col px-8 py-8">
                 <DashboardHeader firstName={userData.firstName} />
                 {activeTab === "Overview" && (
@@ -275,7 +311,9 @@ export default function Dashboard() {
                       totalMessages={totalMessages}
                       tokensUsed={userData.tokensUsed}
                       averageResponseTime={averageResponseTime}
-                      notificationsEnabled={userData.notificationsEnabled || false}
+                      notificationsEnabled={
+                        userData.notificationsEnabled || false
+                      }
                     />
                     <DashboardCharts
                       messageStats={messageStats}
@@ -286,10 +324,12 @@ export default function Dashboard() {
                         phoneNumber={userData.phoneNumber}
                         personality={userData.personality || ""}
                         responseTime={userData.responseTime || 0}
-                        notificationsEnabled={userData.notificationsEnabled || false}
+                        notificationsEnabled={
+                          userData.notificationsEnabled || false
+                        }
                       />
                       <ConversationSummary summary={userData.summary || ""} />
-                      </div>
+                    </div>
                   </>
                 )}
                 {activeTab === "Messages" && userData.uid && (
@@ -304,7 +344,10 @@ export default function Dashboard() {
                       Edit your AI profile, update your personal information,
                       and customize your SwanAI experience.
                     </p>
-                    <Settings userData={userData} onUpdate={handleSettingsUpdate} />
+                    <Settings
+                      userData={userData}
+                      onUpdate={handleSettingsUpdate}
+                    />
                   </>
                 )}
               </main>
@@ -315,4 +358,3 @@ export default function Dashboard() {
     </>
   );
 }
-

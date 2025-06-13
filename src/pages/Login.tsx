@@ -13,6 +13,7 @@ import {
   runTransaction,
   arrayUnion,
   serverTimestamp,
+  getDoc,
 } from "firebase/firestore";
 import { db } from "../config/firebase";
 import { ArrowRightIcon, ArrowLeftIcon } from "@heroicons/react/24/outline";
@@ -70,6 +71,18 @@ const getFirebaseErrorMessage = (errorCode: string): string => {
   return errorMessages[errorCode] || "An error occurred. Please try again.";
 };
 
+async function getCityStateFromCoords(lat: number, lng: number) {
+  const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10&addressdetails=1`;
+  const res = await fetch(url, {
+    headers: { "User-Agent": "SwanAI/1.0 (contact@swanai.com)" },
+  });
+  const data = await res.json();
+  return {
+    city: data.address.city || data.address.town || data.address.village || "",
+    state: data.address.state || "",
+  };
+}
+
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -106,6 +119,14 @@ export default function Login() {
 
         // Get user coordinates
         const coords = await getUserCoordinates();
+        // Get city and state from coordinates
+        const { city, state } = await getCityStateFromCoords(
+          coords.lat,
+          coords.lng
+        );
+
+        // Set user type (default to 'free', can be changed based on your logic)
+        const userType = "free"; // Change this if you have logic for paid users
 
         // Create the user document in Firestore
         const userData = {
@@ -118,7 +139,10 @@ export default function Login() {
           isAdmin: false,
           notificationsEnabled: false,
           tokensUsed: 0,
-          locationData: [],
+          locationData: [{ lat: coords.lat, lng: coords.lng }],
+          city,
+          state,
+          type: userType,
         };
 
         // Use a transaction to update both user document and analytics
@@ -131,12 +155,14 @@ export default function Login() {
           const today = new Date().toISOString().split("T")[0];
           const analyticsRef = doc(db, "analytics", "global");
 
-          // Update usersByDay with increment and add location data
+          // Increment usersPerDay by type
           transaction.set(
             analyticsRef,
             {
-              usersByDay: {
-                [today]: increment(1),
+              usersPerDay: {
+                [today]: {
+                  [userType]: increment(1),
+                },
               },
               // Add location data to the array
               locationData: arrayUnion({
@@ -161,8 +187,25 @@ export default function Login() {
           );
         });
 
-        // Navigate to dashboard after successful signup
-        navigate("/dashboard");
+        // Wait for user document to exist before navigating
+        const userRef = doc(db, "users", user.uid);
+        let userDocExists = false;
+        for (let i = 0; i < 10; i++) {
+          // Try for up to ~2 seconds
+          const snap = await getDoc(userRef);
+          if (snap.exists()) {
+            userDocExists = true;
+            break;
+          }
+          await new Promise((res) => setTimeout(res, 200)); // Wait 200ms
+        }
+        if (userDocExists) {
+          navigate("/dashboard");
+        } else {
+          // fallback: still navigate, but warn in console
+          console.warn("User doc not found after sign up, navigating anyway.");
+          navigate("/dashboard");
+        }
       } else {
         // Handle sign in
         const userCredential = await signInWithEmailAndPassword(
@@ -172,11 +215,25 @@ export default function Login() {
         );
         const user = userCredential.user;
 
-        // Update last login time
+        // Get existing user data first
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+        const existingData = userSnap.exists() ? userSnap.data() : {};
+
+        // Update last login time while preserving other data
         await setDoc(
-          doc(db, "users", user.uid),
+          userRef,
           {
-            lastLogin: new Date(),
+            ...existingData,
+            lastLogin: serverTimestamp(),
+            email: user.email || existingData.email || "",
+            firstName: existingData.firstName || "",
+            lastName: existingData.lastName || "",
+            phoneNumber: existingData.phoneNumber || "",
+            personality: existingData.personality || "",
+            aiRelationship: existingData.aiRelationship || "",
+            notificationsEnabled: existingData.notificationsEnabled || false,
+            tokensUsed: existingData.tokensUsed || 0,
           },
           { merge: true }
         );
@@ -194,23 +251,16 @@ export default function Login() {
   };
 
   const getUserCoordinates = async () => {
-    return new Promise<{ lat: number; lng: number }>((resolve) => {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (pos) =>
-            resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-          async () => {
-            const res = await fetch("https://ipapi.co/json/");
-            const data = await res.json();
-            resolve({ lat: data.latitude, lng: data.longitude });
-          }
-        );
-      } else {
-        fetch("https://ipapi.co/json/")
-          .then((res) => res.json())
-          .then((data) => resolve({ lat: data.latitude, lng: data.longitude }));
-      }
-    });
+    // Always use IP-based lookup, never prompt for browser geolocation
+    try {
+      const res = await fetch("https://ipapi.co/json/");
+      if (!res.ok) throw new Error("IP lookup failed");
+      const data = await res.json();
+      return { lat: data.latitude, lng: data.longitude };
+    } catch (error) {
+      console.warn("Failed to get coordinates, using defaults");
+      return { lat: 0, lng: 0 }; // Default coordinates
+    }
   };
 
   return (
