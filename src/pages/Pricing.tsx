@@ -15,7 +15,7 @@ const tiers = [
       "1 workspace",
     ],
     cta: "Get started for free",
-    to: "/signup",
+    to: "/login?mode=signup",
     highlight: false,
   },
   {
@@ -32,7 +32,7 @@ const tiers = [
       "Team collaboration (up to 10 members)",
     ],
     cta: "Start 7-day free trial",
-    to: "/signup",
+    to: "/login?mode=signup",
     highlight: true,
   },
   {
@@ -50,7 +50,7 @@ const tiers = [
       "Volume discounts available",
     ],
     cta: "Start Pay As You Go",
-    to: "/signup",
+    to: "/login?mode=signup",
     highlight: false,
     dark: true,
   },

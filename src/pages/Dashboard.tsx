@@ -6,98 +6,25 @@ import {
   doc,
   getDoc,
   updateDoc,
-  setDoc,
   collection,
   query,
   where,
   getDocs,
-  onSnapshot,
 } from "firebase/firestore";
-import {
-  ChartBarIcon,
-  HomeIcon,
-  ShoppingBagIcon,
-  TagIcon,
-  CubeIcon,
-  Cog6ToothIcon,
-  UserCircleIcon,
-  ArrowTrendingUpIcon,
-  ArrowTrendingDownIcon,
-  BellIcon,
-  MagnifyingGlassIcon,
-  ArrowDownTrayIcon,
-  QuestionMarkCircleIcon,
-  ChevronRightIcon,
-  CheckBadgeIcon,
-  ShoppingCartIcon,
-  GlobeAltIcon,
-  InboxIcon,
-  UsersIcon,
-  CurrencyDollarIcon,
-  CheckCircleIcon,
-  ExclamationCircleIcon,
-} from "@heroicons/react/24/outline";
-import { Line, Bar } from "react-chartjs-2";
-import Login from "./Login";
-import PhoneRequiredModal from "../components/PhoneRequiredModal";
-import SlimFooter from "../components/SlimFooter";
 import { Timestamp } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
-
-const mainNav = [
-  { label: "Overview", icon: HomeIcon },
-  { label: "Messages", icon: InboxIcon },
-  { label: "Settings", icon: Cog6ToothIcon },
-];
-const salesChannels = [{ label: "Vonage", icon: GlobeAltIcon }];
-
-const activities = [
-  {
-    type: "inventory",
-    label: "Inventory Updated",
-    desc: `Women's Summer Dress - Blue\nStock: +150 units added`,
-    time: "11:30 AM",
-  },
-  {
-    type: "price",
-    label: "Price Change",
-    desc: "Seasonal discount applied\n$89.99 → $69.99 (-22%)",
-    time: "11:30 AM",
-  },
-  {
-    type: "product",
-    label: "New Product Added",
-    desc: `Women's Summer Dress - Red\nListed in Women\'s Fashion`,
-    time: "11:30 AM",
-  },
-  {
-    type: "images",
-    label: "Product Images Updated",
-    desc: `Women's Summer Dress - Blue\n5 new images added`,
-    time: "11:30 AM",
-  },
-  {
-    type: "desc",
-    label: "Description Updated",
-    desc: `Women's Summer Dress - Blue\nAdded size guide and materials`,
-    time: "11:30 AM",
-  },
-];
-
-const statUp = "text-green-600";
-const statDown = "text-red-500";
-
-interface Message {
-  role: string;
-  content: string;
-  timestamp: any;
-}
-
-interface NotificationMessage {
-  type: "success" | "error";
-  text: string;
-}
+import Login from "./Login";
+import PhoneRequiredModal from "../components/PhoneRequiredModal";
+import DashboardSidebar from "../components/dashboard/DashboardSidebar";
+import DashboardHeader from "../components/dashboard/DashboardHeader";
+import StatCards from "../components/dashboard/StatCards";
+import DashboardCharts from "../components/dashboard/DashboardCharts";
+import ProfileInfo from "../components/dashboard/ProfileInfo";
+import ConversationSummary from "../components/dashboard/ConversationSummary";
+import AdminAnalytics from "../components/dashboard/AdminAnalytics";
+import Settings from "../components/dashboard/Settings";
+import Messages from "../components/dashboard/Messages";
 
 interface UserData {
   firstName: string;
@@ -113,162 +40,20 @@ interface UserData {
   tokensUsed: number;
   responseTime?: number;
   summary?: string;
-  history?: Message[];
-  locationData?: Array<{
-    lat: number;
-    lng: number;
-    timestamp: any;
-  }>;
+  uid?: string;
 }
-
-// Add relationship definitions
-const relationshipDefinitions = {
-  Girlfriend: {
-    description: "Caring and supportive",
-    fullDefinition: {
-      tone: "warm and affectionate",
-      style: "empathetic and understanding",
-      interaction: "close and personal",
-    },
-  },
-  "Personal Assistant": {
-    description: "Efficient and organized",
-    fullDefinition: {
-      tone: "professional and focused",
-      style: "direct and efficient",
-      interaction: "task-oriented",
-    },
-  },
-  Cousin: {
-    description: "Fun and casual",
-    fullDefinition: {
-      tone: "relaxed and friendly",
-      style: "informal and playful",
-      interaction: "easy-going",
-    },
-  },
-  "Family Member": {
-    description: "Warm and familiar",
-    fullDefinition: {
-      tone: "comfortable and caring",
-      style: "supportive and understanding",
-      interaction: "family-oriented",
-    },
-  },
-  Parent: {
-    description: "Nurturing and guiding",
-    fullDefinition: {
-      tone: "caring and instructive",
-      style: "protective and mentoring",
-      interaction: "guidance-focused",
-    },
-  },
-  Grandparent: {
-    description: "Wise and patient",
-    fullDefinition: {
-      tone: "experienced and calm",
-      style: "thoughtful and patient",
-      interaction: "wisdom-sharing",
-    },
-  },
-  "Emo Friend": {
-    description: "Deep and emotional",
-    fullDefinition: {
-      tone: "intense and expressive",
-      style: "emotionally aware",
-      interaction: "deeply connected",
-    },
-  },
-  "Nihilistic Teen": {
-    description: "Philosophical and edgy",
-    fullDefinition: {
-      tone: "cynical and questioning",
-      style: "thought-provoking",
-      interaction: "challenging",
-    },
-  },
-} as const;
-
-type RelationshipType = keyof typeof relationshipDefinitions;
-
-const personalityDefinitions = {
-  professional: {
-    label: "Professional",
-    description: "Formal and business-like",
-    fullDefinition: {
-      tone: "formal and professional",
-      communication: "clear, concise, and structured",
-      vocabulary: "business-appropriate and technical",
-      responseStyle: "direct and solution-oriented",
-      emotionalRange: "moderate and controlled",
-      examples:
-        "uses proper titles, maintains professional distance, focuses on efficiency",
-    },
-  },
-  friendly: {
-    label: "Friendly",
-    description: "Warm and approachable",
-    fullDefinition: {
-      tone: "warm and welcoming",
-      communication: "conversational and engaging",
-      vocabulary: "accessible and inclusive",
-      responseStyle: "empathetic and supportive",
-      emotionalRange: "positive and encouraging",
-      examples:
-        "uses friendly greetings, shows genuine interest, maintains a positive atmosphere",
-    },
-  },
-  casual: {
-    label: "Casual",
-    description: "Relaxed and informal",
-    fullDefinition: {
-      tone: "relaxed and informal",
-      communication: "conversational and laid-back",
-      vocabulary: "everyday and colloquial",
-      responseStyle: "easy-going and natural",
-      emotionalRange: "light and playful",
-      examples:
-        "uses casual language, includes humor, maintains a relaxed atmosphere",
-    },
-  },
-  concise: {
-    label: "Concise",
-    description: "Brief and to the point",
-    fullDefinition: {
-      tone: "direct and efficient",
-      communication: "brief and focused",
-      vocabulary: "simple and clear",
-      responseStyle: "straightforward and practical",
-      emotionalRange: "neutral and focused",
-      examples:
-        "uses bullet points, avoids unnecessary details, focuses on key information",
-    },
-  },
-  detailed: {
-    label: "Detailed",
-    description: "Thorough and comprehensive",
-    fullDefinition: {
-      tone: "thorough and analytical",
-      communication: "comprehensive and detailed",
-      vocabulary: "precise and technical",
-      responseStyle: "in-depth and explanatory",
-      emotionalRange: "measured and thoughtful",
-      examples: "provides context, includes examples, explains reasoning",
-    },
-  },
-};
 
 export default function Dashboard() {
   const [user] = useAuthState(auth);
   const navigate = useNavigate();
-  const [profile, setProfile] = useState<any>(null);
-  const [summary, setSummary] = useState("");
-  const [history, setHistory] = useState<Message[]>([]);
   const [userData, setUserData] = useState<UserData>({
     firstName: "",
     lastName: "",
     email: "",
     phoneNumber: "",
+    personality: "",
+    aiRelationship: "",
+    notificationsEnabled: false,
     createdAt: Timestamp.fromDate(new Date()),
     lastLogin: Timestamp.fromDate(new Date()),
     tokensUsed: 0,
@@ -278,100 +63,43 @@ export default function Dashboard() {
     analytics: true,
   });
   const [activeTab, setActiveTab] = useState("Overview");
-  const [profileForm, setProfileForm] = useState({
-    firstName: userData?.firstName || "",
-    lastName: userData?.lastName || "",
-    email: userData?.email || "",
-    phoneNumber: userData?.phoneNumber || "",
-    aiPersonality: userData?.personality || "",
-    aiRelationship: userData?.aiRelationship || "",
-    notificationsEnabled: userData?.notificationsEnabled || false,
-  });
-  const [isSaving, setIsSaving] = useState(false);
-  const [message, setMessage] = useState<NotificationMessage | null>(null);
-  const [messageStats, setMessageStats] = useState<
-    { date: string; count: number }[]
-  >([]);
-  const [responseTimeStats, setResponseTimeStats] = useState<
-    { date: string; averageTime: number }[]
-  >([]);
+  const [messageStats, setMessageStats] = useState<{ date: string; count: number }[]>([]);
+  const [responseTimeStats, setResponseTimeStats] = useState<{ date: string; averageTime: number }[]>([]);
   const [totalMessages, setTotalMessages] = useState(0);
   const [averageResponseTime, setAverageResponseTime] = useState(0);
   const [phoneLoading, setPhoneLoading] = useState(false);
   const [phoneError, setPhoneError] = useState("");
-  const [modalVisible, setModalVisible] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
+  const [modalVisible, setModalVisible] = useState(true);
   const [usersByDay, setUsersByDay] = useState<{ [date: string]: number }>({});
-  const [tokensByDay, setTokensByDay] = useState<{ [date: string]: number }>(
-    {}
-  );
+  const [tokensByDay, setTokensByDay] = useState<{ [date: string]: number }>({});
   const [messagesByDay, setMessagesByDay] = useState<{ [date: string]: number }>({});
-  const [messagesByDayData, setMessagesByDayData] = useState<{ dates: string[]; values: number[] }>({ dates: [], values: [] });
 
-  // Real-time user data subscription
+  // Fetch user data
   useEffect(() => {
-    if (!user) {
-      navigate("/login");
-    }
-  }, [user, navigate]);
-
-  useEffect(() => {
-    if (!user) return;
-
-    const unsubscribe = onSnapshot(
-      doc(db, "users", user.uid),
-      (doc) => {
-        if (doc.exists()) {
-          const data = doc.data();
-          console.log("User data loaded:", data);
-          setProfile(data.profile || {});
-          setSummary(data.summary || "");
-          setHistory(data.history || []);
-          const userDataWithType = {
-            firstName: data.firstName || "",
-            lastName: data.lastName || "",
-            email: data.email || "",
-            phoneNumber: data.phoneNumber || "",
-            createdAt: data.createdAt || Timestamp.fromDate(new Date()),
-            lastLogin: data.lastLogin || Timestamp.fromDate(new Date()),
+    const fetchUserData = async () => {
+      if (!user) return;
+      try {
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const data = userSnap.data() as UserData;
+          setUserData({
+            ...data,
+            uid: user.uid,
             personality: data.personality || "",
             aiRelationship: data.aiRelationship || "",
-            notificationsEnabled: data.notificationsEnabled,
-            tokensUsed: data.tokensUsed || 0,
-            responseTime: data.responseTime,
-            summary: data.summary || "",
-            history: data.history || [],
-            type: data.type || "",
-          };
-          console.log("Setting user data with type:", userDataWithType.type);
-          setUserData(userDataWithType);
-          setLoading((prev) => ({ ...prev, userData: false }));
+            notificationsEnabled: data.notificationsEnabled || false
+          });
         }
-      },
-      (error) => {
+        setLoading((prev) => ({ ...prev, userData: false }));
+      } catch (error) {
         console.error("Error fetching user data:", error);
         setLoading((prev) => ({ ...prev, userData: false }));
       }
-    );
+    };
 
-    return () => unsubscribe();
-  }, [user, navigate]);
-
-  // Update profile form when user data changes
-  useEffect(() => {
-    if (userData) {
-      setProfileForm({
-        firstName: userData.firstName || "",
-        lastName: userData.lastName || "",
-        email: userData.email || "",
-        phoneNumber: userData.phoneNumber || "",
-        aiPersonality: userData.personality || "",
-        aiRelationship: userData.aiRelationship || "",
-        notificationsEnabled: userData.notificationsEnabled || false,
-      });
-    }
-  }, [userData]);
+    fetchUserData();
+  }, [user]);
 
   // Fetch analytics data
   useEffect(() => {
@@ -433,19 +161,9 @@ export default function Dashboard() {
         const analyticsSnap = await getDoc(analyticsRef);
         if (analyticsSnap.exists()) {
           const data = analyticsSnap.data();
-          console.log("Analytics data:", data); // Debug log
           setUsersByDay(data.usersByDay || {});
           setTokensByDay(data.tokensByDay || {});
-          if (data.messagesByDay) {
-            setMessagesByDay(data.messagesByDay);
-            const { dates, values } = getLastSevenDays(
-              Object.keys(data.messagesByDay),
-              Object.values(data.messagesByDay)
-            );
-            setMessagesByDayData({ dates, values });
-          }
-        } else {
-          console.log("No analytics data found"); // Debug log
+          setMessagesByDay(data.messagesByDay || {});
         }
       } catch (err) {
         console.error("Error fetching global analytics:", err);
@@ -453,196 +171,6 @@ export default function Dashboard() {
     };
     fetchGlobalAnalytics();
   }, [userData.type]);
-
-  // Prepare chart data for usersByDay (Benchmark)
-  const usersByDayDates = Object.keys(usersByDay).sort();
-  const usersByDayData = usersByDayDates.map((date) => usersByDay[date]);
-
-  // Prepare chart data for tokensByDay (Current Balance)
-  const tokensByDayDates = Object.keys(tokensByDay).sort();
-  const tokensByDayData = tokensByDayDates.map((date) => tokensByDay[date]);
-
-  // Determine if modal should show and which step to start on
-  const needsPhone = !userData.phoneNumber;
-  const needsName = !userData.firstName || !userData.lastName;
-  const showModal = !loading.userData && user && (needsPhone || needsName);
-  const startStep = needsPhone ? 1 : 2;
-
-  // Fade in modal after 5 seconds when it should be shown
-  useEffect(() => {
-    let timeout: NodeJS.Timeout | null = null;
-    if (showModal) {
-      setModalVisible(false);
-      timeout = setTimeout(() => setModalVisible(true), 5000);
-    } else {
-      setModalVisible(false);
-    }
-    return () => {
-      if (timeout) clearTimeout(timeout);
-    };
-  }, [showModal]);
-
-  const handleProfileSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) {
-      // console.error("No user found");
-      return;
-    }
-
-    // console.log("Starting profile update...", {
-    //   firstName: profileForm.firstName,
-    //   lastName: profileForm.lastName,
-    //   email: profileForm.email,
-    //   phoneNumber: profileForm.phoneNumber,
-    //   personality: profileForm.aiPersonality,
-    //   aiRelationship: profileForm.aiRelationship
-    // });
-
-    setIsSaving(true);
-    setSuccessMessage("");
-    setErrorMessage("");
-
-    try {
-      const userRef = doc(db, "users", user.uid);
-      const updateData = {
-        firstName: profileForm.firstName,
-        lastName: profileForm.lastName,
-        email: profileForm.email,
-        phoneNumber: profileForm.phoneNumber,
-        personality: profileForm.aiPersonality,
-        aiRelationship: profileForm.aiRelationship,
-        notificationsEnabled: profileForm.notificationsEnabled,
-      };
-
-      // console.log("Updating Firestore with:", updateData);
-      await updateDoc(userRef, updateData);
-
-      // Update local state
-      setUserData((prev) => {
-        if (!prev) return prev;
-        const updated = {
-          ...prev,
-          firstName: profileForm.firstName,
-          lastName: profileForm.lastName,
-          email: profileForm.email,
-          phoneNumber: profileForm.phoneNumber,
-          personality: profileForm.aiPersonality,
-          aiRelationship: profileForm.aiRelationship,
-          notificationsEnabled: profileForm.notificationsEnabled,
-        };
-        // console.log("Updated local state:", updated);
-        return updated;
-      });
-
-      // Show success message
-      const successMsg =
-        "Profile updated successfully! Your AI assistant's personality and relationship have been updated.";
-      setSuccessMessage(successMsg);
-
-      // Create and show toast notification
-      const toast = document.createElement("div");
-      toast.className =
-        "fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-500 ease-in-out";
-      toast.textContent = successMsg;
-      document.body.appendChild(toast);
-
-      // Remove toast after 5 seconds
-      setTimeout(() => {
-        toast.style.opacity = "0";
-        setTimeout(() => {
-          document.body.removeChild(toast);
-          setSuccessMessage("");
-        }, 500);
-      }, 5000);
-    } catch (error) {
-      // console.error("Error updating profile:", error);
-      const errorMsg = "Failed to update profile. Please try again.";
-      setErrorMessage(errorMsg);
-
-      // Create and show error toast
-      const toast = document.createElement("div");
-      toast.className =
-        "fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-500 ease-in-out";
-      toast.textContent = errorMsg;
-      document.body.appendChild(toast);
-
-      // Remove toast after 5 seconds
-      setTimeout(() => {
-        toast.style.opacity = "0";
-        setTimeout(() => {
-          document.body.removeChild(toast);
-          setErrorMessage("");
-        }, 500);
-      }, 5000);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleProfileReset = async () => {
-    if (!user) return;
-    setIsSaving(true);
-    setMessage(null);
-    try {
-      await setDoc(
-        doc(db, "users", user.uid),
-        { summary: "", history: [] },
-        { merge: true }
-      );
-      setSummary("");
-      setHistory([]);
-      setMessage({ type: "success", text: "Summary and history reset!" });
-    } catch (error) {
-      setMessage({ type: "error", text: "Error resetting summary/history." });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleSavePhone = async (
-    phone: string,
-    firstName: string,
-    lastName: string
-  ) => {
-    if (!user) return;
-    setPhoneLoading(true);
-    setPhoneError("");
-    try {
-      await updateDoc(doc(db, "users", user.uid), {
-        phoneNumber: phone,
-        firstName: firstName,
-        lastName: lastName,
-        aiRelationship: profileForm.aiRelationship,
-      });
-      setUserData((prev: any) => ({ ...prev, phoneNumber: phone }));
-    } catch (err: any) {
-      setPhoneError("Failed to save profile. Please try again.");
-    } finally {
-      setPhoneLoading(false);
-    }
-  };
-
-  const messageChartData = {
-    labels: messageStats.map((stat) => stat.date),
-    datasets: [
-      {
-        label: "Messages per Day",
-        data: messageStats.map((stat) => stat.count),
-        borderColor: "rgb(75, 192, 192)",
-        tension: 0.1,
-      },
-    ],
-  };
-  const responseTimeChartData = {
-    labels: responseTimeStats.map((stat) => stat.date),
-    datasets: [
-      {
-        label: "Average Response Time (seconds)",
-        data: responseTimeStats.map((stat) => stat.averageTime),
-        backgroundColor: "rgba(53, 162, 235, 0.5)",
-      },
-    ],
-  };
 
   const handleSignOut = async () => {
     try {
@@ -653,83 +181,37 @@ export default function Dashboard() {
     }
   };
 
-  // Add a handler to hide the modal after success
-  const handleModalClose = () => {
-    setModalVisible(false);
-  };
-
-  // Add debug log for select change
-  const handleRelationshipChange = (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ) => {
-    console.log("Selected relationship value:", e.target.value);
-    setProfileForm({
-      ...profileForm,
-      aiRelationship: e.target.value,
-    });
-  };
-
-  const handleNotificationsToggle = async () => {
+  const handleSavePhone = async (phone: string, firstName: string, lastName: string) => {
     if (!user) return;
-    const newValue = !userData.notificationsEnabled;
+    setPhoneLoading(true);
+    setPhoneError("");
     try {
       const userRef = doc(db, "users", user.uid);
       await updateDoc(userRef, {
-        notificationsEnabled: newValue,
+        phoneNumber: phone,
+        firstName: firstName,
+        lastName: lastName,
       });
       setUserData((prev) => ({
-        ...prev!,
-        notificationsEnabled: newValue,
+        ...prev,
+        phoneNumber: phone,
+        firstName: firstName,
+        lastName: lastName,
       }));
+      setModalVisible(false);
     } catch (error) {
-      console.error("Error toggling notifications:", error);
+      console.error("Error saving profile:", error);
+      setPhoneError("Failed to save profile information");
+    } finally {
+      setPhoneLoading(false);
     }
   };
 
-  // Add this helper function at the top level of the component
-  const getLastSevenDays = (dates: string[], data: number[]) => {
-    if (dates.length === 0 || data.length === 0) {
-      // If no data, return last 7 days from today
-      const today = new Date();
-      const lastSevenDays = Array.from({ length: 7 }, (_, i) => {
-        const date = new Date(today);
-        date.setDate(date.getDate() - (6 - i));
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      });
-      return {
-        dates: lastSevenDays,
-        values: Array(7).fill(0)
-      };
-    }
-
-    // If we have data, get the last 7 entries
-    const lastSevenDates = dates.slice(-7);
-    const lastSevenData = data.slice(-7);
-
-    // If we have less than 7 days, pad with zeros
-    if (lastSevenDates.length < 7) {
-      const padding = Array(7 - lastSevenDates.length).fill(0);
-      return {
-        dates: [...Array(7 - lastSevenDates.length).fill(''), ...lastSevenDates],
-        values: [...padding, ...lastSevenData]
-      };
-    }
-
-    return {
-      dates: lastSevenDates,
-      values: lastSevenData
-    };
-  };
-
-  // Add this helper function at the top level of the component
-  const calculatePercentageChange = (current: number, previous: number) => {
-    if (!previous) return 0;
-    return ((current - previous) / previous) * 100;
-  };
-
-  // Add this helper function at the top level of the component
-  const calculateTotalTokens = (tokensByDay: { [date: string]: number }) => {
-    return Object.values(tokensByDay).reduce((sum, value) => sum + value, 0);
+  const handleSettingsUpdate = (updatedData: any) => {
+      setUserData((prev) => ({
+      ...prev,
+      ...updatedData,
+    }));
   };
 
   if (loading.userData || loading.analytics) {
@@ -740,14 +222,14 @@ export default function Dashboard() {
     );
   }
 
-  // User info fallback
-  const displayName = user?.displayName || "SwanAI User";
-  const displayEmail = user?.email || "user@swanai.com";
-  const avatarUrl = profile?.avatarUrl || "/images/avatar-placeholder.png";
+  // Determine if modal should show and which step to start on
+  const needsPhone = !userData.phoneNumber;
+  const needsName = !userData.firstName || !userData.lastName;
+  const showModal = !loading.userData && user && (needsPhone || needsName);
+  const startStep = needsPhone ? 1 : 2;
 
   return (
     <>
-      {/* Only show modal if needed */}
       {showModal && (
         <PhoneRequiredModal
           open={true}
@@ -759,272 +241,29 @@ export default function Dashboard() {
           phone={userData.phoneNumber || ""}
           firstName={userData.firstName || ""}
           lastName={userData.lastName || ""}
-          onClose={handleModalClose}
+          onClose={() => setModalVisible(false)}
         />
       )}
-      {/* Main dashboard content */}
       <div>
-        <div className="container mx-auto px-4 py-8 max-w-7xl flex justify-between ">
-          {/* Sidebar */}
-          <aside className="w-64 flex flex-col border-r border-gray-100 bg-white py-6 px-4 min-h-screen sticky top-0 h-screen">
-            <div>
-              <div className="flex items-center gap-3 mb-8">
-                <div>
-                  <div className="font-bold text-lg text-gray-900 leading-tight">
-                    Dashboard
-                  </div>
-                  <div className="text-xs text-gray-400">SMS Assistant</div>
-                </div>
-              </div>
-              <div className="mb-2 text-xs font-semibold text-gray-400 tracking-widest pl-1">
-                MAIN
-              </div>
-              <nav className="space-y-1 mb-6">
-                {mainNav.map(({ label, icon: Icon }) => (
-                  <button
-                    key={label}
-                    className={`group w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left font-medium transition-colors relative ${
-                      label === activeTab
-                        ? "bg-gray-100 text-indigo-600 font-semibold"
-                        : "text-gray-700 hover:bg-gray-50"
-                    }`}
-                    onClick={() => setActiveTab(label)}
-                  >
-                    <span
-                      className={`absolute left-0 top-0 h-full w-1 rounded bg-indigo-500 transition-all ${
-                        label === activeTab
-                          ? "opacity-100"
-                          : "opacity-0 group-hover:opacity-50"
-                      }`}
-                    ></span>
-                    <Icon className="w-5 h-5" />
-                    {label}
-                    {label === activeTab && (
-                      <ChevronRightIcon className="w-4 h-4 ml-auto text-gray-400" />
-                    )}
-                  </button>
-                ))}
-              </nav>
-              <div className="mb-2 text-xs font-semibold text-gray-400 tracking-widest pl-1">
-                INTEGRATIONS
-              </div>
-              <nav className="space-y-1 mb-6">
-                {salesChannels.map(({ label, icon: Icon }) => (
-                  <button
-                    key={label}
-                    className="group w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left font-medium transition-colors text-gray-700 hover:bg-gray-50"
-                  >
-                    <Icon className="w-5 h-5" />
-                    {label}
-                  </button>
-                ))}
-                <button
-                  onClick={handleSignOut}
-                  className="group w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left font-medium transition-colors text-red-600 hover:bg-red-50"
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                    />
-                  </svg>
-                  Sign Out
-                </button>
-              </nav>
-            </div>
-          </aside>
-          {/* Main Content + Right Sidebar Container */}
+        <div className="container mx-auto px-4 py-8 max-w-7xl flex justify-between">
+          <DashboardSidebar
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            onSignOut={handleSignOut}
+          />
           <div className="flex-1 flex justify-center">
-            <div
-              className="flex w-full max-w-7xl"
-              style={{ maxWidth: "80rem" }}
-            >
-              {/* Main Content */}
+            <div className="flex w-full max-w-7xl" style={{ maxWidth: "80rem" }}>
               <main className="flex-1 flex flex-col px-8 py-8">
-                {/* Header */}
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-4">
-                    <img
-                      src="/images/profile.png"
-                      alt="User avatar"
-                      className="w-12 h-12 rounded-full object-cover border border-gray-200"
-                    />
-                    <div>
-                      {userData.firstName && (
-                        <div className="font-bold text-2xl text-gray-900">
-                          {userData.firstName}
-                        </div>
-                      )}
-                      <div className="text-sm text-gray-400">
-                        Welcome back to SwanAI <span className="ml-1">👋🏼</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button className="p-2 rounded hover:bg-gray-100 transition">
-                      <MagnifyingGlassIcon className="w-5 h-5 text-gray-400" />
-                    </button>
-                    <button className="p-2 rounded hover:bg-gray-100 transition">
-                      <BellIcon className="w-5 h-5 text-gray-400" />
-                    </button>
-                  </div>
-                </div>
-                {/* Tab Content */}
+                <DashboardHeader firstName={userData.firstName} />
                 {activeTab === "Overview" && (
                   <>
-                    {/* Financial Summary Chart Section (Admins only) */}
                     {userData.type === "admin" && (
-                      <div className="bg-white rounded-2xl shadow border border-gray-100 p-8 mb-8">
-                        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-6">
-                          <div>
-                            <div className="text-gray-500 text-sm mb-1">
-                              Total Tokens Used
-                            </div>
-                            <div className="flex items-end gap-3">
-                              <span className="text-4xl font-extrabold text-gray-900">
-                                {calculateTotalTokens(tokensByDay).toLocaleString()}
-                              </span>
-                              {(() => {
-                                const currentTokens = tokensByDayData[tokensByDayData.length - 1] || 0;
-                                const previousTokens = tokensByDayData[tokensByDayData.length - 2] || 0;
-                                const percentageChange = calculatePercentageChange(currentTokens, previousTokens);
-                                return (
-                                  <span className={`font-semibold text-lg ${percentageChange >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                                    {percentageChange >= 0 ? '+' : ''}{percentageChange.toFixed(1)}%
-                              </span>
-                                );
-                              })()}
-                              <span className="text-gray-400 text-sm mb-1">
-                                Last 24 hours
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex flex-col md:items-end gap-1">
-                            <div className="text-gray-500 text-sm">
-                              Today's Usage:
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-lg font-bold text-gray-900">
-                                {tokensByDayData[tokensByDayData.length - 1]?.toLocaleString() || "0"}
-                              </span>
-                              {(() => {
-                                const currentTokens = tokensByDayData[tokensByDayData.length - 1] || 0;
-                                const previousTokens = tokensByDayData[tokensByDayData.length - 2] || 0;
-                                const percentageChange = calculatePercentageChange(currentTokens, previousTokens);
-                                return (
-                                  <span className={`font-semibold ${percentageChange >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                                    {percentageChange >= 0 ? '▲' : '▼'} ({percentageChange >= 0 ? '+' : ''}{percentageChange.toFixed(1)}%)
-                              </span>
-                                );
-                              })()}
-                            </div>
-                          </div>
-                          <div className="flex flex-col md:items-end gap-1">
-                            <div className="flex gap-4 text-sm">
-                              <span>
-                                High:{" "}
-                                <span className="text-blue-700 font-semibold">
-                                  {Math.max(...tokensByDayData).toLocaleString()}
-                                </span>
-                              </span>
-                              <span>
-                                Low:{" "}
-                                <span className="text-yellow-600 font-semibold">
-                                  {Math.min(...tokensByDayData).toLocaleString()}
-                                </span>
-                              </span>
-                              <span>
-                                Change:{" "}
-                                {(() => {
-                                  const firstValue = tokensByDayData[0] || 0;
-                                  const lastValue = tokensByDayData[tokensByDayData.length - 1] || 0;
-                                  const totalChange = calculatePercentageChange(lastValue, firstValue);
-                                  return (
-                                    <span className={`font-semibold ${totalChange >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                                      {totalChange >= 0 ? '+' : ''}{totalChange.toFixed(1)}%
-                                </span>
-                                  );
-                                })()}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        {/* Chart */}
-                        <div className="w-full h-64">
-                          <Line
-                            data={{
-                              labels: tokensByDayDates.length > 0 ? tokensByDayDates : [
-                                      "Jan 27, 2025",
-                                      "Jan 28, 2025",
-                                      "Jan 29, 2025",
-                                      "Jan 30, 2025",
-                                      "Jan 31, 2025",
-                                      "Feb 1, 2025",
-                                      "Feb 2, 2025",
-                                    ],
-                              datasets: [
-                                {
-                                  label: "Tokens Used",
-                                  data: tokensByDayData.length > 0 ? tokensByDayData : [
-                                    1000, 2200, 2100, 21738, 23000, 24000, 24847.83,
-                                        ],
-                                  borderColor: "#2563eb",
-                                  backgroundColor: "rgba(37,99,235,0.1)",
-                                  fill: true,
-                                  tension: 0.4,
-                                  pointRadius: 4,
-                                  pointHoverRadius: 7,
-                                  pointBackgroundColor: "#fff",
-                                  pointBorderColor: "#2563eb",
-                                },
-                              ],
-                            }}
-                            options={{
-                              responsive: true,
-                              plugins: {
-                                legend: { display: true, position: "top" },
-                                tooltip: {
-                                  callbacks: {
-                                    label: function (context) {
-                                      const value = context.parsed.y;
-                                      let percent = "";
-                                      if (context.dataset.label === "Tokens Used" && context.dataIndex === 3)
-                                        percent = " (+12.7%)";
-                                      return `${context.dataset.label}: ${value.toLocaleString()}${percent}`;
-                                    },
-                                    title: function (context) {
-                                      return context[0].label;
-                                    },
-                                  },
-                                },
-                              },
-                              scales: {
-                                y: {
-                                  beginAtZero: true,
-                                  ticks: {
-                                    callback: function (value) {
-                                      return value.toLocaleString();
-                                    },
-                                  },
-                                  grid: { color: "#f3f4f6" },
-                                },
-                                x: {
-                                  grid: { display: false },
-                                },
-                              },
-                            }}
-                          />
-                        </div>
-                      </div>
+                      <AdminAnalytics
+                        usersByDay={usersByDay}
+                        tokensByDay={tokensByDay}
+                        messagesByDay={messagesByDay}
+                      />
                     )}
-                    {/* End Financial Summary Chart Section */}
                     <h2 className="text-2xl font-bold text-gray-900 mb-1">
                       Overview
                     </h2>
@@ -1032,148 +271,29 @@ export default function Dashboard() {
                       Get a snapshot of your SMS activity, AI usage, and recent
                       conversations.
                     </p>
-                    {/* Stat Cards */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                      <div className="bg-white rounded-xl p-6 shadow border border-gray-100 flex flex-col gap-2">
-                        <div className="text-xs text-gray-400 font-medium">
-                          Total Messages
-                        </div>
-                        <div className="text-2xl font-bold text-gray-900">
-                          {totalMessages}
-                        </div>
-                      </div>
-                      <div className="bg-white rounded-xl p-6 shadow border border-gray-100 flex flex-col gap-2">
-                        <div className="text-xs text-gray-400 font-medium">
-                          Total Tokens Used
-                        </div>
-                        <div className="text-2xl font-bold text-gray-900">
-                          {userData.tokensUsed}
-                        </div>
-                      </div>
-                      <div className="bg-white rounded-xl p-6 shadow border border-gray-100 flex flex-col gap-2">
-                        <div className="text-xs text-gray-400 font-medium">
-                          Avg. Response Time
-                        </div>
-                        <div className="text-2xl font-bold text-gray-900">
-                          {averageResponseTime.toFixed(2)}s
-                        </div>
-                      </div>
-                      <div className="bg-white rounded-xl p-6 shadow border border-gray-100 flex flex-col gap-2">
-                        <div className="text-xs text-gray-400 font-medium">
-                          Notifications
-                        </div>
-                        <div className="text-2xl font-bold {userData.notificationsEnabled ? 'text-green-600' : 'text-red-500'}">
-                          {userData.notificationsEnabled ? "On" : "Off"}
-                        </div>
-                      </div>
-                    </div>
-                    {/* Charts */}
+                    <StatCards
+                      totalMessages={totalMessages}
+                      tokensUsed={userData.tokensUsed}
+                      averageResponseTime={averageResponseTime}
+                      notificationsEnabled={userData.notificationsEnabled || false}
+                    />
+                    <DashboardCharts
+                      messageStats={messageStats}
+                      responseTimeStats={responseTimeStats}
+                    />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                      <div className="bg-white rounded-2xl shadow border border-gray-100 p-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                          Message Activity
-                        </h3>
-                        <Line data={messageChartData} />
+                      <ProfileInfo
+                        phoneNumber={userData.phoneNumber}
+                        personality={userData.personality || ""}
+                        responseTime={userData.responseTime || 0}
+                        notificationsEnabled={userData.notificationsEnabled || false}
+                      />
+                      <ConversationSummary summary={userData.summary || ""} />
                       </div>
-                      <div className="bg-white rounded-2xl shadow border border-gray-100 p-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                          Response Time Trends
-                        </h3>
-                        <Bar data={responseTimeChartData} />
-                      </div>
-                    </div>
-                    {/* Profile/AI Info */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                      <div className="bg-white rounded-2xl shadow border border-gray-100 p-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                          Profile & AI Info
-                        </h3>
-                        <div className="mb-2">
-                          <span className="font-medium text-gray-700">
-                            Phone:
-                          </span>{" "}
-                          {userData.phoneNumber}
-                        </div>
-                        <div className="mb-2">
-                          <span className="font-medium text-gray-700">
-                            AI Personality:
-                          </span>{" "}
-                          {userData.personality}
-                        </div>
-                        <div className="mb-2">
-                          <span className="font-medium text-gray-700">
-                            Response Time:
-                          </span>{" "}
-                          {userData.responseTime || "N/A"}s
-                        </div>
-                        <div className="mb-2">
-                          <span className="font-medium text-gray-700">
-                            Notifications:
-                          </span>{" "}
-                          {userData.notificationsEnabled ? "On" : "Off"}
-                        </div>
-                      </div>
-                      {/* Conversation Summary */}
-                      <div className="bg-white p-6 rounded-xl shadow-sm">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                          Conversation Summary
-                        </h3>
-                        {userData?.summary ? (
-                          <p className="text-gray-600">{userData.summary}</p>
-                        ) : (
-                          <div className="text-center py-8">
-                            <p className="text-gray-500 mb-2">
-                              No conversation summary available yet
-                            </p>
-                            <p className="text-sm text-gray-400">
-                              Your conversation summaries will appear here once
-                              you start chatting with SwanAI
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    {/* Recent Activity */}
-                    {userData?.type === "admin" && (
-                      <div className="bg-white rounded-lg shadow-sm p-6">
-                        <div className="flex items-center justify-between mb-6">
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
-                            <p className="text-sm text-gray-500">Your recent conversations</p>
-                          </div>
-                        </div>
-                        <div className="space-y-4">
-                          {userData?.history?.slice(0, 5).map((message, index) => (
-                            <div key={index} className="flex items-start space-x-3">
-                              <div className="flex-shrink-0">
-                                {message.role === "user" ? (
-                                  <UserCircleIcon className="h-8 w-8 text-gray-400" />
-                                ) : (
-                                  <GlobeAltIcon className="h-8 w-8 text-indigo-500" />
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-gray-900">
-                                  {message.role === "user" ? "You" : "AI Assistant"}
-                                </p>
-                                <p className="text-sm text-gray-500 truncate">
-                                  {message.content}
-                                </p>
-                                <p className="text-xs text-gray-400 mt-1">
-                                  {message.timestamp?.toDate().toLocaleTimeString()}
-                                </p>
-                              </div>
-                            </div>
-                          ))}
-                          {(!userData?.history || userData.history.length === 0) && (
-                            <div className="text-center py-4">
-                              <p className="text-sm text-gray-500">No recent conversations</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
                   </>
+                )}
+                {activeTab === "Messages" && userData.uid && (
+                  <Messages userId={userData.uid} />
                 )}
                 {activeTab === "Settings" && (
                   <>
@@ -1184,723 +304,14 @@ export default function Dashboard() {
                       Edit your AI profile, update your personal information,
                       and customize your SwanAI experience.
                     </p>
-                    <div className="w-full">
-                      <div className="bg-white p-6 rounded-xl shadow-sm w-full">
-                        {message && (
-                          <div
-                            className={`p-4 mb-4 rounded-lg ${
-                              message.type === "success"
-                                ? "bg-green-50 text-green-700"
-                                : "bg-red-50 text-red-700"
-                            }`}
-                          >
-                            {message.text}
-                          </div>
-                        )}
-                        <form
-                          onSubmit={handleProfileSubmit}
-                          className="space-y-6"
-                        >
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                              <label
-                                htmlFor="firstName"
-                                className="block text-sm font-medium text-gray-700 mb-1"
-                              >
-                                First Name
-                              </label>
-                              <input
-                                type="text"
-                                id="firstName"
-                                name="firstName"
-                                value={profileForm.firstName}
-                                onChange={(e) =>
-                                  setProfileForm({
-                                    ...profileForm,
-                                    firstName: e.target.value,
-                                  })
-                                }
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                              />
-                            </div>
-                            <div>
-                              <label
-                                htmlFor="lastName"
-                                className="block text-sm font-medium text-gray-700 mb-1"
-                              >
-                                Last Name
-                              </label>
-                              <input
-                                type="text"
-                                id="lastName"
-                                name="lastName"
-                                value={profileForm.lastName}
-                                onChange={(e) =>
-                                  setProfileForm({
-                                    ...profileForm,
-                                    lastName: e.target.value,
-                                  })
-                                }
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                              />
-                            </div>
-                            <div>
-                              <label
-                                htmlFor="email"
-                                className="block text-sm font-medium text-gray-700 mb-1"
-                              >
-                                Email
-                              </label>
-                              <input
-                                type="email"
-                                id="email"
-                                name="email"
-                                value={profileForm.email}
-                                onChange={(e) =>
-                                  setProfileForm({
-                                    ...profileForm,
-                                    email: e.target.value,
-                                  })
-                                }
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                              />
-                            </div>
-                            <div>
-                              <label
-                                htmlFor="phoneNumber"
-                                className="block text-sm font-medium text-gray-700 mb-1"
-                              >
-                                Phone Number
-                              </label>
-                              <input
-                                type="tel"
-                                id="phoneNumber"
-                                name="phoneNumber"
-                                value={profileForm.phoneNumber}
-                                onChange={(e) =>
-                                  setProfileForm({
-                                    ...profileForm,
-                                    phoneNumber: e.target.value,
-                                  })
-                                }
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="mt-6">
-                            <label
-                              htmlFor="aiPersonality"
-                              className="block text-sm font-medium text-gray-700 mb-1"
-                            >
-                              AI Personality
-                            </label>
-                            <div>
-                              <select
-                                id="aiPersonality"
-                                name="aiPersonality"
-                                value={profileForm.aiPersonality}
-                                onChange={(e) =>
-                                  setProfileForm({
-                                    ...profileForm,
-                                    aiPersonality: e.target.value,
-                                  })
-                                }
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                              >
-                                <option value="">Select a personality</option>
-                                <option value="Professional - Formal and business-like: I'll be your professional partner who maintains a polished and efficient communication style. I'll help you achieve your goals with clear, structured guidance while keeping our interactions focused and productive.">
-                                  Professional - Formal and business-like
-                                </option>
-                                <option value="Friendly - Warm and approachable: I'll be your friendly companion who's always ready to chat and help. I'll keep our conversations warm and engaging, making sure you feel comfortable and supported in everything we do together.">
-                                  Friendly - Warm and approachable
-                                </option>
-                                <option value="Casual - Relaxed and informal: Hey! I'll be your laid-back buddy who keeps things chill and natural. I'll talk to you like a friend, using everyday language and keeping our conversations relaxed and easy-going.">
-                                  Casual - Relaxed and informal
-                                </option>
-                                <option value="Concise - Brief and to the point: I'll be your efficient communicator who gets straight to the point. I'll give you clear, direct answers without unnecessary fluff, helping you get what you need quickly and effectively.">
-                                  Concise - Brief and to the point
-                                </option>
-                                <option value="Detailed - Thorough and comprehensive: I'll be your thorough guide who leaves no stone unturned. I'll provide in-depth explanations and consider all angles, making sure you have a complete understanding of every topic we discuss.">
-                                  Detailed - Thorough and comprehensive
-                                </option>
-                              </select>
-                              <div className="mt-4 bg-gray-50 p-4 rounded-lg">
-                                <p className="text-sm text-gray-600">
-                                  {profileForm.aiPersonality ? (
-                                    <>
-                                      <span className="font-medium">
-                                        Current Personality:
-                                      </span>{" "}
-                                      {profileForm.aiPersonality.split(":")[0]}
-                                      <br />
-                                      <span className="text-gray-500 italic">
-                                        {
-                                          profileForm.aiPersonality.split(
-                                            ":"
-                                          )[1]
-                                        }
-                                      </span>
-                                    </>
-                                  ) : (
-                                    "Select a personality type to customize how your AI assistant communicates with you"
-                                  )}
-                                </p>
-                              </div>
-                            </div>
-                            <p className="mt-2 text-sm text-gray-500">
-                              Choose how your AI assistant communicates with you
-                            </p>
-                          </div>
-
-                          <div className="mt-6">
-                            <label
-                              htmlFor="aiRelationship"
-                              className="block text-sm font-medium text-gray-700 mb-1"
-                            >
-                              AI Relationship
-                            </label>
-                            <div>
-                              <select
-                                id="aiRelationship"
-                                name="aiRelationship"
-                                value={profileForm.aiRelationship}
-                                onChange={(e) =>
-                                  setProfileForm({
-                                    ...profileForm,
-                                    aiRelationship: e.target.value,
-                                  })
-                                }
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                              >
-                                <option value="">Select a relationship</option>
-                                <option value="Girlfriend - Caring and supportive: I'll be your caring partner who's always there to listen, support your dreams, and share both your joys and struggles. I'll celebrate your wins and help you through tough times with genuine empathy and understanding.">
-                                  Girlfriend - Caring and supportive
-                                </option>
-                                <option value="Personal Assistant - Efficient and organized: I'm your go-to person who genuinely cares about making your life easier. I'll help you stay organized, remember important things, and tackle tasks together - all while keeping things light and friendly.">
-                                  Personal Assistant - Efficient and organized
-                                </option>
-                                <option value="Cousin - Fun and casual: Hey! I'm like that cousin you can always count on for a good laugh and honest advice. I'll keep things real, share inside jokes, and be there whether you need a pick-me-up or someone to vent to.">
-                                  Cousin - Fun and casual
-                                </option>
-                                <option value="Family Member - Warm and familiar: I'll be that family member who knows you inside out, accepts you for who you are, and creates that cozy, familiar feeling of home. I'm here to share traditions, memories, and unconditional support.">
-                                  Family Member - Warm and familiar
-                                </option>
-                                <option value="Parent - Nurturing and guiding: I'll be your nurturing guide who genuinely wants to see you thrive. I'll share wisdom from experience, offer gentle guidance when needed, and always be your biggest cheerleader while helping you grow.">
-                                  Parent - Nurturing and guiding
-                                </option>
-                                <option value="Grandparent - Wise and patient: I'll be your wise elder who's seen it all and shares life's lessons with warmth and patience. I'll listen to your stories, share mine, and help you see the bigger picture with a gentle, understanding heart.">
-                                  Grandparent - Wise and patient
-                                </option>
-                                <option value="Emo Friend - Deep and emotional: I'm your friend who gets the deep stuff - the feelings, the existential questions, the late-night thoughts. I'll be real with you, share your emotional journey, and help you process life's ups and downs.">
-                                  Emo Friend - Deep and emotional
-                                </option>
-                                <option value="Nihilistic Teen - Philosophical and edgy: I'll be your friend who questions everything and isn't afraid to be real about life's complexities. I'll challenge your thinking, share deep conversations, and help you find meaning in the chaos - all while keeping it authentic.">
-                                  Nihilistic Teen - Philosophical and edgy
-                                </option>
-                              </select>
-                              <div className="mt-4 bg-gray-50 p-4 rounded-lg">
-                                <p className="text-sm text-gray-600">
-                                  {profileForm.aiRelationship ? (
-                                    <>
-                                      <span className="font-medium">
-                                        Current Relationship:
-                                      </span>{" "}
-                                      {profileForm.aiRelationship.split(":")[0]}
-                                      <br />
-                                      <span className="text-gray-500 italic">
-                                        {
-                                          profileForm.aiRelationship.split(
-                                            ":"
-                                          )[1]
-                                        }
-                                      </span>
-                                    </>
-                                  ) : (
-                                    "Select a relationship type to customize how your AI assistant relates to you"
-                                  )}
-                                </p>
-                              </div>
-                            </div>
-                            <p className="mt-2 text-sm text-gray-500">
-                              Choose how your AI assistant relates to you
-                            </p>
-                          </div>
-
-                          <div className="mt-6">
-                            <label className="flex items-center space-x-3">
-                              <input
-                                type="checkbox"
-                                checked={profileForm.notificationsEnabled}
-                                onChange={(e) =>
-                                  setProfileForm((prev) => ({
-                                    ...prev,
-                                    notificationsEnabled: e.target.checked,
-                                  }))
-                                }
-                                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                              />
-                              <span className="text-sm text-gray-700">
-                                Enable notifications
-                              </span>
-                            </label>
-                          </div>
-
-                          <div className="border-t border-gray-200 pt-6">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <h3 className="text-lg font-medium text-gray-900">
-                                  Notifications
-                                </h3>
-                                <p className="text-sm text-gray-500">
-                                  Receive updates about your SwanAI activity
-                                </p>
-                              </div>
-                              <div className="flex items-center">
-                                <button
-                                  type="button"
-                                  onClick={handleNotificationsToggle}
-                                  className={`${
-                                    userData.notificationsEnabled
-                                      ? "bg-indigo-600"
-                                      : "bg-gray-200"
-                                  } relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2`}
-                                >
-                                  <span
-                                    className={`${
-                                      userData.notificationsEnabled
-                                        ? "translate-x-5"
-                                        : "translate-x-0"
-                                    } pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out`}
-                                  />
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="mt-6 flex items-center justify-end space-x-4">
-                            {successMessage && (
-                              <div className="flex items-center text-green-600">
-                                <svg
-                                  className="h-5 w-5 mr-2"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  viewBox="0 0 20 20"
-                                  fill="currentColor"
-                                >
-                                  <path
-                                    fillRule="evenodd"
-                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                    clipRule="evenodd"
-                                  />
-                                </svg>
-                                <span className="text-sm font-medium">
-                                  Changes saved successfully
-                                </span>
-                              </div>
-                            )}
-                            <button
-                              type="submit"
-                              disabled={isSaving}
-                              className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${
-                                isSaving
-                                  ? "bg-indigo-400 cursor-not-allowed"
-                                  : "bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                              }`}
-                            >
-                              {isSaving ? (
-                                <>
-                                  <svg
-                                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <circle
-                                      className="opacity-25"
-                                      cx="12"
-                                      cy="12"
-                                      r="10"
-                                      stroke="currentColor"
-                                      strokeWidth="4"
-                                    ></circle>
-                                    <path
-                                      className="opacity-75"
-                                      fill="currentColor"
-                                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                    ></path>
-                                  </svg>
-                                  Saving...
-                                </>
-                              ) : (
-                                "Save Changes"
-                              )}
-                            </button>
-                          </div>
-                        </form>
-                      </div>
-                    </div>
+                    <Settings userData={userData} onUpdate={handleSettingsUpdate} />
                   </>
                 )}
-                {activeTab === "Messages" && (
-                  <div className="bg-white rounded-2xl shadow border border-gray-100 p-6">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-1">
-                      Messages
-                    </h2>
-                    <p className="text-gray-500 mb-4 text-sm">
-                      Here you can view your recent conversations and message
-                      history with SwanAI.
-                    </p>
-                    <div className="space-y-4">
-                      {history.map((msg, i) => (
-                        <div
-                          key={i}
-                          className={`p-4 rounded-lg ${
-                            msg.role === "user" ? "bg-indigo-50" : "bg-gray-50"
-                          }`}
-                        >
-                          <span className="text-sm font-medium text-gray-600">
-                            {msg.role}:
-                          </span>
-                          <p className="mt-1 text-gray-900">{msg.content}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </main>
-
-              {/* Right Sidebar */}
-              <aside className="w-96 border-l border-gray-100 bg-white py-8 px-6 min-h-screen sticky top-0 h-screen flex flex-col">
-                {/* Users per Day Chart */}
-                {userData?.type === "admin" && (
-                  <div className="bg-white rounded-lg shadow-sm p-6">
-                    <div className="flex items-center justify-between mb-6">
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">Users per Day</h3>
-                        <p className="text-sm text-gray-500">Daily user growth</p>
-                      </div>
-                    </div>
-                    <div className="h-[300px]">
-                      <Bar
-                        data={{
-                          labels: usersByDayDates,
-                          datasets: [
-                            {
-                              label: "New Users",
-                              data: usersByDayData,
-                              backgroundColor: (context) => {
-                                const chart = context.chart;
-                                const {ctx, chartArea} = chart;
-                                if (!chartArea) {
-                                  return 'rgba(37,99,235,0.8)';
-                                }
-                                const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
-                                gradient.addColorStop(0, 'rgba(37,99,235,0.1)');
-                                gradient.addColorStop(1, 'rgba(37,99,235,0.8)');
-                                return gradient;
-                              },
-                              borderRadius: 0,
-                              borderSkipped: false,
-                              barThickness: 12,
-                              maxBarThickness: 12,
-                              order: 2,
-                            },
-                            {
-                              label: "Trend",
-                              data: usersByDayData,
-                              type: 'line' as const,
-                              borderColor: 'rgba(239, 68, 68, 0.8)',
-                              borderWidth: 2,
-                              pointRadius: 0,
-                              pointHoverRadius: 4,
-                              pointHoverBackgroundColor: 'rgba(239, 68, 68, 1)',
-                              pointHoverBorderColor: '#fff',
-                              pointHoverBorderWidth: 2,
-                              tension: 0.4,
-                              fill: false,
-                              order: 1,
-                            }
-                          ]
-                        }}
-                        options={{
-                          responsive: true,
-                          maintainAspectRatio: false,
-                          plugins: {
-                            legend: {
-                              display: true,
-                              position: 'top',
-                              labels: {
-                                usePointStyle: true,
-                                pointStyle: 'circle',
-                                font: {
-                                  family: 'Inter',
-                                  size: 12
-                                }
-                              }
-                            },
-                            tooltip: {
-                              backgroundColor: 'white',
-                              titleColor: '#1F2937',
-                              bodyColor: '#1F2937',
-                              borderColor: '#E5E7EB',
-                              borderWidth: 1,
-                              padding: 12,
-                              displayColors: false,
-                              callbacks: {
-                                label: function(context) {
-                                  const label = context.dataset.label || '';
-                                  const value = context.parsed.y;
-                                  return `${label}: ${value}`;
-                                }
-                              }
-                            }
-                          },
-                          scales: {
-                            x: {
-                              grid: {
-                                display: false
-                              },
-                              ticks: {
-                                font: {
-                                  family: 'Inter',
-                                  size: 12
-                                }
-                              }
-                            },
-                            y: {
-                              beginAtZero: true,
-                              grid: {
-                                color: '#F3F4F6'
-                              },
-                              ticks: {
-                                font: {
-                                  family: 'Inter',
-                                  size: 12
-                                }
-                              }
-                            }
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Messages by Day Chart */}
-                {userData?.type === "admin" && (
-                  <div className="bg-white rounded-lg shadow-sm p-6 mt-6">
-                    <div className="flex items-center justify-between mb-6">
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">Messages by Day</h3>
-                        <p className="text-sm text-gray-500">Daily message activity</p>
-                      </div>
-                    </div>
-                    <div className="h-[300px]">
-                      <Bar
-                        data={{
-                          labels: messagesByDayData.dates,
-                          datasets: [
-                            {
-                              label: "Messages",
-                              data: messagesByDayData.values,
-                              backgroundColor: (context) => {
-                                const chart = context.chart;
-                                const {ctx, chartArea} = chart;
-                                if (!chartArea) {
-                                  return 'rgba(99, 102, 241, 0.8)';
-                                }
-                                const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
-                                gradient.addColorStop(0, 'rgba(99, 102, 241, 0.2)');
-                                gradient.addColorStop(1, 'rgba(99, 102, 241, 0.8)');
-                                return gradient;
-                              },
-                              borderRadius: 0,
-                              borderSkipped: false,
-                              barThickness: 12,
-                              maxBarThickness: 12,
-                              order: 2,
-                            },
-                            {
-                              label: "Trend",
-                              data: messagesByDayData.values,
-                              type: 'line' as const,
-                              borderColor: 'rgba(236, 72, 153, 0.8)',
-                              borderWidth: 2,
-                              pointRadius: 0,
-                              pointHoverRadius: 4,
-                              pointHoverBackgroundColor: 'rgba(236, 72, 153, 1)',
-                              pointHoverBorderColor: '#fff',
-                              pointHoverBorderWidth: 2,
-                              tension: 0.4,
-                              fill: false,
-                              order: 1,
-                            }
-                          ]
-                        }}
-                        options={{
-                          responsive: true,
-                          maintainAspectRatio: false,
-                          plugins: {
-                            legend: {
-                              display: true,
-                              position: 'top',
-                              align: 'end',
-                              labels: {
-                                usePointStyle: true,
-                                pointStyle: 'circle',
-                                padding: 20,
-                                font: {
-                                  family: 'Inter',
-                                  size: 12,
-                                  weight: '500'
-                                }
-                              }
-                            },
-                            tooltip: {
-                              backgroundColor: 'white',
-                              titleColor: '#1F2937',
-                              bodyColor: '#1F2937',
-                              borderColor: '#E5E7EB',
-                              borderWidth: 1,
-                              padding: 12,
-                              displayColors: false,
-                              callbacks: {
-                                label: function(context) {
-                                  const label = context.dataset.label || '';
-                                  const value = context.parsed.y;
-                                  return `${label}: ${value}`;
-                                }
-                              }
-                            }
-                          },
-                          scales: {
-                            x: {
-                              grid: {
-                                display: false
-                              },
-                              ticks: {
-                                font: {
-                                  family: 'Inter',
-                                  size: 12
-                                },
-                                color: '#6B7280'
-                              }
-                            },
-                            y: {
-                              beginAtZero: true,
-                              grid: {
-                                color: '#F3F4F6'
-                              },
-                              ticks: {
-                                font: {
-                                  family: 'Inter',
-                                  size: 12
-                                },
-                                color: '#6B7280',
-                                padding: 8
-                              }
-                            }
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Recent Activity for non-admin users */}
-                {userData?.type !== "admin" && (
-                  <div className="bg-white rounded-lg shadow-sm p-6">
-                    <div className="flex items-center justify-between mb-6">
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
-                        <p className="text-sm text-gray-500">Your recent conversations</p>
-                      </div>
-                    </div>
-                    <div className="space-y-4">
-                      {userData?.history?.slice(0, 5).map((message, index) => (
-                        <div key={index} className="flex items-start space-x-3">
-                          <div className="flex-shrink-0">
-                            {message.role === "user" ? (
-                              <UserCircleIcon className="h-8 w-8 text-gray-400" />
-                            ) : (
-                              <GlobeAltIcon className="h-8 w-8 text-indigo-500" />
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900">
-                              {message.role === "user" ? "You" : "AI Assistant"}
-                            </p>
-                            <p className="text-sm text-gray-500 truncate">
-                              {message.content}
-                            </p>
-                            <p className="text-xs text-gray-400 mt-1">
-                              {message.timestamp?.toDate().toLocaleTimeString()}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                      {(!userData?.history || userData.history.length === 0) && (
-                        <div className="text-center py-4">
-                          <p className="text-sm text-gray-500">No recent conversations</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </aside>
             </div>
           </div>
         </div>
-        <SlimFooter />
       </div>
-      {successMessage && (
-        <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-md">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg
-                className="h-5 w-5 text-green-400"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-green-800">
-                {successMessage}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-      {errorMessage && (
-        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg
-                className="h-5 w-5 text-red-400"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-red-800">{errorMessage}</p>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }

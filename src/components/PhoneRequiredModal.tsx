@@ -118,6 +118,13 @@ export default function PhoneRequiredModal({
     setSuccess(true);
   };
 
+  // Skip step 1 if phone number is already provided
+  useEffect(() => {
+    if (initialPhone && step === 1) {
+      setStep(2);
+    }
+  }, [initialPhone, step]);
+
   return (
     <div
       className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 transition-opacity duration-700 ${
