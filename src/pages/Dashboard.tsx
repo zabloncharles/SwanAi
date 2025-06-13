@@ -1133,36 +1133,46 @@ export default function Dashboard() {
                         )}
                       </div>
                     </div>
-                    {/* Recent Chat History */}
-                    <div className="bg-white p-6 rounded-xl shadow-sm">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                        Recent Chat History
-                      </h3>
-                      {userData.history && userData.history.length > 0 ? (
+                    {/* Recent Activity */}
+                    {userData?.type === "admin" && (
+                      <div className="bg-white rounded-lg shadow-sm p-6">
+                        <div className="flex items-center justify-between mb-6">
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
+                            <p className="text-sm text-gray-500">Your recent conversations</p>
+                          </div>
+                        </div>
                         <div className="space-y-4">
-                          {userData.history.slice(0, 3).map((chat, index) => (
-                            <div
-                              key={index}
-                              className="p-4 bg-gray-50 rounded-lg"
-                            >
-                              <p className="text-sm text-gray-600">
-                                {typeof chat === "object" ? chat.content : chat}
-                              </p>
+                          {userData?.history?.slice(0, 5).map((message, index) => (
+                            <div key={index} className="flex items-start space-x-3">
+                              <div className="flex-shrink-0">
+                                {message.role === "user" ? (
+                                  <UserCircleIcon className="h-8 w-8 text-gray-400" />
+                                ) : (
+                                  <GlobeAltIcon className="h-8 w-8 text-indigo-500" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900">
+                                  {message.role === "user" ? "You" : "AI Assistant"}
+                                </p>
+                                <p className="text-sm text-gray-500 truncate">
+                                  {message.content}
+                                </p>
+                                <p className="text-xs text-gray-400 mt-1">
+                                  {message.timestamp?.toDate().toLocaleTimeString()}
+                                </p>
+                              </div>
                             </div>
                           ))}
+                          {(!userData?.history || userData.history.length === 0) && (
+                            <div className="text-center py-4">
+                              <p className="text-sm text-gray-500">No recent conversations</p>
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <div className="text-center py-8">
-                          <p className="text-gray-500 mb-2">
-                            No chat history available yet
-                          </p>
-                          <p className="text-sm text-gray-400">
-                            Your recent conversations will appear here once you
-                            start chatting with SwanAI
-                          </p>
-                        </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </>
                 )}
                 {activeTab === "Settings" && (
@@ -1562,251 +1572,281 @@ export default function Dashboard() {
               {/* Right Sidebar */}
               <aside className="w-96 border-l border-gray-100 bg-white py-8 px-6 min-h-screen sticky top-0 h-screen flex flex-col">
                 {/* Users per Day Chart */}
-                <div className="mb-8 bg-gradient-to-br from-white to-gray-50 rounded-xl p-4 shadow-sm border border-gray-100">
-                  <div className="flex items-center justify-between mb-4">
-                  <div className="font-semibold text-lg text-gray-900">
-                      Users per Day
-                  </div>
-                    <div className="text-sm text-gray-500">
-                      Last 7 days
-                </div>
-                </div>
-                  <div className="h-48">
-                    {(() => {
-                      const { dates, values } = getLastSevenDays(usersByDayDates, usersByDayData);
-                      return (
-                        <Bar
-                          data={{
-                            labels: dates,
-                            datasets: [
-                              {
-                                label: "New Users",
-                                data: values,
-                                backgroundColor: (context) => {
-                                  const index = context.dataIndex;
-                                  const colors = [
-                                    'rgba(99, 102, 241, 0.8)',  // Indigo
-                                    'rgba(236, 72, 153, 0.8)',  // Pink
-                                    'rgba(16, 185, 129, 0.8)',  // Green
-                                    'rgba(245, 158, 11, 0.8)',  // Amber
-                                    'rgba(239, 68, 68, 0.8)',   // Red
-                                    'rgba(59, 130, 246, 0.8)',  // Blue
-                                    'rgba(139, 92, 246, 0.8)',  // Purple
-                                  ];
-                                  return colors[index % colors.length];
-                                },
-                                borderRadius: 0,
-                                borderSkipped: false,
-                                barThickness: 12,
-                                maxBarThickness: 12,
-                                order: 2,
-                              },
-                              {
-                                label: "Trend",
-                                data: values,
-                                type: 'line',
-                                borderColor: 'rgba(236, 72, 153, 0.8)', // Pink color
-                                borderWidth: 2,
-                                pointRadius: 0,
-                                pointHoverRadius: 4,
-                                pointHoverBackgroundColor: 'rgba(236, 72, 153, 1)',
-                                pointHoverBorderColor: '#fff',
-                                pointHoverBorderWidth: 2,
-                                tension: 0.4,
-                                fill: false,
-                                order: 1,
-                              }
-                            ],
-                          }}
-                          options={{
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                              legend: {
-                                display: true,
-                                position: 'top',
-                                align: 'end',
-                                labels: {
-                                  usePointStyle: true,
-                                  padding: 20,
-                                  font: {
-                                    size: 11,
-                                    family: "'Inter', sans-serif"
-                                  }
+                {userData?.type === "admin" && (
+                  <div className="bg-white rounded-lg shadow-sm p-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">Users per Day</h3>
+                        <p className="text-sm text-gray-500">Daily user growth</p>
+                      </div>
+                    </div>
+                    <div className="h-[300px]">
+                      <Bar
+                        data={{
+                          labels: usersByDayDates,
+                          datasets: [
+                            {
+                              label: "New Users",
+                              data: usersByDayData,
+                              backgroundColor: (context) => {
+                                const chart = context.chart;
+                                const {ctx, chartArea} = chart;
+                                if (!chartArea) {
+                                  return 'rgba(37,99,235,0.8)';
                                 }
+                                const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+                                gradient.addColorStop(0, 'rgba(37,99,235,0.1)');
+                                gradient.addColorStop(1, 'rgba(37,99,235,0.8)');
+                                return gradient;
                               },
-                              tooltip: {
-                                backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                                titleColor: '#1f2937',
-                                bodyColor: '#1f2937',
-                                borderColor: '#e5e7eb',
-                                borderWidth: 1,
-                                padding: 12,
-                                boxPadding: 6,
-                                usePointStyle: true,
-                                callbacks: {
-                                  label: function(context) {
-                                    if (context.dataset.label === "New Users") {
-                                      return `New Users: ${context.parsed.y}`;
-                                    }
-                                    return `Trend: ${context.parsed.y}`;
-                                  }
-                                }
-                              }
+                              borderRadius: 0,
+                              borderSkipped: false,
+                              barThickness: 12,
+                              maxBarThickness: 12,
+                              order: 2,
                             },
-                            scales: {
-                              y: {
-                                beginAtZero: true,
-                                ticks: {
-                                  precision: 0,
-                                  font: {
-                                    size: 11,
-                                    family: "'Inter', sans-serif"
-                                  },
-                                  color: '#6b7280'
-                                },
-                                grid: { color: '#f3f4f6' }
-                              },
-                              x: {
-                                grid: { display: false },
-                                ticks: {
-                                  font: {
-                                    size: 11,
-                                    family: "'Inter', sans-serif"
-                                  },
-                                  color: '#6b7280'
-                                }
-                              }
-                            },
-                            interaction: {
-                              intersect: false,
-                              mode: 'index'
+                            {
+                              label: "Trend",
+                              data: usersByDayData,
+                              type: 'line' as const,
+                              borderColor: 'rgba(239, 68, 68, 0.8)',
+                              borderWidth: 2,
+                              pointRadius: 0,
+                              pointHoverRadius: 4,
+                              pointHoverBackgroundColor: 'rgba(239, 68, 68, 1)',
+                              pointHoverBorderColor: '#fff',
+                              pointHoverBorderWidth: 2,
+                              tension: 0.4,
+                              fill: false,
+                              order: 1,
                             }
-                          }}
-                        />
-                      );
-                    })()}
-                </div>
-                            </div>
+                          ]
+                        }}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              display: true,
+                              position: 'top',
+                              labels: {
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                font: {
+                                  family: 'Inter',
+                                  size: 12
+                                }
+                              }
+                            },
+                            tooltip: {
+                              backgroundColor: 'white',
+                              titleColor: '#1F2937',
+                              bodyColor: '#1F2937',
+                              borderColor: '#E5E7EB',
+                              borderWidth: 1,
+                              padding: 12,
+                              displayColors: false,
+                              callbacks: {
+                                label: function(context) {
+                                  const label = context.dataset.label || '';
+                                  const value = context.parsed.y;
+                                  return `${label}: ${value}`;
+                                }
+                              }
+                            }
+                          },
+                          scales: {
+                            x: {
+                              grid: {
+                                display: false
+                              },
+                              ticks: {
+                                font: {
+                                  family: 'Inter',
+                                  size: 12
+                                }
+                              }
+                            },
+                            y: {
+                              beginAtZero: true,
+                              grid: {
+                                color: '#F3F4F6'
+                              },
+                              ticks: {
+                                font: {
+                                  family: 'Inter',
+                                  size: 12
+                                }
+                              }
+                            }
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {/* Messages by Day Chart */}
-                <div className="bg-white rounded-lg shadow-sm p-6 mt-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Messages by Day</h3>
-                      <p className="text-sm text-gray-500">Daily message activity</p>
-                          </div>
-                          </div>
-                  <div className="h-[300px]">
-                    <Bar
-                      data={{
-                        labels: messagesByDayData.dates,
-                        datasets: [
-                          {
-                            label: "Messages",
-                            data: messagesByDayData.values,
-                            backgroundColor: (context) => {
-                              const chart = context.chart;
-                              const {ctx, chartArea} = chart;
-                              if (!chartArea) {
-                                return 'rgba(99, 102, 241, 0.8)';
-                              }
-                              const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
-                              gradient.addColorStop(0, 'rgba(99, 102, 241, 0.2)');
-                              gradient.addColorStop(1, 'rgba(99, 102, 241, 0.8)');
-                              return gradient;
-                            },
-                            borderRadius: 0,
-                            borderSkipped: false,
-                            barThickness: 12,
-                            maxBarThickness: 12,
-                            order: 2,
-                          },
-                          {
-                            label: "Trend",
-                            data: messagesByDayData.values,
-                            type: 'line' as const,
-                            borderColor: 'rgba(236, 72, 153, 0.8)',
-                            borderWidth: 2,
-                            pointRadius: 0,
-                            pointHoverRadius: 4,
-                            pointHoverBackgroundColor: 'rgba(236, 72, 153, 1)',
-                            pointHoverBorderColor: '#fff',
-                            pointHoverBorderWidth: 2,
-                            tension: 0.4,
-                            fill: false,
-                            order: 1,
-                          }
-                        ]
-                      }}
-                      options={{
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                          legend: {
-                            display: true,
-                            position: 'top',
-                            align: 'end',
-                            labels: {
-                              usePointStyle: true,
-                              pointStyle: 'circle',
-                              padding: 20,
-                              font: {
-                                family: 'Inter',
-                                size: 12,
-                                weight: '500'
-                              }
-                            }
-                          },
-                          tooltip: {
-                            backgroundColor: 'white',
-                            titleColor: '#1F2937',
-                            bodyColor: '#1F2937',
-                            borderColor: '#E5E7EB',
-                            borderWidth: 1,
-                            padding: 12,
-                            displayColors: false,
-                            callbacks: {
-                              label: function(context) {
-                                const label = context.dataset.label || '';
-                                const value = context.parsed.y;
-                                return `${label}: ${value}`;
-                              }
-                            }
-                          }
-                        },
-                        scales: {
-                          x: {
-                            grid: {
-                              display: false
-                            },
-                            ticks: {
-                              font: {
-                                family: 'Inter',
-                                size: 12
+                {userData?.type === "admin" && (
+                  <div className="bg-white rounded-lg shadow-sm p-6 mt-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">Messages by Day</h3>
+                        <p className="text-sm text-gray-500">Daily message activity</p>
+                      </div>
+                    </div>
+                    <div className="h-[300px]">
+                      <Bar
+                        data={{
+                          labels: messagesByDayData.dates,
+                          datasets: [
+                            {
+                              label: "Messages",
+                              data: messagesByDayData.values,
+                              backgroundColor: (context) => {
+                                const chart = context.chart;
+                                const {ctx, chartArea} = chart;
+                                if (!chartArea) {
+                                  return 'rgba(99, 102, 241, 0.8)';
+                                }
+                                const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+                                gradient.addColorStop(0, 'rgba(99, 102, 241, 0.2)');
+                                gradient.addColorStop(1, 'rgba(99, 102, 241, 0.8)');
+                                return gradient;
                               },
-                              color: '#6B7280'
+                              borderRadius: 0,
+                              borderSkipped: false,
+                              barThickness: 12,
+                              maxBarThickness: 12,
+                              order: 2,
+                            },
+                            {
+                              label: "Trend",
+                              data: messagesByDayData.values,
+                              type: 'line' as const,
+                              borderColor: 'rgba(236, 72, 153, 0.8)',
+                              borderWidth: 2,
+                              pointRadius: 0,
+                              pointHoverRadius: 4,
+                              pointHoverBackgroundColor: 'rgba(236, 72, 153, 1)',
+                              pointHoverBorderColor: '#fff',
+                              pointHoverBorderWidth: 2,
+                              tension: 0.4,
+                              fill: false,
+                              order: 1,
+                            }
+                          ]
+                        }}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              display: true,
+                              position: 'top',
+                              align: 'end',
+                              labels: {
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                padding: 20,
+                                font: {
+                                  family: 'Inter',
+                                  size: 12,
+                                  weight: '500'
+                                }
+                              }
+                            },
+                            tooltip: {
+                              backgroundColor: 'white',
+                              titleColor: '#1F2937',
+                              bodyColor: '#1F2937',
+                              borderColor: '#E5E7EB',
+                              borderWidth: 1,
+                              padding: 12,
+                              displayColors: false,
+                              callbacks: {
+                                label: function(context) {
+                                  const label = context.dataset.label || '';
+                                  const value = context.parsed.y;
+                                  return `${label}: ${value}`;
+                                }
+                              }
                             }
                           },
-                          y: {
-                            beginAtZero: true,
-                            grid: {
-                              color: '#F3F4F6'
-                            },
-                            ticks: {
-                              font: {
-                                family: 'Inter',
-                                size: 12
+                          scales: {
+                            x: {
+                              grid: {
+                                display: false
                               },
-                              color: '#6B7280',
-                              padding: 8
+                              ticks: {
+                                font: {
+                                  family: 'Inter',
+                                  size: 12
+                                },
+                                color: '#6B7280'
+                              }
+                            },
+                            y: {
+                              beginAtZero: true,
+                              grid: {
+                                color: '#F3F4F6'
+                              },
+                              ticks: {
+                                font: {
+                                  family: 'Inter',
+                                  size: 12
+                                },
+                                color: '#6B7280',
+                                padding: 8
+                              }
                             }
                           }
-                        }
-                      }}
-                    />
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Recent Activity for non-admin users */}
+                {userData?.type !== "admin" && (
+                  <div className="bg-white rounded-lg shadow-sm p-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
+                        <p className="text-sm text-gray-500">Your recent conversations</p>
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      {userData?.history?.slice(0, 5).map((message, index) => (
+                        <div key={index} className="flex items-start space-x-3">
+                          <div className="flex-shrink-0">
+                            {message.role === "user" ? (
+                              <UserCircleIcon className="h-8 w-8 text-gray-400" />
+                            ) : (
+                              <GlobeAltIcon className="h-8 w-8 text-indigo-500" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900">
+                              {message.role === "user" ? "You" : "AI Assistant"}
+                            </p>
+                            <p className="text-sm text-gray-500 truncate">
+                              {message.content}
+                            </p>
+                            <p className="text-xs text-gray-400 mt-1">
+                              {message.timestamp?.toDate().toLocaleTimeString()}
+                            </p>
+                          </div>
                         </div>
-                </div>
+                      ))}
+                      {(!userData?.history || userData.history.length === 0) && (
+                        <div className="text-center py-4">
+                          <p className="text-sm text-gray-500">No recent conversations</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </aside>
             </div>
           </div>
