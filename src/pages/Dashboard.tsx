@@ -302,6 +302,10 @@ export default function Dashboard() {
   const [modalVisible, setModalVisible] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [usersByDay, setUsersByDay] = useState<{ [date: string]: number }>({});
+  const [tokensByDay, setTokensByDay] = useState<{ [date: string]: number }>(
+    {}
+  );
 
   // Real-time user data subscription
   useEffect(() => {
@@ -413,6 +417,33 @@ export default function Dashboard() {
 
     fetchAnalytics();
   }, [user]);
+
+  // Fetch analytics/global for tokensByDay only if admin
+  useEffect(() => {
+    if (!userData.isAdmin) return;
+    const fetchGlobalAnalytics = async () => {
+      try {
+        const analyticsRef = doc(db, "analytics", "global");
+        const analyticsSnap = await getDoc(analyticsRef);
+        if (analyticsSnap.exists()) {
+          const data = analyticsSnap.data();
+          setUsersByDay(data.usersByDay || {});
+          setTokensByDay(data.tokensByDay || {});
+        }
+      } catch (err) {
+        console.error("Error fetching global analytics:", err);
+      }
+    };
+    fetchGlobalAnalytics();
+  }, [userData.isAdmin]);
+
+  // Prepare chart data for usersByDay (Benchmark)
+  const usersByDayDates = Object.keys(usersByDay).sort();
+  const usersByDayData = usersByDayDates.map((date) => usersByDay[date]);
+
+  // Prepare chart data for tokensByDay (Current Balance)
+  const tokensByDayDates = Object.keys(tokensByDay).sort();
+  const tokensByDayData = tokensByDayDates.map((date) => tokensByDay[date]);
 
   // Determine if modal should show and which step to start on
   const needsPhone = !userData.phoneNumber;
@@ -785,6 +816,147 @@ export default function Dashboard() {
                 {/* Tab Content */}
                 {activeTab === "Overview" && (
                   <>
+                    {/* Financial Summary Chart Section (Admins only) */}
+                    {userData.isAdmin && (
+                      <div className="bg-white rounded-2xl shadow border border-gray-100 p-8 mb-8">
+                        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-6">
+                          <div>
+                            <div className="text-gray-500 text-sm mb-1">
+                              Current Balance
+                            </div>
+                            <div className="flex items-end gap-3">
+                              <span className="text-4xl font-extrabold text-gray-900">
+                                $24,847.83
+                              </span>
+                              <span className="text-green-600 font-semibold text-lg">
+                                +12.7%
+                              </span>
+                              <span className="text-gray-400 text-sm mb-1">
+                                Last 24 hours
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex flex-col md:items-end gap-1">
+                            <div className="text-gray-500 text-sm">
+                              Today's PnL:
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg font-bold text-gray-900">
+                                $1,249.00
+                              </span>
+                              <span className="text-green-600 font-semibold">
+                                ▲ (+8%)
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex flex-col md:items-end gap-1">
+                            <div className="flex gap-4 text-sm">
+                              <span>
+                                High:{" "}
+                                <span className="text-blue-700 font-semibold">
+                                  1,048.08
+                                </span>
+                              </span>
+                              <span>
+                                Low:{" "}
+                                <span className="text-yellow-600 font-semibold">
+                                  1,006.42
+                                </span>
+                              </span>
+                              <span>
+                                Change:{" "}
+                                <span className="text-red-500 font-semibold">
+                                  -0.082%
+                                </span>
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        {/* Chart */}
+                        <div className="w-full h-64">
+                          <Line
+                            data={{
+                              labels:
+                                tokensByDayDates.length > 0
+                                  ? tokensByDayDates
+                                  : [
+                                      "Jan 27, 2025",
+                                      "Jan 28, 2025",
+                                      "Jan 29, 2025",
+                                      "Jan 30, 2025",
+                                      "Jan 31, 2025",
+                                      "Feb 1, 2025",
+                                      "Feb 2, 2025",
+                                    ],
+                              datasets: [
+                                {
+                                  label: "Current Balance",
+                                  data:
+                                    tokensByDayData.length > 0
+                                      ? tokensByDayData
+                                      : [
+                                          1000, 2200, 2100, 21738, 23000, 24000,
+                                          24847.83,
+                                        ],
+                                  borderColor: "#2563eb",
+                                  backgroundColor: "rgba(37,99,235,0.1)",
+                                  fill: true,
+                                  tension: 0.4,
+                                  pointRadius: 4,
+                                  pointHoverRadius: 7,
+                                  pointBackgroundColor: "#fff",
+                                  pointBorderColor: "#2563eb",
+                                },
+                              ],
+                            }}
+                            options={{
+                              responsive: true,
+                              plugins: {
+                                legend: { display: true, position: "top" },
+                                tooltip: {
+                                  callbacks: {
+                                    label: function (context) {
+                                      const value = context.parsed.y;
+                                      let percent = "";
+                                      if (
+                                        context.dataset.label ===
+                                          "Current Balance" &&
+                                        context.dataIndex === 3
+                                      )
+                                        percent = " (+12.7%)";
+                                      return `${
+                                        context.dataset.label
+                                      }: $${value.toLocaleString(undefined, {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })}${percent}`;
+                                    },
+                                    title: function (context) {
+                                      return context[0].label;
+                                    },
+                                  },
+                                },
+                              },
+                              scales: {
+                                y: {
+                                  beginAtZero: true,
+                                  ticks: {
+                                    callback: function (value) {
+                                      return `$${value}`;
+                                    },
+                                  },
+                                  grid: { color: "#f3f4f6" },
+                                },
+                                x: {
+                                  grid: { display: false },
+                                },
+                              },
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    {/* End Financial Summary Chart Section */}
                     <h2 className="text-2xl font-bold text-gray-900 mb-1">
                       Overview
                     </h2>
