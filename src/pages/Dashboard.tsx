@@ -108,7 +108,7 @@ interface UserData {
   aiRelationship?: string;
   createdAt: any;
   lastLogin: any;
-  isAdmin?: boolean;
+  type?: string;
   notificationsEnabled?: boolean;
   tokensUsed: number;
   responseTime?: number;
@@ -306,6 +306,8 @@ export default function Dashboard() {
   const [tokensByDay, setTokensByDay] = useState<{ [date: string]: number }>(
     {}
   );
+  const [messagesByDay, setMessagesByDay] = useState<{ [date: string]: number }>({});
+  const [messagesByDayData, setMessagesByDayData] = useState<{ dates: string[]; values: number[] }>({ dates: [], values: [] });
 
   // Real-time user data subscription
   useEffect(() => {
@@ -322,10 +324,11 @@ export default function Dashboard() {
       (doc) => {
         if (doc.exists()) {
           const data = doc.data();
+          console.log("User data loaded:", data);
           setProfile(data.profile || {});
           setSummary(data.summary || "");
           setHistory(data.history || []);
-          setUserData({
+          const userDataWithType = {
             firstName: data.firstName || "",
             lastName: data.lastName || "",
             email: data.email || "",
@@ -339,7 +342,10 @@ export default function Dashboard() {
             responseTime: data.responseTime,
             summary: data.summary || "",
             history: data.history || [],
-          });
+            type: data.type || "",
+          };
+          console.log("Setting user data with type:", userDataWithType.type);
+          setUserData(userDataWithType);
           setLoading((prev) => ({ ...prev, userData: false }));
         }
       },
@@ -420,22 +426,33 @@ export default function Dashboard() {
 
   // Fetch analytics/global for tokensByDay only if admin
   useEffect(() => {
-    if (!userData.isAdmin) return;
+    if (userData.type !== "admin") return;
     const fetchGlobalAnalytics = async () => {
       try {
         const analyticsRef = doc(db, "analytics", "global");
         const analyticsSnap = await getDoc(analyticsRef);
         if (analyticsSnap.exists()) {
           const data = analyticsSnap.data();
+          console.log("Analytics data:", data); // Debug log
           setUsersByDay(data.usersByDay || {});
           setTokensByDay(data.tokensByDay || {});
+          if (data.messagesByDay) {
+            setMessagesByDay(data.messagesByDay);
+            const { dates, values } = getLastSevenDays(
+              Object.keys(data.messagesByDay),
+              Object.values(data.messagesByDay)
+            );
+            setMessagesByDayData({ dates, values });
+          }
+        } else {
+          console.log("No analytics data found"); // Debug log
         }
       } catch (err) {
         console.error("Error fetching global analytics:", err);
       }
     };
     fetchGlobalAnalytics();
-  }, [userData.isAdmin]);
+  }, [userData.type]);
 
   // Prepare chart data for usersByDay (Benchmark)
   const usersByDayDates = Object.keys(usersByDay).sort();
@@ -669,6 +686,52 @@ export default function Dashboard() {
     }
   };
 
+  // Add this helper function at the top level of the component
+  const getLastSevenDays = (dates: string[], data: number[]) => {
+    if (dates.length === 0 || data.length === 0) {
+      // If no data, return last 7 days from today
+      const today = new Date();
+      const lastSevenDays = Array.from({ length: 7 }, (_, i) => {
+        const date = new Date(today);
+        date.setDate(date.getDate() - (6 - i));
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      });
+      return {
+        dates: lastSevenDays,
+        values: Array(7).fill(0)
+      };
+    }
+
+    // If we have data, get the last 7 entries
+    const lastSevenDates = dates.slice(-7);
+    const lastSevenData = data.slice(-7);
+
+    // If we have less than 7 days, pad with zeros
+    if (lastSevenDates.length < 7) {
+      const padding = Array(7 - lastSevenDates.length).fill(0);
+      return {
+        dates: [...Array(7 - lastSevenDates.length).fill(''), ...lastSevenDates],
+        values: [...padding, ...lastSevenData]
+      };
+    }
+
+    return {
+      dates: lastSevenDates,
+      values: lastSevenData
+    };
+  };
+
+  // Add this helper function at the top level of the component
+  const calculatePercentageChange = (current: number, previous: number) => {
+    if (!previous) return 0;
+    return ((current - previous) / previous) * 100;
+  };
+
+  // Add this helper function at the top level of the component
+  const calculateTotalTokens = (tokensByDay: { [date: string]: number }) => {
+    return Object.values(tokensByDay).reduce((sum, value) => sum + value, 0);
+  };
+
   if (loading.userData || loading.analytics) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -817,20 +880,27 @@ export default function Dashboard() {
                 {activeTab === "Overview" && (
                   <>
                     {/* Financial Summary Chart Section (Admins only) */}
-                    {userData.isAdmin && (
+                    {userData.type === "admin" && (
                       <div className="bg-white rounded-2xl shadow border border-gray-100 p-8 mb-8">
                         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-6">
                           <div>
                             <div className="text-gray-500 text-sm mb-1">
-                              Current Balance
+                              Total Tokens Used
                             </div>
                             <div className="flex items-end gap-3">
                               <span className="text-4xl font-extrabold text-gray-900">
-                                $24,847.83
+                                {calculateTotalTokens(tokensByDay).toLocaleString()}
                               </span>
-                              <span className="text-green-600 font-semibold text-lg">
-                                +12.7%
+                              {(() => {
+                                const currentTokens = tokensByDayData[tokensByDayData.length - 1] || 0;
+                                const previousTokens = tokensByDayData[tokensByDayData.length - 2] || 0;
+                                const percentageChange = calculatePercentageChange(currentTokens, previousTokens);
+                                return (
+                                  <span className={`font-semibold text-lg ${percentageChange >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                    {percentageChange >= 0 ? '+' : ''}{percentageChange.toFixed(1)}%
                               </span>
+                                );
+                              })()}
                               <span className="text-gray-400 text-sm mb-1">
                                 Last 24 hours
                               </span>
@@ -838,15 +908,22 @@ export default function Dashboard() {
                           </div>
                           <div className="flex flex-col md:items-end gap-1">
                             <div className="text-gray-500 text-sm">
-                              Today's PnL:
+                              Today's Usage:
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="text-lg font-bold text-gray-900">
-                                $1,249.00
+                                {tokensByDayData[tokensByDayData.length - 1]?.toLocaleString() || "0"}
                               </span>
-                              <span className="text-green-600 font-semibold">
-                                ▲ (+8%)
+                              {(() => {
+                                const currentTokens = tokensByDayData[tokensByDayData.length - 1] || 0;
+                                const previousTokens = tokensByDayData[tokensByDayData.length - 2] || 0;
+                                const percentageChange = calculatePercentageChange(currentTokens, previousTokens);
+                                return (
+                                  <span className={`font-semibold ${percentageChange >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                    {percentageChange >= 0 ? '▲' : '▼'} ({percentageChange >= 0 ? '+' : ''}{percentageChange.toFixed(1)}%)
                               </span>
+                                );
+                              })()}
                             </div>
                           </div>
                           <div className="flex flex-col md:items-end gap-1">
@@ -854,20 +931,27 @@ export default function Dashboard() {
                               <span>
                                 High:{" "}
                                 <span className="text-blue-700 font-semibold">
-                                  1,048.08
+                                  {Math.max(...tokensByDayData).toLocaleString()}
                                 </span>
                               </span>
                               <span>
                                 Low:{" "}
                                 <span className="text-yellow-600 font-semibold">
-                                  1,006.42
+                                  {Math.min(...tokensByDayData).toLocaleString()}
                                 </span>
                               </span>
                               <span>
                                 Change:{" "}
-                                <span className="text-red-500 font-semibold">
-                                  -0.082%
+                                {(() => {
+                                  const firstValue = tokensByDayData[0] || 0;
+                                  const lastValue = tokensByDayData[tokensByDayData.length - 1] || 0;
+                                  const totalChange = calculatePercentageChange(lastValue, firstValue);
+                                  return (
+                                    <span className={`font-semibold ${totalChange >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                      {totalChange >= 0 ? '+' : ''}{totalChange.toFixed(1)}%
                                 </span>
+                                  );
+                                })()}
                               </span>
                             </div>
                           </div>
@@ -876,10 +960,7 @@ export default function Dashboard() {
                         <div className="w-full h-64">
                           <Line
                             data={{
-                              labels:
-                                tokensByDayDates.length > 0
-                                  ? tokensByDayDates
-                                  : [
+                              labels: tokensByDayDates.length > 0 ? tokensByDayDates : [
                                       "Jan 27, 2025",
                                       "Jan 28, 2025",
                                       "Jan 29, 2025",
@@ -890,13 +971,9 @@ export default function Dashboard() {
                                     ],
                               datasets: [
                                 {
-                                  label: "Current Balance",
-                                  data:
-                                    tokensByDayData.length > 0
-                                      ? tokensByDayData
-                                      : [
-                                          1000, 2200, 2100, 21738, 23000, 24000,
-                                          24847.83,
+                                  label: "Tokens Used",
+                                  data: tokensByDayData.length > 0 ? tokensByDayData : [
+                                    1000, 2200, 2100, 21738, 23000, 24000, 24847.83,
                                         ],
                                   borderColor: "#2563eb",
                                   backgroundColor: "rgba(37,99,235,0.1)",
@@ -918,18 +995,9 @@ export default function Dashboard() {
                                     label: function (context) {
                                       const value = context.parsed.y;
                                       let percent = "";
-                                      if (
-                                        context.dataset.label ===
-                                          "Current Balance" &&
-                                        context.dataIndex === 3
-                                      )
+                                      if (context.dataset.label === "Tokens Used" && context.dataIndex === 3)
                                         percent = " (+12.7%)";
-                                      return `${
-                                        context.dataset.label
-                                      }: $${value.toLocaleString(undefined, {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                      })}${percent}`;
+                                      return `${context.dataset.label}: ${value.toLocaleString()}${percent}`;
                                     },
                                     title: function (context) {
                                       return context[0].label;
@@ -942,7 +1010,7 @@ export default function Dashboard() {
                                   beginAtZero: true,
                                   ticks: {
                                     callback: function (value) {
-                                      return `$${value}`;
+                                      return value.toLocaleString();
                                     },
                                   },
                                   grid: { color: "#f3f4f6" },
@@ -1493,75 +1561,251 @@ export default function Dashboard() {
 
               {/* Right Sidebar */}
               <aside className="w-96 border-l border-gray-100 bg-white py-8 px-6 min-h-screen sticky top-0 h-screen flex flex-col">
-                <div className="flex items-center justify-between">
+                {/* Users per Day Chart */}
+                <div className="mb-8 bg-gradient-to-br from-white to-gray-50 rounded-xl p-4 shadow-sm border border-gray-100">
+                  <div className="flex items-center justify-between mb-4">
                   <div className="font-semibold text-lg text-gray-900">
-                    Recent Activities
+                      Users per Day
                   </div>
+                    <div className="text-sm text-gray-500">
+                      Last 7 days
                 </div>
-                <p className="text-gray-500 mb-4 text-sm">
-                  See your latest actions and updates within SwanAI.
-                </p>
-                <div className="flex items-center gap-2 mb-4">
-                  <button className="px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500 text-white">
-                    Today
-                  </button>
-                  <button className="px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
-                    Yesterday
-                  </button>
-                  <button className="px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
-                    This week
-                  </button>
                 </div>
-                <div className="mb-4">
-                  <input
-                    className="w-full px-3 py-2 rounded-lg border border-gray-100 bg-gray-50 text-sm"
-                    placeholder="Search..."
-                  />
+                  <div className="h-48">
+                    {(() => {
+                      const { dates, values } = getLastSevenDays(usersByDayDates, usersByDayData);
+                      return (
+                        <Bar
+                          data={{
+                            labels: dates,
+                            datasets: [
+                              {
+                                label: "New Users",
+                                data: values,
+                                backgroundColor: (context) => {
+                                  const index = context.dataIndex;
+                                  const colors = [
+                                    'rgba(99, 102, 241, 0.8)',  // Indigo
+                                    'rgba(236, 72, 153, 0.8)',  // Pink
+                                    'rgba(16, 185, 129, 0.8)',  // Green
+                                    'rgba(245, 158, 11, 0.8)',  // Amber
+                                    'rgba(239, 68, 68, 0.8)',   // Red
+                                    'rgba(59, 130, 246, 0.8)',  // Blue
+                                    'rgba(139, 92, 246, 0.8)',  // Purple
+                                  ];
+                                  return colors[index % colors.length];
+                                },
+                                borderRadius: 0,
+                                borderSkipped: false,
+                                barThickness: 12,
+                                maxBarThickness: 12,
+                                order: 2,
+                              },
+                              {
+                                label: "Trend",
+                                data: values,
+                                type: 'line',
+                                borderColor: 'rgba(236, 72, 153, 0.8)', // Pink color
+                                borderWidth: 2,
+                                pointRadius: 0,
+                                pointHoverRadius: 4,
+                                pointHoverBackgroundColor: 'rgba(236, 72, 153, 1)',
+                                pointHoverBorderColor: '#fff',
+                                pointHoverBorderWidth: 2,
+                                tension: 0.4,
+                                fill: false,
+                                order: 1,
+                              }
+                            ],
+                          }}
+                          options={{
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                              legend: {
+                                display: true,
+                                position: 'top',
+                                align: 'end',
+                                labels: {
+                                  usePointStyle: true,
+                                  padding: 20,
+                                  font: {
+                                    size: 11,
+                                    family: "'Inter', sans-serif"
+                                  }
+                                }
+                              },
+                              tooltip: {
+                                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                                titleColor: '#1f2937',
+                                bodyColor: '#1f2937',
+                                borderColor: '#e5e7eb',
+                                borderWidth: 1,
+                                padding: 12,
+                                boxPadding: 6,
+                                usePointStyle: true,
+                                callbacks: {
+                                  label: function(context) {
+                                    if (context.dataset.label === "New Users") {
+                                      return `New Users: ${context.parsed.y}`;
+                                    }
+                                    return `Trend: ${context.parsed.y}`;
+                                  }
+                                }
+                              }
+                            },
+                            scales: {
+                              y: {
+                                beginAtZero: true,
+                                ticks: {
+                                  precision: 0,
+                                  font: {
+                                    size: 11,
+                                    family: "'Inter', sans-serif"
+                                  },
+                                  color: '#6b7280'
+                                },
+                                grid: { color: '#f3f4f6' }
+                              },
+                              x: {
+                                grid: { display: false },
+                                ticks: {
+                                  font: {
+                                    size: 11,
+                                    family: "'Inter', sans-serif"
+                                  },
+                                  color: '#6b7280'
+                                }
+                              }
+                            },
+                            interaction: {
+                              intersect: false,
+                              mode: 'index'
+                            }
+                          }}
+                        />
+                      );
+                    })()}
                 </div>
-                <div className="flex-1 overflow-y-auto">
-                  {userData?.history && userData.history.length > 0 ? (
-                    <div className="space-y-4">
-                      {userData.history.slice(0, 5).map((activity, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg"
-                        >
-                          <div className="flex-shrink-0">
-                            <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
-                              <svg
-                                className="w-4 h-4 text-indigo-600"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-                                />
-                              </svg>
                             </div>
+
+                {/* Messages by Day Chart */}
+                <div className="bg-white rounded-lg shadow-sm p-6 mt-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Messages by Day</h3>
+                      <p className="text-sm text-gray-500">Daily message activity</p>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-gray-600 truncate">
-                              {typeof activity === "object"
-                                ? activity.content
-                                : activity}
-                            </p>
                           </div>
+                  <div className="h-[300px]">
+                    <Bar
+                      data={{
+                        labels: messagesByDayData.dates,
+                        datasets: [
+                          {
+                            label: "Messages",
+                            data: messagesByDayData.values,
+                            backgroundColor: (context) => {
+                              const chart = context.chart;
+                              const {ctx, chartArea} = chart;
+                              if (!chartArea) {
+                                return 'rgba(99, 102, 241, 0.8)';
+                              }
+                              const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+                              gradient.addColorStop(0, 'rgba(99, 102, 241, 0.2)');
+                              gradient.addColorStop(1, 'rgba(99, 102, 241, 0.8)');
+                              return gradient;
+                            },
+                            borderRadius: 0,
+                            borderSkipped: false,
+                            barThickness: 12,
+                            maxBarThickness: 12,
+                            order: 2,
+                          },
+                          {
+                            label: "Trend",
+                            data: messagesByDayData.values,
+                            type: 'line' as const,
+                            borderColor: 'rgba(236, 72, 153, 0.8)',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            pointHoverRadius: 4,
+                            pointHoverBackgroundColor: 'rgba(236, 72, 153, 1)',
+                            pointHoverBorderColor: '#fff',
+                            pointHoverBorderWidth: 2,
+                            tension: 0.4,
+                            fill: false,
+                            order: 1,
+                          }
+                        ]
+                      }}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                          legend: {
+                            display: true,
+                            position: 'top',
+                            align: 'end',
+                            labels: {
+                              usePointStyle: true,
+                              pointStyle: 'circle',
+                              padding: 20,
+                              font: {
+                                family: 'Inter',
+                                size: 12,
+                                weight: '500'
+                              }
+                            }
+                          },
+                          tooltip: {
+                            backgroundColor: 'white',
+                            titleColor: '#1F2937',
+                            bodyColor: '#1F2937',
+                            borderColor: '#E5E7EB',
+                            borderWidth: 1,
+                            padding: 12,
+                            displayColors: false,
+                            callbacks: {
+                              label: function(context) {
+                                const label = context.dataset.label || '';
+                                const value = context.parsed.y;
+                                return `${label}: ${value}`;
+                              }
+                            }
+                          }
+                        },
+                        scales: {
+                          x: {
+                            grid: {
+                              display: false
+                            },
+                            ticks: {
+                              font: {
+                                family: 'Inter',
+                                size: 12
+                              },
+                              color: '#6B7280'
+                            }
+                          },
+                          y: {
+                            beginAtZero: true,
+                            grid: {
+                              color: '#F3F4F6'
+                            },
+                            ticks: {
+                              font: {
+                                family: 'Inter',
+                                size: 12
+                              },
+                              color: '#6B7280',
+                              padding: 8
+                            }
+                          }
+                        }
+                      }}
+                    />
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <p className="text-gray-500 mb-2">No recent activities</p>
-                      <p className="text-sm text-gray-400">
-                        Your recent activities will appear here once you start
-                        using SwanAI
-                      </p>
-                    </div>
-                  )}
                 </div>
               </aside>
             </div>
@@ -1620,3 +1864,4 @@ export default function Dashboard() {
     </>
   );
 }
+
