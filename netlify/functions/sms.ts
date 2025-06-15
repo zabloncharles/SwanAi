@@ -2,7 +2,7 @@ const axios = require('axios');
 const { Handler } = require('@netlify/functions');
 const OpenAI = require('openai');
 const { initializeApp } = require('firebase/app');
-const { getFirestore, collection, query, where, getDocs, getDoc, doc, setDoc, addDoc } = require('firebase/firestore');
+const { getFirestore, collection, query, where, getDocs, getDoc, doc, setDoc, addDoc, increment } = require('firebase/firestore');
 
 // Initialize Firebase
 const firebaseConfig = {
@@ -190,14 +190,17 @@ Here is what you know about the user: ${JSON.stringify(shouldUpdateSummaryProfil
     });
     console.log('Vonage SMS API response:', JSON.stringify(smsResponse));
 
-    // Store Vonage remaining balance in analytics/global tokensByDay map
+    // Store Vonage remaining balance in analytics/global costPerDay map and increment tokensByDay
     const remainingBalance = smsResponse?.messages?.[0]?.['remaining-balance'];
     if (remainingBalance !== undefined) {
       const today = new Date().toISOString().split('T')[0];
       const analyticsRef = doc(db, 'analytics', 'global');
       await setDoc(analyticsRef, {
-        tokensByDay: {
+        costPerDay: {
           [today]: parseFloat(remainingBalance)
+        },
+        tokensByDay: {
+          [today]: increment(tokensUsed)
         }
       }, { merge: true });
     }
