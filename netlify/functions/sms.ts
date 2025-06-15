@@ -111,7 +111,7 @@ const handler = async (event) => {
 
     // Update profile using OpenAI
     const profilePrompt = [
-      { role: 'system', content: 'You are an assistant that extracts and updates user profiles. Given the current profile and recent conversation, return an updated JSON profile.' },
+      { role: 'system', content: 'You are an assistant that extracts and updates user profiles. Given the current profile and recent conversation, return ONLY a valid JSON object for the updated profile. Do not include any extra text.' },
       { role: 'user', content: `Current profile: ${JSON.stringify(profile)}. Conversation: ${JSON.stringify(history)}` }
     ];
     const profileResult = await openai.chat.completions.create({
@@ -119,7 +119,16 @@ const handler = async (event) => {
       messages: profilePrompt,
     });
     try {
-      profile = JSON.parse(profileResult.choices[0].message.content);
+      // Try to find the first { and last } and parse that substring
+      const content = profileResult.choices[0].message.content;
+      const jsonStart = content.indexOf('{');
+      const jsonEnd = content.lastIndexOf('}');
+      if (jsonStart !== -1 && jsonEnd !== -1) {
+        const jsonString = content.substring(jsonStart, jsonEnd + 1);
+        profile = JSON.parse(jsonString);
+      } else {
+        profile = {};
+      }
     } catch (e) {
       // fallback: keep old profile if parsing fails
       console.error('Failed to parse profile JSON:', profileResult.choices[0].message.content);
