@@ -25,6 +25,8 @@ import ConversationSummary from "../components/dashboard/ConversationSummary";
 import AdminAnalytics from "../components/dashboard/AdminAnalytics";
 import Settings from "../components/dashboard/Settings";
 import Messages from "../components/dashboard/Messages";
+import PricingSection from "../components/dashboard/PricingSection";
+import SlimFooter from '../components/SlimFooter';
 
 interface UserData {
   firstName: string;
@@ -41,11 +43,15 @@ interface UserData {
   responseTime?: number;
   summary?: string;
   uid?: string;
+  updatedAt: Date;
 }
 
 export default function Dashboard() {
+  // --- Auth and navigation hooks ---
   const [user] = useAuthState(auth);
   const navigate = useNavigate();
+
+  // --- Local state for user data and analytics ---
   const [userData, setUserData] = useState<UserData>({
     firstName: "",
     lastName: "",
@@ -57,6 +63,8 @@ export default function Dashboard() {
     createdAt: Timestamp.fromDate(new Date()),
     lastLogin: Timestamp.fromDate(new Date()),
     tokensUsed: 0,
+    updatedAt: new Date(),
+    uid: "",
   });
   const [loading, setLoading] = useState({
     userData: true,
@@ -82,7 +90,7 @@ export default function Dashboard() {
     [date: string]: number;
   }>({});
 
-  // Fetch user data
+  // --- Fetch user data from Firestore on mount or when user changes ---
   useEffect(() => {
     const fetchUserData = async () => {
       if (!user) {
@@ -130,7 +138,16 @@ export default function Dashboard() {
     fetchUserData();
   }, [user]);
 
-  // Fetch analytics data
+  // --- Listen for custom event to set active tab from child components ---
+  useEffect(() => {
+    const handleSetTab = (e: any) => {
+      if (e.detail) setActiveTab(e.detail);
+    };
+    window.addEventListener('dashboard-set-tab', handleSetTab);
+    return () => window.removeEventListener('dashboard-set-tab', handleSetTab);
+  }, []);
+
+  // --- Fetch analytics data for the current user ---
   useEffect(() => {
     const fetchAnalytics = async () => {
       if (!user) return;
@@ -181,7 +198,7 @@ export default function Dashboard() {
     fetchAnalytics();
   }, [user]);
 
-  // Fetch analytics/global for tokensByDay only if admin
+  // --- Fetch global analytics if user is admin ---
   useEffect(() => {
     if (userData.type !== "admin") return;
     const fetchGlobalAnalytics = async () => {
@@ -201,6 +218,7 @@ export default function Dashboard() {
     fetchGlobalAnalytics();
   }, [userData.type]);
 
+  // --- Sign out handler ---
   const handleSignOut = async () => {
     try {
       await signOut(auth);
@@ -210,6 +228,7 @@ export default function Dashboard() {
     }
   };
 
+  // --- Save phone and name from modal ---
   const handleSavePhone = async (
     phone: string,
     firstName: string,
@@ -240,13 +259,17 @@ export default function Dashboard() {
     }
   };
 
-  const handleSettingsUpdate = (updatedData: any) => {
+  // --- Settings update handler for Settings component ---
+  const handleSettingsUpdate = async (updatedData: any): Promise<void> => {
     setUserData((prev) => ({
       ...prev,
       ...updatedData,
+      uid: String(updatedData.uid || prev.uid || ""),
     }));
+    return Promise.resolve();
   };
 
+  // --- Loading spinner while fetching data ---
   if (loading.userData || loading.analytics) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -255,106 +278,125 @@ export default function Dashboard() {
     );
   }
 
-  // Determine if modal should show and which step to start on
+  // --- Modal logic for incomplete profile ---
   const needsPhone = !userData.phoneNumber;
   const needsName = !userData.firstName || !userData.lastName;
   const showModal = !loading.userData && user && (needsPhone || needsName);
   const startStep = needsPhone ? 1 : 2;
 
+  // --- Main dashboard layout ---
   return (
     <>
-      {showModal && (
+      {!user ? (
+        <Login />
+      ) : (
+        <div className="min-h-screen bg-white">
+          {/* Main container for sidebar and content, aligned with navbar */}
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex pt-8">
+            {/* Sidebar navigation */}
+            <DashboardSidebar
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              onSignOut={handleSignOut}
+            />
+            {/* Main content area */}
+            <div className="flex-1 pl-8">
+              <div className="py-8">
+                {/* Dashboard header with greeting */}
+                <DashboardHeader firstName={userData.firstName} />
+                <main>
+                  {/* Overview tab content */}
+                  {activeTab === "Overview" && (
+                    <>
+                      <StatCards
+                        totalMessages={totalMessages}
+                        averageResponseTime={averageResponseTime}
+                        tokensUsed={userData.tokensUsed}
+                        notificationsEnabled={userData.notificationsEnabled || false}
+                      />
+                      <div className="mt-8">
+                        <DashboardCharts
+                          messageStats={messageStats}
+                          responseTimeStats={responseTimeStats}
+                          totalMessages={totalMessages}
+                          averageResponseTime={averageResponseTime}
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                        <ProfileInfo
+                          phoneNumber={userData.phoneNumber}
+                          personality={userData.personality || ""}
+                          responseTime={userData.responseTime || 0}
+                          notificationsEnabled={
+                            userData.notificationsEnabled || false
+                          }
+                        />
+                        <ConversationSummary summary={userData.summary || ""} />
+                      </div>
+                      {/* Admin analytics only for admin users */}
+                      {userData.type === "admin" && (
+                        <AdminAnalytics
+                          usersByDay={usersByDay}
+                          tokensByDay={tokensByDay}
+                          messagesByDay={messagesByDay}
+                        />
+                      )}
+                    </>
+                  )}
+                  {/* Messages tab content */}
+                  {activeTab === "Messages" && userData.uid && (
+                    <Messages userId={userData.uid} />
+                  )}
+                  {/* Settings tab content */}
+                  {activeTab === "Settings" && (
+                    <>
+                      <h2 className="text-2xl font-bold text-gray-900 mb-1">
+                        Settings
+                      </h2>
+                      <p className="text-gray-500 mb-4 text-sm">
+                        Edit your AI profile, update your personal information,
+                        and customize your SwanAI experience.
+                      </p>
+                      <Settings
+                        userData={userData}
+                        onUpdate={handleSettingsUpdate}
+                      />
+                    </>
+                  )}
+                  {/* Pricing tab content */}
+                  {activeTab === "Pricing" && (
+                    <>
+                      <h2 className="text-2xl font-bold text-gray-900 mb-1">
+                        Plans and Pricing
+                      </h2>
+                      <p className="text-gray-500 mb-4 text-sm">
+                        Choose the perfect plan for your needs. Upgrade or downgrade at any time.
+                      </p>
+                      <PricingSection />
+                    </>
+                  )}
+                </main>
+              </div>
+            </div>
+          </div>
+          {/* Footer for branding */}
+          <SlimFooter />
+        </div>
+      )}
+      {/* Modal for required phone/name info */}
+      {modalVisible && (
         <PhoneRequiredModal
-          open={true}
           onSave={handleSavePhone}
           loading={phoneLoading}
           error={phoneError}
-          fadeIn={modalVisible}
-          startStep={startStep}
+          open={modalVisible}
+          onClose={() => setModalVisible(false)}
           phone={userData.phoneNumber || ""}
           firstName={userData.firstName || ""}
           lastName={userData.lastName || ""}
-          onClose={() => setModalVisible(false)}
+          fadeIn={true}
         />
       )}
-      <div>
-        <div className="container mx-auto px-4 py-8 max-w-7xl flex justify-between">
-          <DashboardSidebar
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            onSignOut={handleSignOut}
-          />
-          <div className="flex-1 flex justify-center">
-            <div
-              className="flex w-full max-w-7xl"
-              style={{ maxWidth: "80rem" }}
-            >
-              <main className="flex-1 flex flex-col px-8 py-8">
-                <DashboardHeader firstName={userData.firstName} />
-                {activeTab === "Overview" && (
-                  <>
-                    {userData.type === "admin" && (
-                      <AdminAnalytics
-                        usersByDay={usersByDay}
-                        tokensByDay={tokensByDay}
-                        messagesByDay={messagesByDay}
-                      />
-                    )}
-                    <h2 className="text-2xl font-bold text-gray-900 mb-1">
-                      Overview
-                    </h2>
-                    <p className="text-gray-500 mb-4 text-sm">
-                      Get a snapshot of your SMS activity, AI usage, and recent
-                      conversations.
-                    </p>
-                    <StatCards
-                      totalMessages={totalMessages}
-                      tokensUsed={userData.tokensUsed}
-                      averageResponseTime={averageResponseTime}
-                      notificationsEnabled={
-                        userData.notificationsEnabled || false
-                      }
-                    />
-                    <DashboardCharts
-                      messageStats={messageStats}
-                      responseTimeStats={responseTimeStats}
-                    />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                      <ProfileInfo
-                        phoneNumber={userData.phoneNumber}
-                        personality={userData.personality || ""}
-                        responseTime={userData.responseTime || 0}
-                        notificationsEnabled={
-                          userData.notificationsEnabled || false
-                        }
-                      />
-                      <ConversationSummary summary={userData.summary || ""} />
-                    </div>
-                  </>
-                )}
-                {activeTab === "Messages" && userData.uid && (
-                  <Messages userId={userData.uid} />
-                )}
-                {activeTab === "Settings" && (
-                  <>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-1">
-                      Settings
-                    </h2>
-                    <p className="text-gray-500 mb-4 text-sm">
-                      Edit your AI profile, update your personal information,
-                      and customize your SwanAI experience.
-                    </p>
-                    <Settings
-                      userData={userData}
-                      onUpdate={handleSettingsUpdate}
-                    />
-                  </>
-                )}
-              </main>
-            </div>
-          </div>
-        </div>
-      </div>
     </>
   );
 }

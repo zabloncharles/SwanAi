@@ -127,12 +127,19 @@ export default function PhoneRequiredModal({
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 transition-opacity duration-700 ${
-        fadeIn ? "opacity-100" : "opacity-0"
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity duration-500 ${
+        fadeIn ? "opacity-100 scale-100" : "opacity-0 scale-95"
       }`}
-      style={{ pointerEvents: fadeIn ? "auto" : "none" }}
+      style={{ pointerEvents: fadeIn ? "auto" : "none", transition: 'opacity 0.5s, transform 0.5s' }}
     >
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 relative">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 relative animate-fade-in">
+        {/* Progress Indicator */}
+        <div className="flex justify-center mb-4">
+          <div className="flex gap-2">
+            <span className={`w-3 h-3 rounded-full ${step === 1 ? 'bg-blue-600' : 'bg-gray-200'}`}></span>
+            <span className={`w-3 h-3 rounded-full ${step === 2 ? 'bg-blue-600' : 'bg-gray-200'}`}></span>
+          </div>
+        </div>
         {success ? (
           <div className="flex flex-col items-center justify-center h-64">
             <svg

@@ -10,9 +10,11 @@ import {
   TagIcon,
   InformationCircleIcon,
 } from "@heroicons/react/24/outline";
+import { useUser } from "./UserContext";
 
 export default function Navbar() {
   const [user] = useAuthState(auth);
+  const { userData } = useUser();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -78,21 +80,39 @@ export default function Navbar() {
             >
               About
             </Link>
-            <button className="hover:text-indigo-600">
-              <svg
-                className="w-7 h-7"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
+            {/* User Profile Dropdown */}
+            <div className="relative group">
+              <button
+                className="flex items-center gap-2 px-3 py-1 rounded-full hover:bg-gray-100 transition focus:outline-none"
+                onClick={() => setIsMobileMenuOpen(false)}
+                type="button"
+                id="user-menu-button"
+                aria-expanded="false"
+                aria-haspopup="true"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M5.121 17.804A9 9 0 1 1 18.88 17.804M15 11a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"
-                />
-              </svg>
-            </button>
+                <svg className="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5.121 17.804A9 9 0 1 1 18.88 17.804M15 11a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" />
+                </svg>
+                <span className="font-medium text-gray-700">{userData?.firstName || user?.displayName?.split(' ')[0] || user?.email?.split("@")[0]}</span>
+                <svg className="w-4 h-4 ml-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-100 rounded-lg shadow-lg z-50 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto transition-opacity duration-150">
+                <Link
+                  to="/dashboard"
+                  className="block px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-t-lg"
+                >
+                  Profile
+                </Link>
+                <button
+                  onClick={() => signOut(auth)}
+                  className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-b-lg"
+                >
+                  Sign Out
+                </button>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="hidden md:flex items-center space-x-1">

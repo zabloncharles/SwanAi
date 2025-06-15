@@ -18,6 +18,7 @@ import Privacy from "./pages/Privacy";
 import About from "./pages/About";
 import Support from "./pages/Support";
 import Pricing from "./pages/Pricing";
+import { UserProvider } from "./components/UserContext";
 
 function AppContent() {
   const [user, loading] = useAuthState(auth);
@@ -64,7 +65,9 @@ function AppContent() {
 function App() {
   return (
     <Router>
-      <AppContent />
+      <UserProvider>
+        <AppContent />
+      </UserProvider>
     </Router>
   );
 }

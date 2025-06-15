@@ -1,56 +1,82 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useAuthState } from "react-firebase-hooks/auth";
+import { auth, db } from "../../config/firebase";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 
 const tiers = [
   {
     name: "Free",
-    price: "$0",
-    description: "Get started with your personal SMS AI assistant.",
+    price: { monthly: "$0", annual: "$0" },
     features: [
-      "20 SMS AI messages/month",
-      "Choose your AI's personality (friend, family, assistant)",
-      "Basic reminders",
-      "Customer support",
+      "Basic AI personality customization",
+      "Standard response times",
+      "Limited message history",
+      "Basic support",
     ],
-    cta: "Get started for free",
-    highlight: false,
+    cta: "Free",
+    mostPopular: false,
   },
   {
     name: "Pro",
-    price: "$19",
-    description: "Unlock unlimited SMS, advanced reminders, and integrations.",
+    price: { monthly: "$9.99", annual: "$99.99" },
     features: [
-      "Unlimited SMS AI conversations",
-      "Choose your AI's personality (friend, family, assistant)",
-      "Custom AI relationships: friend, cousin, parent, assistant, more",
-      "Advanced reminders & scheduling",
-      "Email & calendar integration (Gmail, Outlook)",
-      "Priority email support",
-      "Integrations (Google Calendar)",
+      "Advanced AI personality customization",
+      "AI relationship customization",
+      "Priority response times",
+      "Extended message history",
+      "Priority support",
+      "Advanced analytics",
     ],
-    cta: "Start 7-day free trial",
-    highlight: true,
+    cta: "Upgrade to Pro",
+    mostPopular: true,
   },
   {
     name: "Pay As You Go",
-    price: "From $0.05/msg",
-    description:
-      "Flexible, usage-based pricing for growing teams and businesses.",
+    price: { monthly: "Custom", annual: "Custom" },
     features: [
-      "All Pro features included",
-      "No monthly commitment",
-      "Only pay for what you use",
-      "Priority support",
-      "Volume discounts available",
+      "All Pro features",
+      "Custom usage-based pricing",
+      "Dedicated support",
+      "Custom integrations",
+      "SLA guarantees",
     ],
-    cta: "Start Pay As You Go",
-    highlight: false,
-    dark: true,
+    cta: "Pay As You Go",
+    mostPopular: false,
   },
 ];
 
+const PLAN_TYPES = {
+  FREE: 'free',
+  PRO: 'pro',
+  ULTIMATE: 'ultimate',
+};
+
+const PLAN_DISPLAY_NAMES = {
+  [PLAN_TYPES.FREE]: 'Free',
+  [PLAN_TYPES.PRO]: 'Pro',
+  [PLAN_TYPES.ULTIMATE]: 'Pay As You Go',
+};
+
+// Feature comparison data
+const featureTable = [
+  { feature: 'AI Personality Customization', free: true, pro: true, custom: true },
+  { feature: 'AI Relationship Customization', free: false, pro: true, custom: true },
+  { feature: 'Priority Response Times', free: false, pro: true, custom: true },
+  { feature: 'Extended Message History', free: false, pro: true, custom: true },
+  { feature: 'Priority Support', free: false, pro: true, custom: true },
+  { feature: 'Advanced Analytics', free: false, pro: true, custom: true },
+  { feature: 'Custom Usage-Based Pricing', free: false, pro: false, custom: true },
+  { feature: 'Dedicated Support', free: false, pro: false, custom: true },
+  { feature: 'Custom Integrations', free: false, pro: false, custom: true },
+  { feature: 'SLA Guarantees', free: false, pro: false, custom: true },
+];
+
 export default function PricingSection() {
-  const [billing, setBilling] = useState<"monthly" | "annual">("annual");
-  const [currentPlan, setCurrentPlan] = useState("Free");
+  const [user] = useAuthState(auth);
+  const [planType, setPlanType] = useState<string | null>(null); // null = not loaded, string = loaded
+  const [billing, setBilling] = useState<'monthly' | 'annual'>('annual');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
   const [showToast, setShowToast] = useState(false);
@@ -59,28 +85,89 @@ export default function PricingSection() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [pendingPlan, setPendingPlan] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!user) {
+      setLoading(false);
+      setPlanType(null);
+      return;
+    }
+    setLoading(true);
+    setError('');
+    getDoc(doc(db, 'users', user.uid))
+      .then(snap => {
+        if (snap.exists()) {
+          const data = snap.data();
+          setPlanType(data.type || PLAN_TYPES.FREE);
+          setBilling(data.billingPeriod || 'annual');
+        } else {
+          setPlanType(PLAN_TYPES.FREE);
+        }
+      })
+      .catch(() => setError('Failed to load plan.'))
+      .finally(() => setLoading(false));
+  }, [user]);
+
   const handleUpgrade = (plan: string) => {
     setPendingPlan(plan);
     setShowConfirm(true);
   };
 
-  const confirmUpgrade = () => {
-    if (!pendingPlan) return;
+  const confirmUpgrade = async () => {
+    if (!pendingPlan || !user) return;
     setShowConfirm(false);
     setModalLoading(true);
     setModalSuccess(false);
     setShowModal(true);
-    setTimeout(() => {
+
+    try {
+      // Map the plan name to the type value
+      let planTypeValue = PLAN_TYPES.FREE;
+      switch (pendingPlan) {
+        case 'Free':
+          planTypeValue = PLAN_TYPES.FREE;
+          break;
+        case 'Pro':
+          planTypeValue = PLAN_TYPES.PRO;
+          break;
+        case 'Pay As You Go':
+          planTypeValue = PLAN_TYPES.ULTIMATE;
+          break;
+        default:
+          planTypeValue = PLAN_TYPES.FREE;
+      }
+
+      // Update the user's plan and billing period in Firebase
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, {
+        type: planTypeValue,
+        planUpdatedAt: new Date(),
+        billingPeriod: billing,
+      });
+
+      // Wait for 5 seconds before showing success
+      await new Promise(resolve => setTimeout(resolve, 5000));
+
       setModalLoading(false);
       setModalSuccess(true);
-      setCurrentPlan(pendingPlan);
+      setPlanType(planTypeValue);
       setModalMessage(
-        `Payment successful! You are now on the ${pendingPlan} plan.`
+        `Payment successful! You are now on the ${pendingPlan} plan with ${billing} billing.`
       );
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
+
+      // Auto-dismiss the success modal after 3 seconds
+      setTimeout(() => {
+        setShowModal(false);
+        setModalSuccess(false);
+      }, 3000);
+
       setPendingPlan(null);
-    }, 5000);
+    } catch (error) {
+      console.error('Error updating plan:', error);
+      setModalLoading(false);
+      setModalMessage('Failed to update plan. Please try again.');
+    }
   };
 
   const cancelUpgrade = () => {
@@ -88,351 +175,253 @@ export default function PricingSection() {
     setPendingPlan(null);
   };
 
-  const currentPlanObj = tiers.find((t) => t.name === currentPlan);
-  const pendingPlanObj = tiers.find((t) => t.name === pendingPlan);
+  // UI rendering
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-[200px]">
+        <span className="text-gray-500">Loading plans...</span>
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="flex justify-center items-center min-h-[200px]">
+        <span className="text-red-500">{error}</span>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      {/* Toast Notification */}
-      {showToast && (
-        <div className="fixed top-6 right-6 z-50 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg animate-fade-in">
-          {modalMessage}
-        </div>
-      )}
-      {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 transition-opacity duration-700">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 relative">
-            <button
-              onClick={() => setShowModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 focus:outline-none"
-              aria-label="Close"
-            >
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-            {modalLoading ? (
-              <>
-                <div className="w-20 h-20 flex items-center justify-center mb-6 mx-auto">
-                  <svg
-                    className="animate-spin h-16 w-16 text-green-500"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                      fill="none"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8v8z"
-                    />
-                  </svg>
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">
-                  Processing payment...
-                </h2>
-                <p className="text-gray-500 text-center mb-6">
-                  Please wait while we process your payment.
-                </p>
-              </>
-            ) : modalSuccess ? (
-              <>
-                <div className="flex flex-col items-center justify-center h-64">
-                  <svg
-                    className="w-16 h-16 text-green-500 mb-4"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">
-                    Payment Successful
-                  </h2>
-                  <p className="text-gray-500 text-center mb-6">
-                    {modalMessage}
-                  </p>
-                  <button
-                    onClick={() => setShowModal(false)}
-                    className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-                  >
-                    Close
-                  </button>
-                </div>
-              </>
-            ) : null}
-          </div>
-        </div>
-      )}
-      {/* Confirm Dialog */}
-      {showConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 transition-opacity duration-700">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 relative flex flex-col items-center">
-            <button
-              onClick={cancelUpgrade}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 focus:outline-none"
-              aria-label="Close"
-            >
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4 text-center">
-              Confirm Plan Change
-            </h2>
-            <p className="text-gray-500 text-center mb-6">
-              Are you sure you want to switch to the{" "}
-              <span className="font-semibold text-indigo-600">
-                {pendingPlan}
-              </span>{" "}
-              plan?
-            </p>
-            {/* Plan Comparison */}
-            {currentPlanObj && pendingPlanObj && (
-              <div className="w-full mb-6">
-                <div className="flex justify-between gap-4 text-xs font-medium mb-1">
-                  <span className="flex-1 text-center text-gray-400 uppercase tracking-wide">
-                    Current
-                  </span>
-                  <span className="flex-1 text-center text-gray-400 uppercase tracking-wide">
-                    New
-                  </span>
-                </div>
-                <div className="flex justify-between gap-4 mb-2">
-                  <span className="flex-1 text-center text-gray-700 font-semibold">
-                    {currentPlanObj.name}
-                  </span>
-                  <span className="flex-1 text-center text-indigo-600 font-semibold">
-                    {pendingPlanObj.name}
-                  </span>
-                </div>
-                <div className="flex gap-4">
-                  <div className="flex-1 bg-gray-50 rounded-lg p-3">
-                    {currentPlanObj.features.map((f) => (
-                      <div key={f} className="flex items-start gap-2 mb-2">
-                        <svg
-                          className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                        <span className="text-gray-800 text-sm leading-snug">
-                          {f}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex-1 bg-gray-50 rounded-lg p-3">
-                    {pendingPlanObj.features.map((f) => (
-                      <div key={f} className="flex items-start gap-2 mb-2">
-                        <svg
-                          className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                        <span
-                          className={`text-sm leading-snug ${
-                            currentPlanObj.features.includes(f)
-                              ? "text-gray-800"
-                              : "font-semibold text-indigo-600"
-                          }`}
-                        >
-                          {f}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-            <div className="flex gap-4 mt-2">
-              <button
-                onClick={confirmUpgrade}
-                className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-              >
-                Yes, Confirm
-              </button>
-              <button
-                onClick={cancelUpgrade}
-                className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      <div className="text-center mb-8">
-        <div className="inline-flex rounded-lg bg-gray-100 p-1 mb-2">
+    <div className="relative">
+      {/* Billing Toggle */}
+      <div className="flex justify-center mb-8">
+        <div className="relative flex items-center p-1 bg-gray-100 rounded-lg shadow-md">
           <button
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              billing === "monthly"
-                ? "bg-white text-gray-900 shadow"
-                : "text-gray-500"
+            onClick={() => setBilling('monthly')}
+            className={`relative px-6 py-2 text-base font-semibold rounded-md transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              billing === 'monthly'
+                ? 'bg-blue-600 text-white shadow'
+                : 'text-gray-600 hover:text-blue-700'
             }`}
-            onClick={() => setBilling("monthly")}
+            aria-pressed={billing === 'monthly'}
           >
             Monthly
           </button>
           <button
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              billing === "annual"
-                ? "bg-white text-gray-900 shadow"
-                : "text-gray-500"
+            onClick={() => setBilling('annual')}
+            className={`relative px-6 py-2 text-base font-semibold rounded-md transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              billing === 'annual'
+                ? 'bg-blue-600 text-white shadow'
+                : 'text-gray-600 hover:text-blue-700'
             }`}
-            onClick={() => setBilling("annual")}
+            aria-pressed={billing === 'annual'}
           >
-            Annual{" "}
-            <span className="ml-1 text-xs text-green-600 font-semibold">
+            Annual
+            <span className="absolute -top-2 -right-2 px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded-full">
               Save 20%
             </span>
           </button>
         </div>
       </div>
+
+      {/* Pricing Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {tiers.map((tier) => (
-          <div
-            key={tier.name}
-            className={`flex flex-col rounded-2xl border ${
-              tier.dark
-                ? "bg-gray-900 text-white border-gray-800"
-                : "bg-white border-gray-200"
-            } shadow-sm p-8 relative ${
-              tier.highlight ? "ring-2 ring-indigo-500" : ""
-            } ${currentPlan === tier.name ? "ring-4 ring-green-400" : ""}`}
-          >
-            <div className="mb-4">
-              <h2 className="text-xl font-bold mb-1 flex items-center">
-                {tier.name}
-                {tier.highlight && (
-                  <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">
-                    Popular
+        {tiers.map((tier) => {
+          const isCurrent = planType && PLAN_DISPLAY_NAMES[planType] === tier.name;
+          const isPro = tier.name === 'Pro';
+          return (
+            <div
+              key={tier.name}
+              className={`relative flex flex-col p-8 bg-white rounded-2xl shadow-sm transition-transform duration-200 ${
+                isPro ? 'ring-4 ring-blue-500 scale-105 shadow-lg z-10' : 'border border-gray-200'
+              } ${isCurrent ? 'border-4 border-green-500' : ''}`}
+            >
+              {isPro && (
+                <div className="absolute -top-4 left-0 right-0 mx-auto w-36 rounded-full bg-blue-600 px-3 py-1 text-center text-sm font-bold text-white shadow">
+                  Most Popular
+                </div>
+              )}
+              {isCurrent && (
+                <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold shadow">
+                  Current Plan
+                </div>
+              )}
+              <div className="flex-1">
+                <h3 className="text-xl font-bold text-gray-900 mb-2">{tier.name}</h3>
+                <p className="mt-2 flex items-baseline text-gray-900">
+                  <span className="text-5xl font-extrabold tracking-tight">
+                    {tier.price[billing]}
                   </span>
-                )}
-                {currentPlan === tier.name && (
-                  <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 flex items-center gap-1">
-                    <svg
-                      className="w-4 h-4 text-green-500 inline-block"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                    Current Plan
-                  </span>
-                )}
-              </h2>
-              <div className="text-3xl font-extrabold mb-1">
-                {tier.price}
-                {tier.name !== "Enterprise" && (
-                  <span className="text-base font-medium ml-1 text-gray-400">
-                    {billing === "annual" ? "/mo (billed yearly)" : "/mo"}
-                  </span>
-                )}
+                  {tier.price[billing] !== 'Custom' && (
+                    <span className="ml-1 text-xl font-semibold">
+                      /{billing === 'monthly' ? 'mo' : 'yr'}
+                    </span>
+                  )}
+                </p>
+                <ul className="mt-6 space-y-3">
+                  {tier.features.map((feature) => (
+                    <li key={feature} className="flex items-start">
+                      <div className="flex-shrink-0 mt-1">
+                        <svg
+                          className="h-5 w-5 text-blue-500"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      </div>
+                      <p className="ml-3 text-sm text-gray-700">{feature}</p>
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <div
-                className={`mb-4 text-sm ${
-                  tier.dark ? "text-gray-300" : "text-gray-500"
-                }`}
-              >
-                {tier.description}
+              <div className="mt-8">
+                {isCurrent ? (
+                  <button
+                    className="w-full rounded-lg px-4 py-2 text-base font-semibold bg-gray-100 text-gray-900 cursor-not-allowed border border-gray-300 transition-transform duration-150"
+                    disabled
+                  >
+                    Current Plan
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleUpgrade(tier.name)}
+                    className="w-full rounded-lg px-4 py-2 text-base font-semibold bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all active:scale-95"
+                  >
+                    {tier.cta}
+                  </button>
+                )}
               </div>
             </div>
-            <ul
-              className={`mb-8 space-y-3 flex-1 ${
-                tier.dark ? "text-gray-200" : "text-gray-700"
-              }`}
-            >
-              {tier.features.map((feature) => (
-                <li key={feature} className="flex items-start">
-                  <svg
-                    className={`w-5 h-5 flex-shrink-0 mr-2 ${
-                      tier.dark ? "text-green-400" : "text-green-600"
-                    }`}
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  <span>{feature}</span>
-                </li>
-              ))}
-            </ul>
-            <button
-              className={`mt-auto w-full inline-block text-center rounded-lg px-5 py-3 font-semibold transition-colors focus:outline-none ${
-                currentPlan === tier.name
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : tier.dark
-                  ? "bg-white text-gray-900 hover:bg-gray-100"
-                  : "bg-indigo-600 text-white hover:bg-indigo-700"
-              } ${tier.highlight ? "shadow-lg" : ""}`}
-              onClick={() => handleUpgrade(tier.name)}
-              disabled={currentPlan === tier.name}
-            >
-              {currentPlan === tier.name ? "Current Plan" : tier.cta}
-            </button>
-          </div>
-        ))}
+          );
+        })}
       </div>
+
+      {/* Feature Comparison Table */}
+      <div className="overflow-x-auto mb-10 mt-10">
+        <table className="min-w-full border border-gray-200 rounded-lg bg-white text-sm">
+          <thead>
+            <tr>
+              <th className="px-4 py-2 text-left font-semibold text-gray-700">Feature</th>
+              <th className="px-4 py-2 text-center font-semibold text-gray-700">Free</th>
+              <th className="px-4 py-2 text-center font-semibold text-gray-700">Pro</th>
+              <th className="px-4 py-2 text-center font-semibold text-gray-700">Custom</th>
+            </tr>
+          </thead>
+          <tbody>
+            {featureTable.map(row => (
+              <tr key={row.feature} className="border-t">
+                <td className="px-4 py-2 text-gray-600 flex items-center gap-2">
+                  <svg className="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="10" strokeWidth="2" /></svg>
+                  {row.feature}
+                </td>
+                <td className="px-4 py-2 text-center">{row.free ? <span title="Included">✓</span> : <span title="Not included">—</span>}</td>
+                <td className="px-4 py-2 text-center">{row.pro ? <span title="Included">✓</span> : <span title="Not included">—</span>}</td>
+                <td className="px-4 py-2 text-center">{row.custom ? <span title="Included">✓</span> : <span title="Not included">—</span>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Testimonial/Guarantee */}
+      <div className="mt-12 flex flex-col items-start">
+        <div className="max-w-xl">
+          <div className="text-lg font-semibold text-blue-700 mb-2">“SwanAI Pro has transformed my workflow. The support is top-notch and the features are worth every penny!”</div>
+          <div className="text-sm text-gray-500">— Happy Customer</div>
+        </div>
+    
+      </div>
+
+      {/* Confirmation Modal */}
+      {showConfirm && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              Confirm Plan Change
+            </h3>
+            <p className="text-sm text-gray-500 mb-6">
+              Are you sure you want to change your plan to {pendingPlan}? This will
+              update your billing immediately.
+            </p>
+            <div className="flex justify-end gap-4">
+              <button
+                onClick={cancelUpgrade}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmUpgrade}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Loading/Success Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            {modalLoading ? (
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-sm text-gray-500">Processing your request...</p>
+              </div>
+            ) : modalSuccess ? (
+              <div className="text-center">
+                <svg
+                  className="h-12 w-12 text-green-500 mx-auto mb-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+                <p className="text-sm text-gray-900">{modalMessage}</p>
+              </div>
+            ) : (
+              <div className="text-center">
+                <svg
+                  className="h-12 w-12 text-red-500 mx-auto mb-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+                <p className="text-sm text-gray-900">{modalMessage}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {showToast && (
+        <div className="fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50">
+          {modalMessage}
+        </div>
+      )}
     </div>
   );
 }

@@ -201,10 +201,12 @@ export default function Login() {
         }
         if (userDocExists) {
           navigate("/dashboard");
+          window.location.reload();
         } else {
           // fallback: still navigate, but warn in console
           console.warn("User doc not found after sign up, navigating anyway.");
           navigate("/dashboard");
+          window.location.reload();
         }
       } else {
         // Handle sign in
