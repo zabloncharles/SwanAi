@@ -94,7 +94,7 @@ const handler = async (event) => {
 
     // Always generate/update summary after every message
     const summaryPrompt = [
-      { role: 'system', content: 'Summarize the following conversation for future context.' },
+      { role: 'system', content: `Summarize the following conversation for future context. Do NOT mention that you are an AI or language model. Stay in character as the user's ${userData.aiRelationship || 'Friend'} with a ${userData.personality || 'Friendly'} personality.` },
       { role: 'user', content: summary },
       ...history
     ];
@@ -111,7 +111,7 @@ const handler = async (event) => {
 
     // Update profile using OpenAI
     const profilePrompt = [
-      { role: 'system', content: 'You are an assistant that extracts and updates user profiles. Given the current profile and recent conversation, return ONLY a valid JSON object for the updated profile. Do not include any extra text.' },
+      { role: 'system', content: `You are an assistant that extracts and updates user profiles. Given the current profile and recent conversation, return ONLY a valid JSON object for the updated profile. The profile should include fields like personality, relationship, preferences, and any other relevant user info. Do not include any extra text or just { role: 'user' }.` },
       { role: 'user', content: `Current profile: ${JSON.stringify(profile)}. Conversation: ${JSON.stringify(history)}` }
     ];
     const profileResult = await openai.chat.completions.create({
@@ -184,6 +184,18 @@ Here is what you know about the user: ${JSON.stringify(profile)}.`
       text: aiResponse,
     });
     console.log('Vonage SMS API response:', JSON.stringify(smsResponse));
+
+    // Store Vonage remaining balance in analytics/global tokensByDay map
+    const remainingBalance = smsResponse?.messages?.[0]?.['remaining-balance'];
+    if (remainingBalance !== undefined) {
+      const today = new Date().toISOString().split('T')[0];
+      const analyticsRef = doc(db, 'analytics', 'global');
+      await setDoc(analyticsRef, {
+        tokensByDay: {
+          [today]: parseFloat(remainingBalance)
+        }
+      }, { merge: true });
+    }
 
     return {
       statusCode: 200,
