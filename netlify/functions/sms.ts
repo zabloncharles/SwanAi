@@ -92,52 +92,52 @@ const handler = async (event) => {
     // Add new user message to history
     history.push({ role: 'user', content: text });
 
-    // Always generate/update summary after every message
-    const summaryPrompt = [
-      { role: 'system', content: `Summarize the following conversation for future context. Do NOT mention that you are an AI or language model. Stay in character as the user's ${userData.aiRelationship || 'Friend'} with a ${userData.personality || 'Friendly'} personality.` },
-      { role: 'user', content: summary },
-      ...history
-    ];
-    const summaryResult = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
-      messages: summaryPrompt,
-    });
-    summary = summaryResult.choices[0].message.content;
+    // Only update summary and profile every 5 messages
+    const shouldUpdateSummaryProfile = history.length % 5 === 1; // update on 1st, 6th, 11th, etc.
+    let updatedSummary = summary;
+    let updatedProfile = profile;
+    if (shouldUpdateSummaryProfile) {
+      // Update summary
+      const summaryPrompt = [
+        { role: 'system', content: `Summarize the following conversation for future context. Do NOT mention that you are an AI or language model. Stay in character as the user's ${userData.aiRelationship || 'Friend'} with a ${userData.personality || 'Friendly'} personality.` },
+        { role: 'user', content: summary },
+        ...history
+      ];
+      const summaryResult = await openai.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: summaryPrompt,
+      });
+      updatedSummary = summaryResult.choices[0].message.content;
+
+      // Update profile
+      const profilePrompt = [
+        { role: 'system', content: `You are an assistant that extracts and updates user profiles. Given the current profile and recent conversation, return ONLY a valid JSON object for the updated profile. The profile should include fields like personality, relationship, preferences, and any other relevant user info. Do not include any extra text or just { role: 'user' }.` },
+        { role: 'user', content: `Current profile: ${JSON.stringify(profile)}. Conversation: ${JSON.stringify(history)}` }
+      ];
+      const profileResult = await openai.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: profilePrompt,
+      });
+      try {
+        const content = profileResult.choices[0].message.content;
+        const jsonStart = content.indexOf('{');
+        const jsonEnd = content.lastIndexOf('}');
+        if (jsonStart !== -1 && jsonEnd !== -1) {
+          const jsonString = content.substring(jsonStart, jsonEnd + 1);
+          updatedProfile = JSON.parse(jsonString);
+        } else {
+          updatedProfile = profile;
+        }
+      } catch (e) {
+        console.error('Failed to parse profile JSON:', profileResult.choices[0].message.content);
+        updatedProfile = profile;
+      }
+    }
 
     // Trim history if needed
     if (history.length > MAX_HISTORY) {
       history = history.slice(-MAX_HISTORY);
     }
-
-    // Update profile using OpenAI
-    const profilePrompt = [
-      { role: 'system', content: `You are an assistant that extracts and updates user profiles. Given the current profile and recent conversation, return ONLY a valid JSON object for the updated profile. The profile should include fields like personality, relationship, preferences, and any other relevant user info. Do not include any extra text or just { role: 'user' }.` },
-      { role: 'user', content: `Current profile: ${JSON.stringify(profile)}. Conversation: ${JSON.stringify(history)}` }
-    ];
-    const profileResult = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
-      messages: profilePrompt,
-    });
-    try {
-      // Try to find the first { and last } and parse that substring
-      const content = profileResult.choices[0].message.content;
-      const jsonStart = content.indexOf('{');
-      const jsonEnd = content.lastIndexOf('}');
-      if (jsonStart !== -1 && jsonEnd !== -1) {
-        const jsonString = content.substring(jsonStart, jsonEnd + 1);
-        profile = JSON.parse(jsonString);
-      } else {
-        profile = {};
-      }
-    } catch (e) {
-      // fallback: keep old profile if parsing fails
-      console.error('Failed to parse profile JSON:', profileResult.choices[0].message.content);
-    }
-
-    // Save updated summary, history, and profile
-    console.log('Saving to Firestore:', { summary, history, profile, userId });
-    await setDoc(userRef, { ...userSnap.data(), summary, history, profile }, { merge: true });
-    console.log('Saved to Firestore:', { summary, history, profile, userId });
 
     // Use profile and summary in the system prompt, and integrate personality
     const personality = userData.personality || userData.aiPersonality || 'Friendly';
@@ -152,9 +152,9 @@ If it fits, add a touch of humor or encouragement, and use emojis sparingly.
 Never sound robotic or overly formal. 
 Avoid generic phrases like "Anything else you need?" or "How can I help you?" Instead, use natural, relationship-appropriate language, and don't be afraid to add a little humor or personality.
 If the user asks about your personality or relationship, answer based on the above.
-Here is what you know about the user: ${JSON.stringify(profile)}.`
+Here is what you know about the user: ${JSON.stringify(shouldUpdateSummaryProfile ? updatedProfile : profile)}.`
       },
-      { role: 'system', content: summary },
+      { role: 'system', content: shouldUpdateSummaryProfile ? updatedSummary : summary },
       ...history
     ];
     const startTime = Date.now();
@@ -167,13 +167,18 @@ Here is what you know about the user: ${JSON.stringify(profile)}.`
     const aiResponse = completion.choices[0].message?.content || 'Sorry, I could not process your request.';
     const tokensUsed = completion.usage?.total_tokens || 0;
 
-    // Add AI response to history and save
+    // Add AI response to history
     history.push({ role: 'assistant', content: aiResponse });
-    await setDoc(userRef, { ...userSnap.data(), summary, history, profile }, { merge: true });
 
-    // Update running total tokens used
+    // Batch all Firestore updates for the user into a single setDoc call
     const prevTokens = userSnap.data().tokensUsed || 0;
-    await setDoc(userRef, { ...userSnap.data(), tokensUsed: prevTokens + tokensUsed }, { merge: true });
+    await setDoc(userRef, {
+      ...userSnap.data(),
+      summary: shouldUpdateSummaryProfile ? updatedSummary : summary,
+      history,
+      profile: shouldUpdateSummaryProfile ? updatedProfile : profile,
+      tokensUsed: prevTokens + tokensUsed
+    }, { merge: true });
 
     // Send SMS response via Vonage API
     const smsResponse = await sendSms({
