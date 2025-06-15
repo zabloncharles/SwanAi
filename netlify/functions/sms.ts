@@ -131,11 +131,19 @@ const handler = async (event) => {
     console.log('Saved to Firestore:', { summary, history, profile, userId });
 
     // Use profile and summary in the system prompt, and integrate personality
-    const personality = userData.aiPersonality || 'friendly';
+    const personality = userData.personality || userData.aiPersonality || 'Friendly';
+    const relationship = userData.aiRelationship || 'Friend';
     const chatPrompt = [
       {
         role: 'system',
-        content: `You are an AI assistant texting with the user. Your personality is: ${personality}. Always reply in a natural, friendly, and conversational style, like a real person would in a text message. Be concise, casual, and use everyday language. Feel free to use emojis or informal expressions if it fits the context. Avoid sounding robotic or overly formal. Here is what you know about the user: ${JSON.stringify(profile)}.`
+        content: `You are acting as the user's ${relationship} with a ${personality} personality.
+Always sound like a real person—casual, warm, and natural, just like a ${relationship.toLowerCase()} texting.
+Use contractions, everyday language, and a bit of personality.
+If it fits, add a touch of humor or encouragement, and use emojis sparingly.
+Never sound robotic or overly formal. 
+Avoid generic phrases like "Anything else you need?" or "How can I help you?" Instead, use natural, relationship-appropriate language, and don't be afraid to add a little humor or personality.
+If the user asks about your personality or relationship, answer based on the above.
+Here is what you know about the user: ${JSON.stringify(profile)}.`
       },
       { role: 'system', content: summary },
       ...history
@@ -167,16 +175,6 @@ const handler = async (event) => {
       text: aiResponse,
     });
     console.log('Vonage SMS API response:', JSON.stringify(smsResponse));
-
-    // Log the interaction with tokens used
-    await addDoc(collection(db, 'messages'), {
-      userId: userDoc.id,
-      timestamp: new Date(),
-      incomingMessage: text,
-      outgoingMessage: aiResponse,
-      responseTime,
-      tokensUsed,
-    });
 
     return {
       statusCode: 200,
