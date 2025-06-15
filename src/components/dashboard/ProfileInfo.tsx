@@ -11,6 +11,8 @@ interface ProfileInfoProps {
   personality: string;
   responseTime: number;
   notificationsEnabled: boolean;
+  aiRelationship?: string;
+  type?: string;
 }
 
 export default function ProfileInfo({
@@ -18,6 +20,8 @@ export default function ProfileInfo({
   personality,
   responseTime,
   notificationsEnabled,
+  aiRelationship,
+  type,
 }: ProfileInfoProps) {
   const infoItems = [
     {
@@ -30,6 +34,13 @@ export default function ProfileInfo({
       label: "AI Personality",
       value: personality || "Professional",
     },
+    ...(type === 'pro' || type === 'ultimate' || type === 'admin'
+      ? [{
+          icon: UserCircleIcon,
+          label: "AI Relationship",
+          value: aiRelationship && aiRelationship.trim() !== '' ? aiRelationship : "Not selected yet",
+        }]
+      : []),
     {
       icon: ClockIcon,
       label: "Average Response Time",

@@ -330,6 +330,8 @@ export default function Dashboard() {
                           notificationsEnabled={
                             userData.notificationsEnabled || false
                           }
+                          aiRelationship={userData.aiRelationship}
+                          type={userData.type}
                         />
                         <ConversationSummary summary={userData.summary || ""} />
                       </div>
