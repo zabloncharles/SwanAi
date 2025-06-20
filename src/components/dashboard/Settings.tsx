@@ -72,7 +72,7 @@ const relationshipOptions = [
 
 interface SettingsProps {
   userData: UserData;
-  onUpdate: (data: UserData) => Promise<void>;
+  onUpdate: (data: Partial<UserData>) => Promise<void>;
 }
 
 export default function Settings({ userData, onUpdate }: SettingsProps) {
@@ -191,14 +191,77 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
     setSaveMessage(null);
 
     try {
-      const aiSettings = {
+      // Check if relationship is changing
+      const isRelationshipChanging =
+        userData.profile?.relationship !== editedData.profile.relationship;
+
+      let aiSettings: Partial<UserData> = {
         profile: editedData.profile,
-        personality: deleteField(),
-        aiRelationship: deleteField(),
       };
+
+      // If relationship is changing, implement selective memory management
+      if (isRelationshipChanging) {
+        console.log(
+          `Relationship changing from ${userData.profile?.relationship} to ${editedData.profile.relationship}`
+        );
+
+        // Preserve personal information but adapt relationship-specific data
+        const preservedProfile = {
+          ...editedData.profile,
+          // Preserve personal info
+          personal_info: userData.profile?.personal_info || {},
+          preferences: {
+            ...userData.profile?.preferences,
+            // Adapt communication style for new relationship
+            communication_style: undefined, // Let AI learn new style
+          },
+          // Preserve interests and goals
+          conversation_history: {
+            ...userData.profile?.conversation_history,
+            // Clear recent patterns but keep shared memories
+            frequent_topics:
+              userData.profile?.conversation_history?.frequent_topics || [],
+            shared_memories:
+              userData.profile?.conversation_history?.shared_memories || [],
+            // Reset relationship-specific patterns
+            mood_patterns: undefined,
+            communication_frequency: undefined,
+            response_style: undefined,
+          },
+          // Adapt relationship dynamics for new relationship
+          relationship_dynamics: {
+            trust_level: undefined, // Let AI rebuild trust in new context
+            comfort_level: undefined,
+            preferred_support_style: undefined,
+            boundaries: undefined,
+          },
+          // Preserve learning preferences
+          learning_preferences: userData.profile?.learning_preferences || {},
+        };
+
+        aiSettings = {
+          ...aiSettings,
+          profile: preservedProfile,
+          // Clear conversation summary for fresh start
+          summary: "",
+        };
+
+        console.log(
+          "Relationship change detected - implementing selective memory management"
+        );
+      }
+
       await onUpdate(aiSettings);
       setEditingSection(null);
-      setSaveMessage({ type: "success", text: "AI customization saved!" });
+
+      if (isRelationshipChanging) {
+        setSaveMessage({
+          type: "success",
+          text: "AI relationship updated! Your AI will remember your personal details but adapt to the new relationship dynamic.",
+        });
+      } else {
+        setSaveMessage({ type: "success", text: "AI customization saved!" });
+      }
     } catch (error) {
       setSaveMessage({
         type: "error",
@@ -516,6 +579,19 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
                     (r) => r.value === editedData.profile?.relationship
                   )?.description || "Define your connection with the AI"}
                 </p>
+                {userData.profile?.relationship &&
+                  editedData.profile?.relationship &&
+                  userData.profile.relationship !==
+                    editedData.profile.relationship && (
+                    <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm text-blue-800">
+                        <strong>Note:</strong> Changing your relationship will
+                        preserve your personal information (interests, goals,
+                        etc.) but will adapt the AI's communication style and
+                        approach to match the new relationship dynamic.
+                      </p>
+                    </div>
+                  )}
               </div>
             ) : (
               <div className="mt-6 p-6 rounded-lg bg-gray-50 text-center">
