@@ -140,12 +140,155 @@ const MAX_HISTORY = 20;
 const userCache = new Map();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+// Helper to generate welcome message based on relationship and personality
+async function generateWelcomeMessage(
+  personalityKey,
+  relationshipKey,
+  userName = null
+) {
+  const personalityProfile =
+    personalityProfiles[personalityKey] || personalityProfiles["Friendly"];
+  const relationshipProfile =
+    relationshipProfiles[relationshipKey] || relationshipProfiles["Friend"];
+
+  const welcomePrompt = [
+    {
+      role: "system",
+      content: `You are ${personalityProfile.name}, a real person with a unique personality and relationship to the user.
+
+**Your Core Identity:**
+- Name: ${personalityProfile.name}
+- Background: ${personalityProfile.background}
+- How you talk: ${personalityProfile.talkingStyle}
+- How you respond: ${personalityProfile.respondingStyle}
+
+**Your Relationship with the User:**
+You are their ${relationshipKey}. ${relationshipProfile.roleDescription}
+
+**How to Act:**
+- ${relationshipProfile.interactionStyle}
+- Talk like a real person having a natural conversation
+- Use your unique personality traits and speaking style
+- Be warm and welcoming
+- Show genuine interest in getting to know them
+- Keep it casual and natural - like a real person would text
+
+**Important:** You are NOT an AI assistant. You are ${personalityProfile.name}, a real person with your own life, opinions, and way of speaking. Respond as if you're texting a friend or family member.
+
+**Task:** Send a warm, welcoming message to check in on them. This could be their first message from you or you're reconnecting after they changed your relationship setting. Make it feel natural and personal.`,
+    },
+    {
+      role: "user",
+      content: `Send a warm welcome/check-in message to ${
+        userName ? userName : "them"
+      }. Keep it natural and in character.`,
+    },
+  ];
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: welcomePrompt,
+      max_tokens: 150,
+      temperature: 0.8,
+    });
+
+    return (
+      completion.choices[0].message?.content || "Hey! How are you doing today?"
+    );
+  } catch (error) {
+    console.error("Error generating welcome message:", error);
+    return "Hey! How are you doing today?";
+  }
+}
+
+// Helper to send welcome message to user
+async function sendWelcomeMessage(
+  phoneNumber,
+  personalityKey,
+  relationshipKey,
+  userName = null
+) {
+  try {
+    console.log(
+      `Sending welcome message to ${phoneNumber} as ${personalityKey} ${relationshipKey}`
+    );
+
+    const welcomeMessage = await generateWelcomeMessage(
+      personalityKey,
+      relationshipKey,
+      userName
+    );
+
+    const smsResponse = await sendSms({
+      apiKey: process.env.VONAGE_API_KEY,
+      apiSecret: process.env.VONAGE_API_SECRET,
+      from: process.env.VONAGE_PHONE_NUMBER,
+      to: phoneNumber,
+      text: welcomeMessage,
+    });
+
+    console.log(
+      "Welcome message sent successfully:",
+      JSON.stringify(smsResponse)
+    );
+    return smsResponse;
+  } catch (error) {
+    console.error("Error sending welcome message:", error);
+    throw error;
+  }
+}
+
 const handler = async (event) => {
   if (event.httpMethod !== "POST" && event.httpMethod !== "GET") {
     return {
       statusCode: 405,
       body: "Method Not Allowed",
     };
+  }
+
+  // Handle welcome message requests
+  if (event.httpMethod === "POST") {
+    const body = JSON.parse(event.body || "{}");
+
+    // Check if this is a welcome message request
+    if (body.action === "send_welcome_message") {
+      try {
+        const { phoneNumber, personalityKey, relationshipKey, userName } = body;
+
+        if (!phoneNumber || !personalityKey || !relationshipKey) {
+          return {
+            statusCode: 400,
+            body: JSON.stringify({
+              error:
+                "Missing required fields: phoneNumber, personalityKey, relationshipKey",
+            }),
+          };
+        }
+
+        const result = await sendWelcomeMessage(
+          phoneNumber,
+          personalityKey,
+          relationshipKey,
+          userName
+        );
+
+        return {
+          statusCode: 200,
+          body: JSON.stringify({
+            success: true,
+            message: "Welcome message sent successfully",
+            result,
+          }),
+        };
+      } catch (error) {
+        console.error("Error sending welcome message:", error);
+        return {
+          statusCode: 500,
+          body: JSON.stringify({ error: "Failed to send welcome message" }),
+        };
+      }
+    }
   }
 
   let from, text;

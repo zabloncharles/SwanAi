@@ -195,6 +195,10 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
       const isRelationshipChanging =
         userData.profile?.relationship !== editedData.profile.relationship;
 
+      // Check if this is the first time setting a relationship
+      const isFirstTimeSetting =
+        !userData.profile?.relationship && editedData.profile.relationship;
+
       let aiSettings: Partial<UserData> = {
         profile: editedData.profile,
       };
@@ -205,7 +209,8 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
           `Relationship changing from ${userData.profile?.relationship} to ${editedData.profile.relationship}`
         );
 
-        // Preserve personal information but adapt relationship-specific data
+        // Keep only the basic relationship and personality settings
+        // Clear all learned information for fresh start
         const preservedProfile = {
           ...editedData.profile,
           // Keep only the basic relationship and personality settings
@@ -227,10 +232,43 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
       await onUpdate(aiSettings);
       setEditingSection(null);
 
+      // Send welcome message if relationship is changing or being set for the first time
+      if (isRelationshipChanging || isFirstTimeSetting) {
+        try {
+          const welcomeResponse = await fetch("/.netlify/functions/sms", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              action: "send_welcome_message",
+              phoneNumber: userData.phoneNumber,
+              personalityKey: editedData.profile.personality || "Friendly",
+              relationshipKey: editedData.profile.relationship,
+              userName: userData.firstName || userData.profile?.name,
+            }),
+          });
+
+          if (welcomeResponse.ok) {
+            console.log("Welcome message sent successfully");
+          } else {
+            console.error("Failed to send welcome message");
+          }
+        } catch (error) {
+          console.error("Error sending welcome message:", error);
+          // Don't fail the save operation if welcome message fails
+        }
+      }
+
       if (isRelationshipChanging) {
         setSaveMessage({
           type: "success",
           text: "AI relationship updated! Your AI will start fresh and learn about you in the context of this new relationship dynamic.",
+        });
+      } else if (isFirstTimeSetting) {
+        setSaveMessage({
+          type: "success",
+          text: "AI relationship set! Your AI will send you a welcome message to get started.",
         });
       } else {
         setSaveMessage({ type: "success", text: "AI customization saved!" });
@@ -552,6 +590,16 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
                     (r) => r.value === editedData.profile?.relationship
                   )?.description || "Define your connection with the AI"}
                 </p>
+                {!userData.profile?.relationship &&
+                  editedData.profile?.relationship && (
+                    <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-sm text-green-800">
+                        <strong>Welcome!</strong> Setting your first
+                        relationship will trigger a welcome message from your AI
+                        to get started.
+                      </p>
+                    </div>
+                  )}
                 {userData.profile?.relationship &&
                   editedData.profile?.relationship &&
                   userData.profile.relationship !==
@@ -560,8 +608,8 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
                       <p className="text-sm text-blue-800">
                         <strong>Note:</strong> Changing your relationship will
                         clear all learned information about you. Your AI will
-                        start fresh and learn about you in the context of this
-                        new relationship dynamic.
+                        start fresh and send you a welcome message to begin
+                        learning about you in this new context.
                       </p>
                     </div>
                   )}
