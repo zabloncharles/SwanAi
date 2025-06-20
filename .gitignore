@@ -30,3 +30,7 @@ netlify/functions/*.js
 netlify/functions/*.js.map 
 # Local Netlify folder
 .netlify
+
+# Environment
+.env
+.env*.local
