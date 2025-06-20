@@ -208,27 +208,8 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
         // Preserve personal information but adapt relationship-specific data
         const preservedProfile = {
           ...editedData.profile,
-          // Preserve personal info
-          personal_info: userData.profile?.personal_info || {},
-          preferences: {
-            topics_of_interest:
-              userData.profile?.preferences?.topics_of_interest || [],
-            emotional_patterns:
-              userData.profile?.preferences?.emotional_patterns,
-            response_preferences:
-              userData.profile?.preferences?.response_preferences,
-            // Don't include communication_style - let AI learn new style
-          },
-          // Preserve interests and goals
-          conversation_history: {
-            frequent_topics:
-              userData.profile?.conversation_history?.frequent_topics || [],
-            shared_memories:
-              userData.profile?.conversation_history?.shared_memories || [],
-            // Don't include mood_patterns, communication_frequency, response_style
-          },
-          // Don't include relationship_dynamics - let AI rebuild them
-          learning_preferences: userData.profile?.learning_preferences || {},
+          // Keep only the basic relationship and personality settings
+          // Clear all learned information for fresh start
         };
 
         aiSettings = {
@@ -249,7 +230,7 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
       if (isRelationshipChanging) {
         setSaveMessage({
           type: "success",
-          text: "AI relationship updated! Your AI will remember your personal details but adapt to the new relationship dynamic.",
+          text: "AI relationship updated! Your AI will start fresh and learn about you in the context of this new relationship dynamic.",
         });
       } else {
         setSaveMessage({ type: "success", text: "AI customization saved!" });
@@ -578,9 +559,9 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
                     <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                       <p className="text-sm text-blue-800">
                         <strong>Note:</strong> Changing your relationship will
-                        preserve your personal information (interests, goals,
-                        etc.) but will adapt the AI's communication style and
-                        approach to match the new relationship dynamic.
+                        clear all learned information about you. Your AI will
+                        start fresh and learn about you in the context of this
+                        new relationship dynamic.
                       </p>
                     </div>
                   )}
