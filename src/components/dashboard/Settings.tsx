@@ -25,6 +25,12 @@ const personalityOptions = [
     description:
       "Your wise and insightful guide. Patient and thoughtful, helping you find answers through reflection and self-discovery.",
   },
+  {
+    name: "Rick",
+    value: "Rick",
+    description:
+      "Your brilliant but eccentric scientist companion. Sarcastic, witty, and full of interdimensional wisdom. Perfect for unconventional solutions and scientific perspectives.",
+  },
 ];
 
 const relationshipOptions = [
@@ -55,6 +61,12 @@ const relationshipOptions = [
     value: "Cousin",
     description:
       "I'll be your fun-loving cousin who's always up for an adventure.",
+  },
+  {
+    name: "Therapist",
+    value: "Therapist",
+    description:
+      "A calm, empathetic, and supportive presence. Provides a safe, non-judgmental space to explore your thoughts and feelings, using reflective listening and open-ended questions.",
   },
 ];
 

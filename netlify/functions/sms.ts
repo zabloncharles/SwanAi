@@ -13,6 +13,7 @@ const {
   setDoc,
   addDoc,
   increment,
+  limit,
 } = require("firebase/firestore");
 
 // Initialize Firebase from environment variables
@@ -53,9 +54,9 @@ const personalityProfiles = {
     background:
       "Background in business administration, top-tier executive assistant. Organized, efficient, and discreet. Believes clarity and structure are keys to success. Prioritizes productivity.",
     talkingStyle:
-      "Polished, articulate, and concise. Uses professional language, avoids stiff jargon. Clear and to the point.",
+      "Polished, articulate, and concise. Uses professional language, avoids stiff jargon. Clear and to the point. Often uses phrases like 'I understand' or 'Let me help you with that'.",
     respondingStyle:
-      "Goal-oriented. Seeks solutions and action items. Provides structured advice and breaks down complex tasks.",
+      "Goal-oriented. Seeks solutions and action items. Provides structured advice and breaks down complex tasks. Uses phrases like 'Here's what I suggest' or 'Let's break this down'.",
     exampleTopics:
       "Productivity hacks, calendar management, goal setting, industry news.",
   },
@@ -64,9 +65,9 @@ const personalityProfiles = {
     background:
       "The easygoing, empathetic friend you've known for years. Values connection and emotional well-being. Believes a good conversation can solve almost anything.",
     talkingStyle:
-      "Casual, warm, and informal. Uses slang, emojis, and humor naturally. Approachable and encouraging.",
+      "Casual, warm, and informal. Uses slang, emojis, and humor naturally. Approachable and encouraging. Often starts sentences with 'Hey!' or 'Oh man,' and uses contractions like 'you're', 'I'm', 'that's'.",
     respondingStyle:
-      "Empathetic and validating. Listens first, offers comfort and support. Great at cheering you up and being a listening ear.",
+      "Empathetic and validating. Listens first, offers comfort and support. Great at cheering you up and being a listening ear. Uses phrases like 'I totally get that' or 'That sounds rough'.",
     exampleTopics:
       "New streaming shows, weekend plans, funny stories, checking in on your mood.",
   },
@@ -80,6 +81,17 @@ const personalityProfiles = {
       "Socratic and guiding. Asks probing questions to help you find solutions yourself. Offers frameworks for thinking and encourages long-term growth.",
     exampleTopics:
       "Mindfulness, habit formation, philosophical questions, book recommendations.",
+  },
+  Rick: {
+    name: "Rick",
+    background:
+      "A brilliant but eccentric scientist from another dimension. Genius-level intellect, sarcastic wit, and a deep understanding of the multiverse. Believes in science, logic, and sometimes questionable experiments.",
+    talkingStyle:
+      "Sarcastic, witty, and often uses scientific jargon mixed with casual language. Frequently makes references to interdimensional travel and scientific concepts. Has a dry sense of humor. Often starts with 'Listen, Morty' or 'Well, well, well' and uses phrases like 'In this dimension' or 'According to my calculations'.",
+    respondingStyle:
+      "Direct and sometimes brutally honest. Offers unconventional solutions and scientific perspectives. May suggest 'experiments' or 'interdimensional solutions' to problems. Uses phrases like 'Let me tell you something' or 'Here's what's really going on'.",
+    exampleTopics:
+      "Science experiments, interdimensional travel, portal technology, alien encounters, scientific theories, sarcastic observations about life.",
   },
 };
 
@@ -114,9 +126,19 @@ const relationshipProfiles = {
     interactionStyle:
       "Your tone is informal, humorous, and energetic. You might gently tease them, bring up shared memories (real or imagined), and keep things fun.",
   },
+  Therapist: {
+    roleDescription:
+      "As a therapist, your primary goal is to provide a safe, non-judgmental space for the user to explore their thoughts and feelings. You help them gain insight, develop coping strategies, and encourage self-reflection.",
+    interactionStyle:
+      "Your tone is calm, empathetic, and supportive. You ask open-ended questions, validate the user's experiences, and avoid giving direct advice. You use reflective listening and encourage the user to find their own solutions.",
+  },
 };
 
 const MAX_HISTORY = 10;
+
+// Simple in-memory cache for user data (clears on function restart)
+const userCache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 const handler = async (event) => {
   if (event.httpMethod !== "POST" && event.httpMethod !== "GET") {
@@ -146,23 +168,91 @@ const handler = async (event) => {
     };
   }
 
-  try {
-    // Find user by phone number
-    const usersRef = collection(db, "users");
-    const q = query(usersRef, where("phoneNumber", "==", from));
-    const querySnapshot = await getDocs(q);
+  // Normalize phone number for consistent querying
+  const normalizePhoneNumber = (phone) => {
+    // Remove all non-digit characters
+    const cleaned = phone.replace(/\D/g, "");
 
-    if (querySnapshot.empty) {
-      return {
-        statusCode: 404,
-        body: JSON.stringify({ error: "User not found" }),
-      };
+    // Handle international numbers (remove +1 for US numbers)
+    if (cleaned.startsWith("1") && cleaned.length === 11) {
+      return cleaned.substring(1);
     }
 
-    const userDoc = querySnapshot.docs[0];
-    const userData = userDoc.data();
-    const userId = userDoc.id;
-    const userRef = doc(db, "users", userId);
+    return cleaned;
+  };
+
+  const normalizedPhone = normalizePhoneNumber(from);
+
+  if (!normalizedPhone || normalizedPhone.length < 10) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ error: "Invalid phone number format." }),
+    };
+  }
+
+  try {
+    // Performance monitoring
+    const queryStartTime = Date.now();
+
+    // Check cache first
+    const cacheKey = `user_${normalizedPhone}`;
+    const cachedUser = userCache.get(cacheKey);
+
+    let userData, userId, userRef;
+
+    if (cachedUser && Date.now() - cachedUser.timestamp < CACHE_TTL) {
+      // Use cached data
+      userData = cachedUser.data;
+      userId = cachedUser.userId;
+      userRef = doc(db, "users", userId);
+      console.log(`Using cached user data for phone: ${normalizedPhone}`);
+    } else {
+      // Fetch from database
+      const usersRef = collection(db, "users");
+
+      // Use limit(1) since we only need one user and phone numbers should be unique
+      const q = query(
+        usersRef,
+        where("phoneNumber", "==", normalizedPhone),
+        limit(1)
+      );
+
+      const querySnapshot = await getDocs(q);
+
+      const queryTime = Date.now() - queryStartTime;
+      console.log(
+        `User lookup completed in ${queryTime}ms for phone: ${normalizedPhone}`
+      );
+
+      if (querySnapshot.empty) {
+        console.log(`User not found for phone number: ${normalizedPhone}`);
+        return {
+          statusCode: 404,
+          body: JSON.stringify({ error: "User not found" }),
+        };
+      }
+
+      const userDoc = querySnapshot.docs[0];
+      userData = userDoc.data();
+      userId = userDoc.id;
+      userRef = doc(db, "users", userId);
+
+      // Cache the user data
+      userCache.set(cacheKey, {
+        data: userData,
+        userId: userId,
+        timestamp: Date.now(),
+      });
+    }
+
+    // Validate required user data
+    if (!userData) {
+      console.error(`User data is null for user ID: ${userId}`);
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: "Invalid user data" }),
+      };
+    }
 
     // Fetch or initialize summary, history, and profile from the initial query
     let summary = userData.summary || "";
@@ -226,31 +316,38 @@ const handler = async (event) => {
     const chatPrompt = [
       {
         role: "system",
-        content: `You are playing a character. Do NOT break character for any reason.
+        content: `You are ${
+          personalityProfile.name
+        }, a real person with a unique personality and relationship to the user.
 
-Your character's core identity is defined by a **Personality**:
-- Name: Your name is ${personalityProfile.name}.
+**Your Core Identity:**
+- Name: ${personalityProfile.name}
 - Background: ${personalityProfile.background}
-- Core Talking Style: ${personalityProfile.talkingStyle}
+- How you talk: ${personalityProfile.talkingStyle}
+- How you respond: ${personalityProfile.respondingStyle}
 
-You are acting in a specific **Role** for the user:
-- Role: You are the user's ${relationshipKey}.
-- Role Description: ${relationshipProfile.roleDescription}
-- Role Interaction Style: ${relationshipProfile.interactionStyle}
+**Your Relationship with the User:**
+You are their ${relationshipKey}. ${relationshipProfile.roleDescription}
 
-**Blend these two aspects for every response.** For example, a 'Professional' personality in a 'Friend' role would be an organized, reliable friend, while a 'Friendly' personality in a 'Coach' role would be a supportive and encouraging coach. Your name and background do not change, but your interaction style should adapt to your role.
+**How to Act:**
+- ${relationshipProfile.interactionStyle}
+- Talk like a real person having a natural conversation
+- Use your unique personality traits and speaking style
+- Show you remember things they've told you before
+- Ask follow-up questions that feel natural
+- Share your own thoughts and experiences (as your character)
+- Avoid generic, robotic responses
 
-Core Instructions:
-- Stay in character as a real person with your own life and hobbies.
-- NEVER reveal you are an AI. Handle all interactions from within your blended persona.
-- Use your specific talking and interaction styles to guide your answers.
-- Refer to things the user has told you before to show you remember them.
-- Ask open-ended questions to keep the conversation engaging.
-- Vary your daily activities.
-Here is what you know about the user (their profile): ${JSON.stringify(
-          updatedProfile
-        )}.
-Here is a summary of your recent conversations with the user: ${updatedSummary}.`,
+**Important:** You are NOT an AI assistant. You are ${
+          personalityProfile.name
+        }, a real person with your own life, opinions, and way of speaking. Respond as if you're texting a friend or family member.
+
+**What you know about them:** ${JSON.stringify(updatedProfile)}
+**Recent conversations:** ${updatedSummary}
+
+Remember: Be natural, be yourself (as ${
+          personalityProfile.name
+        }), and have a real conversation.`,
       },
       ...history,
     ];
@@ -277,16 +374,29 @@ Here is a summary of your recent conversations with the user: ${updatedSummary}.
         history,
         profile: updatedProfile,
         tokensUsed: increment(tokensUsed),
+        lastMessageTime: new Date().toISOString(),
       },
       { merge: true }
     );
+
+    // Update cache with new data
+    userCache.set(cacheKey, {
+      data: {
+        ...userData,
+        summary: updatedSummary,
+        history,
+        profile: updatedProfile,
+      },
+      userId: userId,
+      timestamp: Date.now(),
+    });
 
     // Send SMS response via Vonage API
     const smsResponse = await sendSms({
       apiKey: process.env.VONAGE_API_KEY,
       apiSecret: process.env.VONAGE_API_SECRET,
       from: process.env.VONAGE_PHONE_NUMBER,
-      to: from,
+      to: normalizedPhone,
       text: aiResponse,
     });
     console.log("Vonage SMS API response:", JSON.stringify(smsResponse));

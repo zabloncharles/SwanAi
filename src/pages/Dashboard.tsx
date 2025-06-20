@@ -203,7 +203,7 @@ export default function Dashboard() {
 
   // --- Fetch global analytics if user is admin ---
   useEffect(() => {
-    if (userData.type !== "admin") return;
+    if (userData.type !== "admin" && !(userData as any).isAdmin) return;
     const fetchGlobalAnalytics = async () => {
       try {
         const analyticsRef = doc(db, "analytics", "global");
@@ -219,7 +219,7 @@ export default function Dashboard() {
       }
     };
     fetchGlobalAnalytics();
-  }, [userData.type]);
+  }, [userData.type, (userData as any).isAdmin]);
 
   // --- Sign out handler ---
   const handleSignOut = async () => {
@@ -361,7 +361,8 @@ export default function Dashboard() {
                         <ConversationSummary summary={userData.summary || ""} />
                       </div>
                       {/* Admin analytics only for admin users */}
-                      {userData.type === "admin" && (
+                      {(userData.type === "admin" ||
+                        (userData as any).isAdmin === true) && (
                         <AdminAnalytics
                           usersByDay={usersByDay}
                           tokensByDay={tokensByDay}
