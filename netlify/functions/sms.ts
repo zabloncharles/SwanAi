@@ -134,7 +134,7 @@ const relationshipProfiles = {
   },
 };
 
-const MAX_HISTORY = 10;
+const MAX_HISTORY = 20;
 
 // Simple in-memory cache for user data (clears on function restart)
 const userCache = new Map();
@@ -309,8 +309,8 @@ const handler = async (event) => {
     // Add new user message to history
     history.push({ role: "user", content: text });
 
-    // Only update summary and profile every 3 messages (temporarily changed from 5 for testing)
-    const shouldUpdateSummaryProfile = history.length % 3 === 1; // update on 1st, 4th, 7th, 10th, etc.
+    // Only update summary and profile every 5 messages
+    const shouldUpdateSummaryProfile = history.length % 5 === 1; // update on 1st, 6th, 11th, etc.
     let updatedSummary = summary;
     let updatedProfile = profile;
 
