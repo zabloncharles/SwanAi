@@ -313,7 +313,17 @@ const handler = async (event) => {
     const shouldUpdateSummaryProfile = history.length % 5 === 1; // update on 1st, 6th, 11th, etc.
     let updatedSummary = summary;
     let updatedProfile = profile;
+
+    console.log(
+      `History length: ${history.length}, Should update summary: ${shouldUpdateSummaryProfile}`
+    );
+    console.log(`Current summary: "${summary}"`);
+
     if (shouldUpdateSummaryProfile) {
+      console.log(
+        `Starting summary/profile update for history length: ${history.length}`
+      );
+
       // Update summary & profile in a single AI call
       const analysisPrompt = [
         {
@@ -332,18 +342,37 @@ const handler = async (event) => {
         },
       ];
 
+      console.log(`Analysis prompt:`, JSON.stringify(analysisPrompt, null, 2));
+
       const analysisResult = await openai.chat.completions.create({
         model: "gpt-3.5-turbo-0125", // A model that supports JSON mode
         messages: analysisPrompt,
         response_format: { type: "json_object" },
       });
 
+      console.log(
+        `Analysis result:`,
+        analysisResult.choices[0].message.content
+      );
+
       try {
         const result = JSON.parse(analysisResult.choices[0].message.content);
+        console.log(`Parsed result:`, JSON.stringify(result, null, 2));
+
         updatedSummary = result.updatedSummary || summary;
         updatedProfile = result.updatedProfile || profile;
+
+        console.log(`Updated summary: "${updatedSummary}"`);
+        console.log(
+          `Updated profile:`,
+          JSON.stringify(updatedProfile, null, 2)
+        );
       } catch (e) {
         console.error("Failed to parse AI analysis JSON:", e);
+        console.error(
+          "Raw response:",
+          analysisResult.choices[0].message.content
+        );
         // Keep old summary/profile if parsing fails
       }
     }
@@ -414,6 +443,10 @@ Remember: Be natural, be yourself (as ${
     history.push({ role: "assistant", content: aiResponse });
 
     // Batch all Firestore updates for the user into a single setDoc call
+    console.log(
+      `Saving to database - Summary: "${updatedSummary}", History length: ${history.length}`
+    );
+
     await setDoc(
       userRef,
       {
@@ -425,6 +458,8 @@ Remember: Be natural, be yourself (as ${
       },
       { merge: true }
     );
+
+    console.log(`Successfully saved to database`);
 
     // Update cache with new data
     userCache.set(cacheKey, {
