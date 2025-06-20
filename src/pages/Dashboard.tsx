@@ -90,6 +90,9 @@ export default function Dashboard() {
   const [messagesByDay, setMessagesByDay] = useState<{
     [date: string]: number;
   }>({});
+  const [remainingBalance, setRemainingBalance] = useState<number | undefined>(
+    undefined
+  );
 
   // --- Fetch user data from Firestore on mount or when user changes ---
   useEffect(() => {
@@ -213,6 +216,15 @@ export default function Dashboard() {
           setUsersByDay(data.usersByDay || {});
           setTokensByDay(data.tokensByDay || {});
           setMessagesByDay(data.messagesByDay || {});
+
+          // Get the most recent remaining balance from costPerDay
+          if (data.costPerDay) {
+            const dates = Object.keys(data.costPerDay).sort();
+            const latestDate = dates[dates.length - 1];
+            if (latestDate) {
+              setRemainingBalance(data.costPerDay[latestDate]);
+            }
+          }
         }
       } catch (err) {
         console.error("Error fetching global analytics:", err);
@@ -367,6 +379,7 @@ export default function Dashboard() {
                           usersByDay={usersByDay}
                           tokensByDay={tokensByDay}
                           messagesByDay={messagesByDay}
+                          remainingBalance={remainingBalance}
                         />
                       )}
                     </>

@@ -7,24 +7,28 @@ interface AdminAnalyticsProps {
   usersByDay: { [date: string]: number };
   tokensByDay: { [date: string]: number };
   messagesByDay: { [date: string]: number };
+  remainingBalance?: number;
 }
 
 export default function AdminAnalytics({
   usersByDay,
   tokensByDay,
   messagesByDay,
+  remainingBalance,
 }: AdminAnalyticsProps) {
-  const [activeTab, setActiveTab] = useState<'users' | 'tokens' | 'messages'>('users');
+  const [activeTab, setActiveTab] = useState<"users" | "tokens" | "messages">(
+    "users"
+  );
 
   const exportCSV = (data: Record<string, number>, label: string) => {
-    const rows = [['Date', label]];
+    const rows = [["Date", label]];
     Object.entries(data).forEach(([date, value]) => {
       rows.push([date, value.toString()]);
     });
-    const csvContent = rows.map(r => r.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const csvContent = rows.map((r) => r.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = `${label}-by-day.csv`;
     a.click();
@@ -32,14 +36,14 @@ export default function AdminAnalytics({
   };
 
   const tabData = [
-    { key: 'users', label: 'Active Users', data: usersByDay, color: 'blue' },
-    { key: 'tokens', label: 'Tokens Used', data: tokensByDay, color: 'indigo' },
-    { key: 'messages', label: 'Messages', data: messagesByDay, color: 'green' },
+    { key: "users", label: "Active Users", data: usersByDay, color: "blue" },
+    { key: "tokens", label: "Tokens Used", data: tokensByDay, color: "indigo" },
+    { key: "messages", label: "Messages", data: messagesByDay, color: "green" },
   ];
 
-  const current = tabData.find(t => t.key === activeTab)!;
+  const current = tabData.find((t) => t.key === activeTab)!;
   const dates = Object.keys(current.data).sort();
-  const values = dates.map(date => current.data[date]);
+  const values = dates.map((date) => current.data[date]);
   const last = values[values.length - 1] || 0;
   const prev = values[values.length - 2] || 0;
   const trend = last - prev;
@@ -201,12 +205,13 @@ export default function AdminAnalytics({
       <div className="bg-white rounded-2xl shadow border border-gray-100 p-8 mb-8 mt-8">
         <div className="flex items-center gap-4 mb-6">
           <div className="flex gap-2">
-            {tabData.map(tab => (
+            {tabData.map((tab) => (
               <button
                 key={tab.key}
                 className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
                   activeTab === tab.key
-                    ? `bg-${tab.color}-600 text-white` : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? `bg-${tab.color}-600 text-white`
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
                 onClick={() => setActiveTab(tab.key as any)}
               >
@@ -216,24 +221,33 @@ export default function AdminAnalytics({
           </div>
           <button
             className="ml-auto px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 text-sm font-medium"
-            onClick={() => exportCSV(current.data, current.label.replace(/ /g, ''))}
+            onClick={() =>
+              exportCSV(current.data, current.label.replace(/ /g, ""))
+            }
           >
             Export CSV
           </button>
         </div>
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-6">
           <div>
-            <div className="text-gray-500 text-sm mb-1">Total {current.label}</div>
+            <div className="text-gray-500 text-sm mb-1">
+              Total {current.label}
+            </div>
             <div className="flex items-end gap-3">
               <span className="text-4xl font-extrabold text-gray-900">
                 {values.reduce((a, b) => a + b, 0).toLocaleString()}
               </span>
               <span
                 className={`font-semibold text-lg ${
-                  trend > 0 ? 'text-green-600' : trend < 0 ? 'text-red-500' : 'text-gray-400'
+                  trend > 0
+                    ? "text-green-600"
+                    : trend < 0
+                    ? "text-red-500"
+                    : "text-gray-400"
                 }`}
               >
-                {trend > 0 ? '+' : ''}{trend}
+                {trend > 0 ? "+" : ""}
+                {trend}
               </span>
               <span className="text-gray-400 text-sm mb-1">Last 24 hours</span>
             </div>
@@ -243,21 +257,49 @@ export default function AdminAnalytics({
           <table className="min-w-full border border-gray-200 rounded-lg bg-white text-sm">
             <thead>
               <tr>
-                <th className="px-4 py-2 text-left font-semibold text-gray-700">Date</th>
-                <th className="px-4 py-2 text-left font-semibold text-gray-700">{current.label}</th>
+                <th className="px-4 py-2 text-left font-semibold text-gray-700">
+                  Date
+                </th>
+                <th className="px-4 py-2 text-left font-semibold text-gray-700">
+                  {current.label}
+                </th>
               </tr>
             </thead>
             <tbody>
-              {dates.map(date => (
+              {dates.map((date) => (
                 <tr key={date} className="border-t">
                   <td className="px-4 py-2 text-gray-600">{date}</td>
-                  <td className="px-4 py-2 text-gray-900">{current.data[date]}</td>
+                  <td className="px-4 py-2 text-gray-900">
+                    {current.data[date]}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Remaining Balance Section */}
+      {remainingBalance !== undefined && (
+        <div className="bg-white rounded-2xl shadow border border-gray-100 p-8 mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 mb-1">
+                Vonage Account Balance
+              </h2>
+              <p className="text-gray-500 text-sm">
+                Current remaining balance for SMS services
+              </p>
+            </div>
+            <div className="text-right">
+              <div className="text-3xl font-bold text-green-600">
+                ${remainingBalance.toFixed(4)}
+              </div>
+              <div className="text-sm text-gray-500">Available for SMS</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Admin-only Active Users Section */}
       <div className="bg-white rounded-2xl shadow border border-gray-100 p-8 mb-8">
