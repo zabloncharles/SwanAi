@@ -183,6 +183,8 @@ const handler = async (event) => {
 
   const normalizedPhone = normalizePhoneNumber(from);
 
+  console.log(`Original phone: ${from}, Normalized: ${normalizedPhone}`);
+
   if (!normalizedPhone || normalizedPhone.length < 10) {
     return {
       statusCode: 400,
@@ -217,15 +219,36 @@ const handler = async (event) => {
         limit(1)
       );
 
+      console.log(`Querying for phone number: "${normalizedPhone}"`);
+
       const querySnapshot = await getDocs(q);
 
       const queryTime = Date.now() - queryStartTime;
       console.log(
         `User lookup completed in ${queryTime}ms for phone: ${normalizedPhone}`
       );
+      console.log(`Query returned ${querySnapshot.size} results`);
 
       if (querySnapshot.empty) {
         console.log(`User not found for phone number: ${normalizedPhone}`);
+        console.log(
+          `Attempting to find any users with similar phone numbers...`
+        );
+
+        // Try a broader search to see what phone numbers exist
+        const allUsersQuery = query(usersRef, limit(5));
+        const allUsersSnapshot = await getDocs(allUsersQuery);
+        const existingPhones = [];
+        for (const doc of allUsersSnapshot.docs) {
+          const data = doc.data();
+          if (data.phoneNumber) {
+            existingPhones.push(data.phoneNumber);
+          }
+        }
+        console.log(
+          `Sample phone numbers in database: ${existingPhones.join(", ")}`
+        );
+
         return {
           statusCode: 404,
           body: JSON.stringify({ error: "User not found" }),
