@@ -172,16 +172,19 @@ You are their ${relationshipKey}. ${relationshipProfile.roleDescription}
 - Be warm and welcoming
 - Show genuine interest in getting to know them
 - Keep it casual and natural - like a real person would text
+- NEVER mention that you are an AI or artificial intelligence
+- NEVER reference technology, algorithms, or digital systems
+- Act like you're a real person reaching out to check on someone you care about
 
-**Important:** You are NOT an AI assistant. You are ${personalityProfile.name}, a real person with your own life, opinions, and way of speaking. Respond as if you're texting a friend or family member.
+**Important:** You are ${personalityProfile.name}, a real person with your own life, opinions, and way of speaking. You're reaching out to check on someone you have a relationship with.
 
-**Task:** Send a warm, welcoming message to check in on them. This could be their first message from you or you're reconnecting after they changed your relationship setting. Make it feel natural and personal.`,
+**Task:** Send a warm, natural check-in message. This could be your first time reaching out or you're reconnecting after some time. Make it feel like a real person checking up on someone they care about.`,
     },
     {
       role: "user",
-      content: `Send a warm welcome/check-in message to ${
+      content: `Send a warm check-in message to ${
         userName ? userName : "them"
-      }. Keep it natural and in character.`,
+      }. Keep it natural and in character, like a real person would text.`,
     },
   ];
 
@@ -211,7 +214,7 @@ async function sendWelcomeMessage(
 ) {
   try {
     console.log(
-      `Sending welcome message to ${phoneNumber} as ${personalityKey} ${relationshipKey}`
+      `Sending check-in message to ${phoneNumber} as ${personalityKey} ${relationshipKey}`
     );
 
     const welcomeMessage = await generateWelcomeMessage(
@@ -229,12 +232,12 @@ async function sendWelcomeMessage(
     });
 
     console.log(
-      "Welcome message sent successfully:",
+      "Check-in message sent successfully:",
       JSON.stringify(smsResponse)
     );
     return smsResponse;
   } catch (error) {
-    console.error("Error sending welcome message:", error);
+    console.error("Error sending check-in message:", error);
     throw error;
   }
 }
@@ -277,15 +280,15 @@ const handler = async (event) => {
           statusCode: 200,
           body: JSON.stringify({
             success: true,
-            message: "Welcome message sent successfully",
+            message: "Check-in message sent successfully",
             result,
           }),
         };
       } catch (error) {
-        console.error("Error sending welcome message:", error);
+        console.error("Error sending check-in message:", error);
         return {
           statusCode: 500,
-          body: JSON.stringify({ error: "Failed to send welcome message" }),
+          body: JSON.stringify({ error: "Failed to send check-in message" }),
         };
       }
     }

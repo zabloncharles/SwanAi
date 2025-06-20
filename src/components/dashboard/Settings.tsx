@@ -250,12 +250,12 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
           });
 
           if (welcomeResponse.ok) {
-            console.log("Welcome message sent successfully");
+            console.log("Check-in message sent successfully");
           } else {
-            console.error("Failed to send welcome message");
+            console.error("Failed to send check-in message");
           }
         } catch (error) {
-          console.error("Error sending welcome message:", error);
+          console.error("Error sending check-in message:", error);
           // Don't fail the save operation if welcome message fails
         }
       }
@@ -263,12 +263,12 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
       if (isRelationshipChanging) {
         setSaveMessage({
           type: "success",
-          text: "AI relationship updated! Your AI will start fresh and learn about you in the context of this new relationship dynamic.",
+          text: "Relationship updated! Your new connection will start fresh and send you a check-in message to begin getting to know you.",
         });
       } else if (isFirstTimeSetting) {
         setSaveMessage({
           type: "success",
-          text: "AI relationship set! Your AI will send you a welcome message to get started.",
+          text: "Relationship set! Your new connection will send you a check-in message to get started.",
         });
       } else {
         setSaveMessage({ type: "success", text: "AI customization saved!" });
@@ -595,8 +595,8 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
                     <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
                       <p className="text-sm text-green-800">
                         <strong>Welcome!</strong> Setting your first
-                        relationship will trigger a welcome message from your AI
-                        to get started.
+                        relationship will trigger a check-in message from your
+                        new connection.
                       </p>
                     </div>
                   )}
@@ -607,9 +607,9 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
                     <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                       <p className="text-sm text-blue-800">
                         <strong>Note:</strong> Changing your relationship will
-                        clear all learned information about you. Your AI will
-                        start fresh and send you a welcome message to begin
-                        learning about you in this new context.
+                        clear all learned information. Your new connection will
+                        start fresh and send you a check-in message to begin
+                        getting to know you.
                       </p>
                     </div>
                   )}
