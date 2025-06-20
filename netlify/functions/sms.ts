@@ -175,7 +175,7 @@ const handler = async (event) => {
 
     // Handle international numbers (remove +1 for US numbers)
     if (cleaned.startsWith("1") && cleaned.length === 11) {
-      return cleaned.substring(1);
+      return cleaned; // Keep the full number with country code
     }
 
     return cleaned;
@@ -249,10 +249,34 @@ const handler = async (event) => {
           `Sample phone numbers in database: ${existingPhones.join(", ")}`
         );
 
-        return {
-          statusCode: 404,
-          body: JSON.stringify({ error: "User not found" }),
-        };
+        // Try the original phone number format as fallback
+        console.log(`Trying original phone number format: "${from}"`);
+        const fallbackQuery = query(
+          usersRef,
+          where("phoneNumber", "==", from),
+          limit(1)
+        );
+        const fallbackSnapshot = await getDocs(fallbackQuery);
+
+        if (!fallbackSnapshot.empty) {
+          console.log(`Found user with original phone format: ${from}`);
+          const userDoc = fallbackSnapshot.docs[0];
+          userData = userDoc.data();
+          userId = userDoc.id;
+          userRef = doc(db, "users", userId);
+
+          // Cache the user data
+          userCache.set(cacheKey, {
+            data: userData,
+            userId: userId,
+            timestamp: Date.now(),
+          });
+        } else {
+          return {
+            statusCode: 404,
+            body: JSON.stringify({ error: "User not found" }),
+          };
+        }
       }
 
       const userDoc = querySnapshot.docs[0];
