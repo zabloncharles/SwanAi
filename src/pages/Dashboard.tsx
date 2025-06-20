@@ -45,6 +45,7 @@ interface UserData {
   uid?: string;
   updatedAt: Date;
   profile?: { personality: string; relationship: string };
+  isAdmin?: boolean;
 }
 
 export default function Dashboard() {
@@ -327,7 +328,7 @@ export default function Dashboard() {
       ) : (
         <div className="min-h-screen bg-white">
           {/* Main container for sidebar and content, aligned with navbar */}
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex pt-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex pt-8 mt-10">
             {/* Sidebar navigation */}
             <DashboardSidebar
               activeTab={activeTab}

@@ -220,8 +220,9 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
         aiSettings = {
           ...aiSettings,
           profile: preservedProfile,
-          // Clear conversation summary for fresh start
+          // Clear conversation summary and history for fresh start
           summary: "",
+          history: [],
         };
 
         console.log(
@@ -235,6 +236,25 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
       // Send welcome message if relationship is changing or being set for the first time
       if (isRelationshipChanging || isFirstTimeSetting) {
         try {
+          // Check if we're in development mode
+          const isDevelopment =
+            window.location.hostname === "localhost" ||
+            window.location.hostname === "127.0.0.1";
+
+          if (isDevelopment) {
+            console.log(
+              "Development mode: Attempting to send welcome message for testing"
+            );
+            // In development, we'll try to send the message for testing
+            console.log("Sending welcome message to:", userData.phoneNumber);
+            console.log("Current user data:", {
+              phoneNumber: userData.phoneNumber,
+              firstName: userData.firstName,
+              lastName: userData.lastName,
+              profile: editedData.profile,
+            });
+          }
+
           const welcomeResponse = await fetch("/.netlify/functions/sms", {
             method: "POST",
             headers: {
@@ -304,19 +324,21 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
 
       {/* Personal Information Card */}
       <div className="bg-white rounded-2xl shadow border border-gray-100 p-8">
-        <button
-          type="button"
-          className="w-full flex justify-between items-center text-left"
-          onClick={(e) => {
-            e.stopPropagation();
-            setEditingSection(null);
-            setOpenCard("personal");
-          }}
-          aria-expanded={openCard === "personal"}
-        >
-          <h2 className="text-2xl font-bold text-gray-900">
-            Personal Information
-          </h2>
+        <div className="w-full flex justify-between items-center text-left">
+          <button
+            type="button"
+            className="flex-1 text-left"
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditingSection(null);
+              setOpenCard("personal");
+            }}
+            aria-expanded={openCard === "personal"}
+          >
+            <h2 className="text-2xl font-bold text-gray-900">
+              Personal Information
+            </h2>
+          </button>
           <div className="flex items-center gap-4">
             {editingSection === "personal" ? (
               <>
@@ -367,7 +389,7 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
               {openCard === "personal" ? "−" : "+"}
             </span>
           </div>
-        </button>
+        </div>
 
         {openCard === "personal" && (
           <div className="mt-6 space-y-6">
@@ -445,17 +467,21 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
 
       {/* AI Customization Card */}
       <div className="bg-white rounded-2xl shadow border border-gray-100 p-8">
-        <button
-          type="button"
-          className="w-full flex justify-between items-center text-left"
-          onClick={(e) => {
-            e.stopPropagation();
-            setEditingSection(null);
-            setOpenCard("ai");
-          }}
-          aria-expanded={openCard === "ai"}
-        >
-          <h2 className="text-2xl font-bold text-gray-900">AI Customization</h2>
+        <div className="w-full flex justify-between items-center text-left">
+          <button
+            type="button"
+            className="flex-1 text-left"
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditingSection(null);
+              setOpenCard("ai");
+            }}
+            aria-expanded={openCard === "ai"}
+          >
+            <h2 className="text-2xl font-bold text-gray-900">
+              AI Customization
+            </h2>
+          </button>
           <div className="flex items-center gap-4">
             {editingSection === "ai" ? (
               <>
@@ -506,7 +532,7 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
               {openCard === "ai" ? "−" : "+"}
             </span>
           </div>
-        </button>
+        </div>
 
         {openCard === "ai" && (
           <div className="mt-6 space-y-6">

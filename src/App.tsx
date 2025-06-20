@@ -28,47 +28,37 @@ function AppContent() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen">
+    <>
       {!isLoginPage && <Navbar />}
-      <main className={`container mx-auto px-4 ${isLoginPage ? "" : "py-8"}`}>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route
-            path="/dashboard"
-            element={user ? <Dashboard /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/analytics"
-            element={user ? <Analytics /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/login"
-            element={!user ? <Login /> : <Navigate to="/dashboard" />}
-          />
-          <Route path="/docs" element={<Docs />} />
-          <Route path="/privacy" element={<Privacy />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/support" element={<Support />} />
-          <Route path="/pricing" element={<Pricing />} />
-        </Routes>
-      </main>
-    </div>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/analytics" element={<Analytics />} />
+        <Route path="/docs" element={<Docs />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/support" element={<Support />} />
+        <Route path="/pricing" element={<Pricing />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </>
   );
 }
 
 function App() {
   return (
-    <Router>
-      <UserProvider>
+    <UserProvider>
+      <Router>
         <AppContent />
-      </UserProvider>
-    </Router>
+      </Router>
+    </UserProvider>
   );
 }
 

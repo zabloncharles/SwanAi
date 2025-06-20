@@ -213,8 +213,25 @@ async function sendWelcomeMessage(
   userName = null
 ) {
   try {
+    // Normalize phone number to consistent format
+    const normalizePhoneNumber = (phone) => {
+      // Remove all non-digit characters
+      const cleaned = phone.replace(/\D/g, "");
+
+      // Handle international numbers (add +1 for US numbers if not present)
+      if (cleaned.length === 10) {
+        return `1${cleaned}`; // Add country code for 10-digit US numbers
+      } else if (cleaned.startsWith("1") && cleaned.length === 11) {
+        return cleaned; // Keep the full number with country code
+      }
+
+      return cleaned;
+    };
+
+    const normalizedPhone = normalizePhoneNumber(phoneNumber);
+
     console.log(
-      `Sending check-in message to ${phoneNumber} as ${personalityKey} ${relationshipKey}`
+      `Sending check-in message to ${phoneNumber} (normalized: ${normalizedPhone}) as ${personalityKey} ${relationshipKey}`
     );
 
     const welcomeMessage = await generateWelcomeMessage(
@@ -223,13 +240,65 @@ async function sendWelcomeMessage(
       userName
     );
 
+    // Send SMS response via Vonage API
     const smsResponse = await sendSms({
       apiKey: process.env.VONAGE_API_KEY,
       apiSecret: process.env.VONAGE_API_SECRET,
       from: process.env.VONAGE_PHONE_NUMBER,
-      to: phoneNumber,
+      to: normalizedPhone,
       text: welcomeMessage,
     });
+
+    // Clear user history and add only the welcome message for fresh start
+    try {
+      // Find the user by phone number - try both normalized and original formats
+      const usersRef = collection(db, "users");
+
+      // Try normalized phone number first
+      let q = query(
+        usersRef,
+        where("phoneNumber", "==", normalizedPhone),
+        limit(1)
+      );
+      let querySnapshot = await getDocs(q);
+
+      // If not found, try original phone number format
+      if (querySnapshot.empty) {
+        console.log(
+          `User not found with normalized phone ${normalizedPhone}, trying original format ${phoneNumber}`
+        );
+        q = query(usersRef, where("phoneNumber", "==", phoneNumber), limit(1));
+        querySnapshot = await getDocs(q);
+      }
+
+      if (!querySnapshot.empty) {
+        const userDoc = querySnapshot.docs[0];
+        const userRef = doc(db, "users", userDoc.id);
+
+        // Clear history and add only the welcome message
+        const welcomeHistory = [{ role: "assistant", content: welcomeMessage }];
+
+        await setDoc(
+          userRef,
+          {
+            history: welcomeHistory,
+            summary: "",
+          },
+          { merge: true }
+        );
+
+        console.log(
+          `Cleared user history and added welcome message. New history length: ${welcomeHistory.length}`
+        );
+      } else {
+        console.log(
+          `User not found for phone number ${phoneNumber} or ${normalizedPhone}`
+        );
+      }
+    } catch (error) {
+      console.error("Error updating user history:", error);
+      // Don't fail the welcome message if history update fails
+    }
 
     console.log(
       "Check-in message sent successfully:",

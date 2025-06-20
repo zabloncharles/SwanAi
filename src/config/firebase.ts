@@ -11,6 +11,19 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
+// Validate required config
+if (!firebaseConfig.apiKey) {
+  throw new Error("Firebase API Key is required");
+}
+
+if (!firebaseConfig.authDomain) {
+  throw new Error("Firebase Auth Domain is required");
+}
+
+if (!firebaseConfig.projectId) {
+  throw new Error("Firebase Project ID is required");
+}
+
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);

@@ -66,5 +66,6 @@ export interface UserData {
   tokensUsed?: number;
   responseTime?: number;
   summary?: string;
+  history?: Array<{ role: string; content: string }>;
   updatedAt: Date;
 }

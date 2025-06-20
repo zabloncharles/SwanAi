@@ -80,6 +80,7 @@ async function getCityStateFromCoords(lat: number, lng: number) {
   return {
     city: data.address.city || data.address.town || data.address.village || "",
     state: data.address.state || "",
+    country: data.address.country || "",
   };
 }
 
@@ -109,7 +110,7 @@ export default function Login() {
 
     try {
       if (isSignUp) {
-        // Create the user in Firebase Auth
+        // Handle sign up
         const userCredential = await createUserWithEmailAndPassword(
           auth,
           email,
@@ -119,84 +120,35 @@ export default function Login() {
 
         // Get user coordinates
         const coords = await getUserCoordinates();
-        // Get city and state from coordinates
-        const { city, state } = await getCityStateFromCoords(
-          coords.lat,
-          coords.lng
-        );
+        const cityState = await getCityStateFromCoords(coords.lat, coords.lng);
 
-        // Set user type (default to 'free', can be changed based on your logic)
-        const userType = "free"; // Change this if you have logic for paid users
-
-        // Create the user document in Firestore
-        const userData = {
+        // Create user document
+        const userRef = doc(db, "users", user.uid);
+        await setDoc(userRef, {
+          email: user.email || "",
           firstName: "",
           lastName: "",
-          email: user.email || "",
           phoneNumber: "",
-          createdAt: serverTimestamp(),
-          lastLogin: serverTimestamp(),
-          isAdmin: false,
+          personality: "",
+          aiRelationship: "",
           notificationsEnabled: false,
           tokensUsed: 0,
-          locationData: [{ lat: coords.lat, lng: coords.lng }],
-          city,
-          state,
-          type: userType,
-        };
-
-        // Use a transaction to update both user document and analytics
-        await runTransaction(db, async (transaction) => {
-          // Set user document
-          const userRef = doc(db, "users", user.uid);
-          transaction.set(userRef, userData, { merge: true });
-
-          // Update analytics
-          const today = new Date().toISOString().split("T")[0];
-          const analyticsRef = doc(db, "analytics", "global");
-
-          // Increment usersPerDay by type
-          transaction.set(
-            analyticsRef,
-            {
-              usersPerDay: {
-                [today]: {
-                  [userType]: increment(1),
-                },
-              },
-              // Add location data to the array
-              locationData: arrayUnion({
-                lat: coords.lat,
-                lng: coords.lng,
-                name: `${coords.lat.toFixed(2)}, ${coords.lng.toFixed(2)}`,
-                color: "#ef4444",
-                size: 0.8,
-                altitude: 0.1,
-                count: 1,
-              }),
-              // Initialize other fields if they don't exist
-              activeUsers: increment(0),
-              activeSubscriptions: increment(0),
-              averageResponseTime: increment(0),
-              messagesByDay: {},
-              subscriptionsByDay: {},
-              tokensByDay: {},
-              totalRevenue: increment(0),
-            },
-            { merge: true }
-          );
+          createdAt: serverTimestamp(),
+          lastLogin: serverTimestamp(),
+          location: {
+            city: cityState.city,
+            state: cityState.state,
+            country: cityState.country,
+            coordinates: coords,
+          },
         });
 
-        // Wait for user document to exist before navigating
-        const userRef = doc(db, "users", user.uid);
+        // Wait a bit for the document to be created
         let userDocExists = false;
-        for (let i = 0; i < 10; i++) {
-          // Try for up to ~2 seconds
-          const snap = await getDoc(userRef);
-          if (snap.exists()) {
-            userDocExists = true;
-            break;
-          }
+        for (let i = 0; i < 5; i++) {
+          const userSnap = await getDoc(userRef);
+          userDocExists = userSnap.exists();
+          if (userDocExists) break;
           await new Promise((res) => setTimeout(res, 200)); // Wait 200ms
         }
         if (userDocExists) {

@@ -96,8 +96,8 @@ export default function AdminAnalytics({
       const stateCounts: { [state: string]: number } = {};
       snapshot.forEach((doc) => {
         const data = doc.data();
-        if (data.state) {
-          const state = data.state;
+        if (data.location?.state) {
+          const state = data.location.state;
           stateCounts[state] = (stateCounts[state] || 0) + 1;
         }
       });
