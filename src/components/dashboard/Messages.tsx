@@ -1,13 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import React, { useState, useEffect } from "react";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../../config/firebase";
 
 interface Message {
-  id: string;
   content: string;
-  timestamp: any;
-  responseTime?: number;
-  isUser: boolean;
+  role: "user" | "assistant";
 }
 
 interface MessagesProps {
@@ -21,31 +18,16 @@ export default function Messages({ userId }: MessagesProps) {
   useEffect(() => {
     const fetchMessages = async () => {
       try {
-        const messagesRef = collection(db, 'messages');
-        const q = query(
-          messagesRef,
-          where('userId', '==', userId),
-          orderBy('timestamp', 'desc'),
-          limit(50)
-        );
-        
-        const querySnapshot = await getDocs(q);
-        const messageList: Message[] = [];
-        
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          messageList.push({
-            id: doc.id,
-            content: data.content,
-            timestamp: data.timestamp,
-            responseTime: data.responseTime,
-            isUser: data.isUser || false
-          });
-        });
+        const userDoc = doc(db, "users", userId);
+        const userSnapshot = await getDoc(userDoc);
 
-        setMessages(messageList);
+        if (userSnapshot.exists()) {
+          const userData = userSnapshot.data();
+          const history = userData.history || [];
+          setMessages(history);
+        }
       } catch (error) {
-        console.error('Error fetching messages:', error);
+        console.error("Error fetching messages:", error);
       } finally {
         setLoading(false);
       }
@@ -65,36 +47,37 @@ export default function Messages({ userId }: MessagesProps) {
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-xl shadow-sm p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Recent Messages</h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">
+          Recent Messages
+        </h2>
         {messages.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-gray-500">No messages yet. Start chatting with SwanAI to see your conversation history.</p>
+            <p className="text-gray-500">
+              No messages yet. Start chatting with SwanAI to see your
+              conversation history.
+            </p>
           </div>
         ) : (
           <div className="space-y-4">
-            {messages.map((message) => (
+            {messages.map((message, index) => (
               <div
-                key={message.id}
-                className={`p-4 rounded-lg ${
-                  message.isUser
-                    ? 'bg-indigo-50 ml-12'
-                    : 'bg-gray-50 mr-12'
+                key={index}
+                className={`flex flex-col ${
+                  message.role === "user" ? "items-end" : "items-start"
                 }`}
               >
-                <div className="flex justify-between items-start mb-2">
-                  <span className="text-sm font-medium text-gray-900">
-                    {message.isUser ? 'You' : 'SwanAI'}
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    {message.timestamp.toDate().toLocaleString()}
-                  </span>
+                <div className="text-sm text-gray-500 mb-1">
+                  {message.role === "user" ? "You" : "SwanAI"}
                 </div>
-                <p className="text-gray-700 whitespace-pre-wrap">{message.content}</p>
-                {message.responseTime && !message.isUser && (
-                  <div className="mt-2 text-xs text-gray-500">
-                    Response time: {message.responseTime.toFixed(2)}s
-                  </div>
-                )}
+                <div
+                  className={`p-3 rounded-lg max-w-md ${
+                    message.role === "user"
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-100 text-gray-800"
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap">{message.content}</p>
+                </div>
               </div>
             ))}
           </div>
@@ -102,4 +85,4 @@ export default function Messages({ userId }: MessagesProps) {
       </div>
     </div>
   );
-} 
+}

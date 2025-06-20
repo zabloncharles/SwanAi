@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, deleteField } from "firebase/firestore";
 import { db } from "../../config/firebase";
 import { UserData } from "../../types/user";
 import PricingSection from "./PricingSection";
@@ -8,32 +8,54 @@ import { auth } from "../../config/firebase";
 
 const personalityOptions = [
   {
-    value: "Professional - I'll be your professional partner who maintains a polished and efficient communication style.",
-    description: "I'll be your professional partner who maintains a polished and efficient communication style."
+    name: "Professional",
+    value: "Professional",
+    description:
+      "Your polished and efficient partner. Organized, articulate, and goal-oriented. Perfect for staying on top of tasks and projects.",
   },
   {
-    value: "Friendly - I'll be your friendly companion who keeps things casual and approachable.",
-    description: "I'll be your friendly companion who keeps things casual and approachable."
+    name: "Friendly",
+    value: "Friendly",
+    description:
+      "Your supportive and easygoing companion. Casual, warm, and always there to chat, celebrate wins, or offer a listening ear.",
   },
   {
-    value: "Mentor - I'll be your mentor who provides guidance and wisdom.",
-    description: "I'll be your mentor who provides guidance and wisdom."
-  }
+    name: "Mentor",
+    value: "Mentor",
+    description:
+      "Your wise and insightful guide. Patient and thoughtful, helping you find answers through reflection and self-discovery.",
+  },
 ];
 
 const relationshipOptions = [
   {
-    value: "Parent - I'll be your nurturing guide who genuinely wants to see you thrive.",
-    description: "I'll be your nurturing guide who genuinely wants to see you thrive."
+    name: "Mom",
+    value: "Mom",
+    description:
+      "A nurturing and caring presence, always there with warm support and gentle encouragement.",
   },
   {
-    value: "Friend - I'll be your supportive friend who's always there to chat.",
-    description: "I'll be your supportive friend who's always there to chat."
+    name: "Dad",
+    value: "Dad",
+    description:
+      "A steady and protective figure, offering practical advice and celebrating your strengths.",
   },
   {
-    value: "Coach - I'll be your dedicated coach who pushes you to be your best.",
-    description: "I'll be your dedicated coach who pushes you to be your best."
-  }
+    name: "Friend",
+    value: "Friend",
+    description: "I'll be your supportive friend who's always there to chat.",
+  },
+  {
+    name: "Coach",
+    value: "Coach",
+    description: "I'll be your dedicated coach who pushes you to be your best.",
+  },
+  {
+    name: "Cousin",
+    value: "Cousin",
+    description:
+      "I'll be your fun-loving cousin who's always up for an adventure.",
+  },
 ];
 
 interface SettingsProps {
@@ -42,31 +64,76 @@ interface SettingsProps {
 }
 
 export default function Settings({ userData, onUpdate }: SettingsProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedData, setEditedData] = useState<UserData & { name: string; phone: string } | null>(null);
+  const [editingSection, setEditingSection] = useState<string | null>(null);
+  const [editedData, setEditedData] = useState<
+    (UserData & { name: string; phone: string }) | null
+  >(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [saveMessage, setSaveMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
   const [openCard, setOpenCard] = useState<string | null>("personal");
   const saveButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (userData) {
+      let updatedData = { ...userData };
+      let needsUpdate = false;
+
+      // Data migration logic
+      const currentPersonality = userData.profile?.personality;
+      if (
+        currentPersonality &&
+        !personalityOptions.some((p) => p.value === currentPersonality)
+      ) {
+        if (currentPersonality.startsWith("Professional")) {
+          updatedData.profile = {
+            ...updatedData.profile,
+            personality: "Professional",
+          };
+          needsUpdate = true;
+        } else if (currentPersonality === "Helpful and friendly") {
+          updatedData.profile = {
+            ...updatedData.profile,
+            personality: "Friendly",
+          };
+          needsUpdate = true;
+        }
+      }
+
       setEditedData({
-        ...userData,
-        name: (userData.firstName || "") + (userData.lastName ? ` ${userData.lastName}` : ""),
-        phone: userData.phoneNumber || "",
+        ...updatedData,
+        name:
+          (updatedData.firstName || "") +
+          (updatedData.lastName ? ` ${updatedData.lastName}` : ""),
+        phone: updatedData.phoneNumber || "",
       });
+
+      if (needsUpdate) {
+        onUpdate({ profile: updatedData.profile });
+      }
     }
-  }, [userData]);
+  }, [userData, onUpdate]);
 
   useEffect(() => {
-    if (isEditing && saveButtonRef.current) {
+    if (editingSection && saveButtonRef.current) {
       const observer = new IntersectionObserver(
         ([entry]) => {
           if (entry.isIntersecting) {
-            saveButtonRef.current?.classList.remove('fixed', 'bottom-4', 'right-4', 'z-50');
+            saveButtonRef.current?.classList.remove(
+              "fixed",
+              "bottom-4",
+              "right-4",
+              "z-50"
+            );
           } else {
-            saveButtonRef.current?.classList.add('fixed', 'bottom-4', 'right-4', 'z-50');
+            saveButtonRef.current?.classList.add(
+              "fixed",
+              "bottom-4",
+              "right-4",
+              "z-50"
+            );
           }
         },
         { threshold: 0 }
@@ -75,28 +142,56 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
       observer.observe(saveButtonRef.current);
       return () => observer.disconnect();
     }
-  }, [isEditing]);
+  }, [editingSection]);
 
-  const handleSave = async () => {
+  const handlePersonalInfoSave = async () => {
     if (!editedData) return;
-    
+
     setIsSaving(true);
     setSaveMessage(null);
-    
+
     try {
       const [firstName, ...lastArr] = (editedData.name || "").split(" ");
       const lastName = lastArr.join(" ");
-      const updated = {
-        ...editedData,
+      const personalInfo = {
         firstName,
         lastName,
         phoneNumber: editedData.phone,
+        email: editedData.email,
       };
-      await onUpdate(updated);
-      setIsEditing(false);
-      setSaveMessage({ type: 'success', text: 'Settings saved successfully!' });
+      await onUpdate(personalInfo);
+      setEditingSection(null);
+      setSaveMessage({ type: "success", text: "Personal information saved!" });
     } catch (error) {
-      setSaveMessage({ type: 'error', text: 'Failed to save settings. Please try again.' });
+      setSaveMessage({
+        type: "error",
+        text: "Failed to save personal information.",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleAiCustomizationSave = async () => {
+    if (!editedData?.profile) return;
+
+    setIsSaving(true);
+    setSaveMessage(null);
+
+    try {
+      const aiSettings = {
+        profile: editedData.profile,
+        personality: deleteField(),
+        aiRelationship: deleteField(),
+      };
+      await onUpdate(aiSettings);
+      setEditingSection(null);
+      setSaveMessage({ type: "success", text: "AI customization saved!" });
+    } catch (error) {
+      setSaveMessage({
+        type: "error",
+        text: "Failed to save AI customization.",
+      });
     } finally {
       setIsSaving(false);
     }
@@ -104,7 +199,7 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
 
   if (!editedData) return null;
 
-  const isProUser = editedData.type === "pro";
+  const isProUser = editedData.type === "pro" || editedData.type === "ultimate";
 
   return (
     <div className="space-y-8">
@@ -112,7 +207,9 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
         <div
           role="alert"
           className={`p-4 rounded-lg ${
-            saveMessage.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
+            saveMessage.type === "success"
+              ? "bg-green-50 text-green-800"
+              : "bg-red-50 text-red-800"
           }`}
         >
           {saveMessage.text}
@@ -124,25 +221,85 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
         <button
           type="button"
           className="w-full flex justify-between items-center text-left"
-          onClick={() => setOpenCard(openCard === "personal" ? null : "personal")}
+          onClick={(e) => {
+            e.stopPropagation();
+            setEditingSection(null);
+            setOpenCard("personal");
+          }}
           aria-expanded={openCard === "personal"}
         >
-          <h2 className="text-2xl font-bold text-gray-900">Personal Information</h2>
-          <span className="text-gray-500">{openCard === "personal" ? "−" : "+"}</span>
+          <h2 className="text-2xl font-bold text-gray-900">
+            Personal Information
+          </h2>
+          <div className="flex items-center gap-4">
+            {editingSection === "personal" ? (
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingSection(null);
+                    // Reset changes on cancel
+                    setEditedData({
+                      ...userData,
+                      name:
+                        (userData.firstName || "") +
+                        (userData.lastName ? ` ${userData.lastName}` : ""),
+                      phone: userData.phoneNumber || "",
+                    });
+                  }}
+                  className="text-sm font-semibold text-gray-600 hover:text-gray-900"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePersonalInfoSave();
+                  }}
+                  disabled={isSaving}
+                  className="text-sm font-semibold text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                >
+                  {isSaving ? "Saving..." : "Save"}
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditingSection("personal");
+                  setOpenCard("personal");
+                }}
+                className="text-sm font-semibold text-blue-600 hover:text-blue-800"
+              >
+                Edit
+              </button>
+            )}
+            <span className="text-gray-500">
+              {openCard === "personal" ? "−" : "+"}
+            </span>
+          </div>
         </button>
 
         {openCard === "personal" && (
           <div className="mt-6 space-y-6">
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="name"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Name
               </label>
               <input
                 type="text"
                 id="name"
                 value={editedData.name}
-                onChange={(e) => setEditedData({ ...editedData, name: e.target.value })}
-                disabled={!isEditing}
+                onChange={(e) =>
+                  setEditedData({ ...editedData, name: e.target.value })
+                }
+                disabled={editingSection !== "personal"}
                 className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
                 aria-describedby="name-description"
               />
@@ -152,15 +309,20 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Email
               </label>
               <input
                 type="email"
                 id="email"
                 value={editedData.email}
-                onChange={(e) => setEditedData({ ...editedData, email: e.target.value })}
-                disabled={!isEditing}
+                onChange={(e) =>
+                  setEditedData({ ...editedData, email: e.target.value })
+                }
+                disabled={editingSection !== "personal"}
                 className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
                 aria-describedby="email-description"
               />
@@ -170,15 +332,20 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
             </div>
 
             <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="phone"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Phone Number
               </label>
               <input
                 type="tel"
                 id="phone"
                 value={editedData.phone}
-                onChange={(e) => setEditedData({ ...editedData, phone: e.target.value })}
-                disabled={!isEditing}
+                onChange={(e) =>
+                  setEditedData({ ...editedData, phone: e.target.value })
+                }
+                disabled={editingSection !== "personal"}
                 className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
                 aria-describedby="phone-description"
               />
@@ -195,77 +362,170 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
         <button
           type="button"
           className="w-full flex justify-between items-center text-left"
-          onClick={() => setOpenCard(openCard === "ai" ? null : "ai")}
+          onClick={(e) => {
+            e.stopPropagation();
+            setEditingSection(null);
+            setOpenCard("ai");
+          }}
           aria-expanded={openCard === "ai"}
         >
           <h2 className="text-2xl font-bold text-gray-900">AI Customization</h2>
-          <span className="text-gray-500">{openCard === "ai" ? "−" : "+"}</span>
+          <div className="flex items-center gap-4">
+            {editingSection === "ai" ? (
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingSection(null);
+                    // Reset changes on cancel
+                    setEditedData({
+                      ...userData,
+                      name:
+                        (userData.firstName || "") +
+                        (userData.lastName ? ` ${userData.lastName}` : ""),
+                      phone: userData.phoneNumber || "",
+                    });
+                  }}
+                  className="text-sm font-semibold text-gray-600 hover:text-gray-900"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAiCustomizationSave();
+                  }}
+                  disabled={isSaving}
+                  className="text-sm font-semibold text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                >
+                  {isSaving ? "Saving..." : "Save"}
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditingSection("ai");
+                  setOpenCard("ai");
+                }}
+                className="text-sm font-semibold text-blue-600 hover:text-blue-800"
+              >
+                Edit
+              </button>
+            )}
+            <span className="text-gray-500">
+              {openCard === "ai" ? "−" : "+"}
+            </span>
+          </div>
         </button>
 
         {openCard === "ai" && (
           <div className="mt-6 space-y-6">
             <div>
-              <label htmlFor="personality" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="personality"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 AI Personality
               </label>
               <select
                 id="personality"
-                value={editedData.personality || ''}
-                onChange={(e) => setEditedData({ ...editedData, personality: e.target.value })}
-                disabled={!isEditing}
+                value={editedData.profile?.personality || ""}
+                onChange={(e) =>
+                  setEditedData({
+                    ...editedData,
+                    profile: {
+                      ...editedData.profile,
+                      personality: e.target.value,
+                    },
+                  })
+                }
+                disabled={editingSection !== "ai"}
                 className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
                 aria-describedby="personality-description"
               >
                 <option value="">Select a personality</option>
                 {personalityOptions.map((option) => (
                   <option key={option.value} value={option.value}>
-                    {option.value.split(" - ")[0]}
+                    {option.name}
                   </option>
                 ))}
               </select>
-              <p id="personality-description" className="mt-1 text-sm text-gray-500">
-                Choose how your AI assistant communicates with you
+              <p
+                id="personality-description"
+                className="mt-1 text-sm text-gray-500"
+              >
+                {personalityOptions.find(
+                  (p) => p.value === editedData.profile?.personality
+                )?.description ||
+                  "Choose how your AI assistant communicates with you"}
               </p>
             </div>
 
             {isProUser ? (
               <div>
-                <label htmlFor="aiRelationship" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="aiRelationship"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   AI Relationship
                 </label>
                 <select
                   id="aiRelationship"
-                  value={editedData.aiRelationship || ''}
-                  onChange={(e) => setEditedData({ ...editedData, aiRelationship: e.target.value })}
-                  disabled={!isEditing}
+                  value={editedData.profile?.relationship || ""}
+                  onChange={(e) =>
+                    setEditedData({
+                      ...editedData,
+                      profile: {
+                        ...editedData.profile,
+                        relationship: e.target.value,
+                      },
+                    })
+                  }
+                  disabled={editingSection !== "ai"}
                   className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
                   aria-describedby="relationship-description"
                 >
                   <option value="">Select a relationship</option>
                   {relationshipOptions.map((option) => (
                     <option key={option.value} value={option.value}>
-                      {option.value.split(" - ")[0]}
+                      {option.name}
                     </option>
                   ))}
                 </select>
-                <p id="relationship-description" className="mt-1 text-sm text-gray-500">
-                  Define your relationship with your AI assistant
+                <p
+                  id="relationship-description"
+                  className="mt-1 text-sm text-gray-500"
+                >
+                  {relationshipOptions.find(
+                    (r) => r.value === editedData.profile?.relationship
+                  )?.description || "Define your connection with the AI"}
                 </p>
               </div>
             ) : (
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="text-sm font-medium text-gray-900">Pro Feature</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  Upgrade to Pro to customize your AI relationship and create a more personalized experience.
+              <div className="mt-6 p-6 rounded-lg bg-gray-50 text-center">
+                <h3 className="text-lg font-semibold text-gray-800">
+                  Unlock More with Pro
+                </h3>
+                <p className="mt-2 text-gray-600">
+                  Upgrade to a Pro account to customize your AI's relationship
+                  and unlock deeper personalization.
                 </p>
                 <button
                   type="button"
-                  onClick={() => {
-                    window.dispatchEvent(new CustomEvent('dashboard-set-tab', { detail: 'Pricing' }));
-                  }}
-                  className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  onClick={() =>
+                    window.dispatchEvent(
+                      new CustomEvent("dashboard-set-tab", {
+                        detail: "Pricing",
+                      })
+                    )
+                  }
+                  className="mt-4 px-5 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors"
                 >
-                  Upgrade to Pro
+                  View Pricing
                 </button>
               </div>
             )}
@@ -278,28 +538,40 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
         <button
           type="button"
           className="w-full flex justify-between items-center text-left"
-          onClick={() => setOpenCard(openCard === "notifications" ? null : "notifications")}
+          onClick={() =>
+            setOpenCard(openCard === "notifications" ? null : "notifications")
+          }
           aria-expanded={openCard === "notifications"}
         >
           <h2 className="text-2xl font-bold text-gray-900">Notifications</h2>
-          <span className="text-gray-500">{openCard === "notifications" ? "−" : "+"}</span>
+          <span className="text-gray-500">
+            {openCard === "notifications" ? "−" : "+"}
+          </span>
         </button>
 
         {openCard === "notifications" && (
           <div className="mt-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-medium text-gray-900">Enable Notifications</h3>
+                <h3 className="text-sm font-medium text-gray-900">
+                  Enable Notifications
+                </h3>
                 <p className="mt-1 text-sm text-gray-500">
-                  Receive updates and important information about your SwanAI experience
+                  Receive updates and important information about your SwanAI
+                  experience
                 </p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
                   checked={editedData.notificationsEnabled}
-                  onChange={(e) => setEditedData({ ...editedData, notificationsEnabled: e.target.checked })}
-                  disabled={!isEditing}
+                  onChange={(e) =>
+                    setEditedData({
+                      ...editedData,
+                      notificationsEnabled: e.target.checked,
+                    })
+                  }
+                  disabled={editingSection !== "notifications"}
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
@@ -308,31 +580,6 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
           </div>
         )}
       </div>
-
-      {isEditing && (
-        <div className="flex justify-end gap-4">
-          <button
-            onClick={() => {
-              setIsEditing(false);
-              setEditedData(null);
-              setSaveMessage(null);
-            }}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-            aria-label="Cancel editing"
-          >
-            Cancel
-          </button>
-          <button
-            ref={saveButtonRef}
-            onClick={handleSave}
-            disabled={isSaving}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            aria-label={isSaving ? 'Saving changes...' : 'Save changes'}
-          >
-            {isSaving ? 'Saving...' : 'Save Changes'}
-          </button>
-        </div>
-      )}
     </div>
   );
 }

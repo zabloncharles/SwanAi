@@ -1,15 +1,25 @@
+import { Timestamp } from "firebase/firestore";
+
 export interface UserData {
   uid: string;
-  name?: string;
   firstName?: string;
   lastName?: string;
   email: string;
-  phone?: string;
   phoneNumber?: string;
-  type: 'free' | 'pro' | 'admin';
   personality?: string;
   aiRelationship?: string;
+  profile?: {
+    personality?: string;
+    relationship?: string;
+    name?: string | null;
+    preferences?: any;
+  };
+  createdAt: Timestamp;
+  lastLogin?: Timestamp;
+  type: "free" | "pro" | "ultimate" | "admin";
   notificationsEnabled: boolean;
-  createdAt: Date;
+  tokensUsed?: number;
+  responseTime?: number;
+  summary?: string;
   updatedAt: Date;
-} 
+}

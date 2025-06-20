@@ -26,7 +26,7 @@ import AdminAnalytics from "../components/dashboard/AdminAnalytics";
 import Settings from "../components/dashboard/Settings";
 import Messages from "../components/dashboard/Messages";
 import PricingSection from "../components/dashboard/PricingSection";
-import SlimFooter from '../components/SlimFooter';
+import SlimFooter from "../components/SlimFooter";
 
 interface UserData {
   firstName: string;
@@ -44,6 +44,7 @@ interface UserData {
   summary?: string;
   uid?: string;
   updatedAt: Date;
+  profile?: { personality: string; relationship: string };
 }
 
 export default function Dashboard() {
@@ -108,8 +109,10 @@ export default function Dashboard() {
           const updatedUserData = {
             ...data,
             uid: user.uid,
-            personality: data.personality || "",
-            aiRelationship: data.aiRelationship || "",
+            profile: data.profile || {
+              personality: "Friendly",
+              relationship: "Friend",
+            },
             notificationsEnabled: data.notificationsEnabled || false,
           };
           console.log("Updated user data:", updatedUserData);
@@ -143,8 +146,8 @@ export default function Dashboard() {
     const handleSetTab = (e: any) => {
       if (e.detail) setActiveTab(e.detail);
     };
-    window.addEventListener('dashboard-set-tab', handleSetTab);
-    return () => window.removeEventListener('dashboard-set-tab', handleSetTab);
+    window.addEventListener("dashboard-set-tab", handleSetTab);
+    return () => window.removeEventListener("dashboard-set-tab", handleSetTab);
   }, []);
 
   // --- Fetch analytics data for the current user ---
@@ -260,13 +263,33 @@ export default function Dashboard() {
   };
 
   // --- Settings update handler for Settings component ---
-  const handleSettingsUpdate = async (updatedData: any): Promise<void> => {
-    setUserData((prev) => ({
-      ...prev,
-      ...updatedData,
-      uid: String(updatedData.uid || prev.uid || ""),
-    }));
-    return Promise.resolve();
+  const handleSettingsUpdate = async (dataToSave: Partial<UserData>) => {
+    if (!user) return;
+    try {
+      const userRef = doc(db, "users", user.uid);
+      await updateDoc(userRef, dataToSave);
+
+      // Create a clean version of data for local state by removing sentinels
+      const cleanDataForState = { ...dataToSave };
+      if ("personality" in cleanDataForState)
+        delete (cleanDataForState as any).personality;
+      if ("aiRelationship" in cleanDataForState)
+        delete (cleanDataForState as any).aiRelationship;
+
+      // Optimistically update local state instead of re-fetching
+      setUserData((prevUserData) => ({
+        ...prevUserData,
+        ...cleanDataForState,
+        profile: {
+          ...(prevUserData.profile as object),
+          ...(cleanDataForState.profile as object),
+        },
+      }));
+    } catch (error) {
+      console.error("Error updating settings:", error);
+      // Optional: Add logic to revert state on error
+      throw error;
+    }
   };
 
   // --- Loading spinner while fetching data ---
@@ -312,7 +335,9 @@ export default function Dashboard() {
                         totalMessages={totalMessages}
                         averageResponseTime={averageResponseTime}
                         tokensUsed={userData.tokensUsed}
-                        notificationsEnabled={userData.notificationsEnabled || false}
+                        notificationsEnabled={
+                          userData.notificationsEnabled || false
+                        }
                       />
                       <div className="mt-8">
                         <DashboardCharts
@@ -325,12 +350,12 @@ export default function Dashboard() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                         <ProfileInfo
                           phoneNumber={userData.phoneNumber}
-                          personality={userData.personality || ""}
+                          personality={userData.profile?.personality || ""}
                           responseTime={userData.responseTime || 0}
                           notificationsEnabled={
                             userData.notificationsEnabled || false
                           }
-                          aiRelationship={userData.aiRelationship}
+                          aiRelationship={userData.profile?.relationship}
                           type={userData.type}
                         />
                         <ConversationSummary summary={userData.summary || ""} />
@@ -372,7 +397,8 @@ export default function Dashboard() {
                         Plans and Pricing
                       </h2>
                       <p className="text-gray-500 mb-4 text-sm">
-                        Choose the perfect plan for your needs. Upgrade or downgrade at any time.
+                        Choose the perfect plan for your needs. Upgrade or
+                        downgrade at any time.
                       </p>
                       <PricingSection />
                     </>
