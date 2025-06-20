@@ -211,31 +211,23 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
           // Preserve personal info
           personal_info: userData.profile?.personal_info || {},
           preferences: {
-            ...userData.profile?.preferences,
-            // Adapt communication style for new relationship
-            communication_style: undefined, // Let AI learn new style
+            topics_of_interest:
+              userData.profile?.preferences?.topics_of_interest || [],
+            emotional_patterns:
+              userData.profile?.preferences?.emotional_patterns,
+            response_preferences:
+              userData.profile?.preferences?.response_preferences,
+            // Don't include communication_style - let AI learn new style
           },
           // Preserve interests and goals
           conversation_history: {
-            ...userData.profile?.conversation_history,
-            // Clear recent patterns but keep shared memories
             frequent_topics:
               userData.profile?.conversation_history?.frequent_topics || [],
             shared_memories:
               userData.profile?.conversation_history?.shared_memories || [],
-            // Reset relationship-specific patterns
-            mood_patterns: undefined,
-            communication_frequency: undefined,
-            response_style: undefined,
+            // Don't include mood_patterns, communication_frequency, response_style
           },
-          // Adapt relationship dynamics for new relationship
-          relationship_dynamics: {
-            trust_level: undefined, // Let AI rebuild trust in new context
-            comfort_level: undefined,
-            preferred_support_style: undefined,
-            boundaries: undefined,
-          },
-          // Preserve learning preferences
+          // Don't include relationship_dynamics - let AI rebuild them
           learning_preferences: userData.profile?.learning_preferences || {},
         };
 
