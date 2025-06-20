@@ -309,8 +309,8 @@ const handler = async (event) => {
     // Add new user message to history
     history.push({ role: "user", content: text });
 
-    // Only update summary and profile every 5 messages
-    const shouldUpdateSummaryProfile = history.length % 5 === 1; // update on 1st, 6th, 11th, etc.
+    // Generate summary and clear history when it reaches MAX_HISTORY
+    const shouldUpdateSummaryProfile = history.length >= MAX_HISTORY;
     let updatedSummary = summary;
     let updatedProfile = profile;
 
@@ -367,6 +367,10 @@ const handler = async (event) => {
           `Updated profile:`,
           JSON.stringify(updatedProfile, null, 2)
         );
+
+        // Clear history after generating summary
+        history = [];
+        console.log(`History cleared, new length: ${history.length}`);
       } catch (e) {
         console.error("Failed to parse AI analysis JSON:", e);
         console.error(
@@ -375,11 +379,6 @@ const handler = async (event) => {
         );
         // Keep old summary/profile if parsing fails
       }
-    }
-
-    // Trim history if needed
-    if (history.length > MAX_HISTORY) {
-      history = history.slice(-MAX_HISTORY);
     }
 
     const personalityKey = updatedProfile.personality || "Friendly";
