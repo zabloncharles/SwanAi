@@ -238,10 +238,10 @@ const handler = async (event) => {
         // Try a broader search to see what phone numbers exist
         const allUsersQuery = query(usersRef, limit(5));
         const allUsersSnapshot = await getDocs(allUsersQuery);
-        const existingPhones = [];
+        const existingPhones: string[] = [];
         for (const doc of allUsersSnapshot.docs) {
           const data = doc.data();
-          if (data.phoneNumber) {
+          if (data.phoneNumber && typeof data.phoneNumber === "string") {
             existingPhones.push(data.phoneNumber);
           }
         }
@@ -311,15 +311,18 @@ const handler = async (event) => {
 
     // Generate summary and clear history when it reaches MAX_HISTORY
     const shouldUpdateSummaryProfile = history.length >= MAX_HISTORY;
+    // Also update summary periodically (every 5 messages) for continuous learning
+    const shouldUpdatePeriodically =
+      history.length > 0 && history.length % 5 === 0;
     let updatedSummary = summary;
     let updatedProfile = profile;
 
     console.log(
-      `History length: ${history.length}, Should update summary: ${shouldUpdateSummaryProfile}`
+      `History length: ${history.length}, Should update summary: ${shouldUpdateSummaryProfile}, Should update periodically: ${shouldUpdatePeriodically}`
     );
     console.log(`Current summary: "${summary}"`);
 
-    if (shouldUpdateSummaryProfile) {
+    if (shouldUpdateSummaryProfile || shouldUpdatePeriodically) {
       console.log(
         `Starting summary/profile update for history length: ${history.length}`
       );
@@ -328,11 +331,59 @@ const handler = async (event) => {
       const analysisPrompt = [
         {
           role: "system",
-          content: `You are an assistant that analyzes conversations and returns ONLY a valid JSON object. Do not add any extra text. The JSON object must have two keys: "updatedSummary" and "updatedProfile".
-- "updatedSummary": Summarize the conversation for future context. Stay in character as the user's ${
-            userData.profile?.relationship || "Friend"
-          }.
-- "updatedProfile": Update the user's JSON profile by extracting new details (personality, preferences, etc.) from the conversation.`,
+          content: `You are an expert at analyzing conversations and extracting detailed user information. Return ONLY a valid JSON object with these keys:
+
+"updatedSummary": A comprehensive summary that captures:
+- Key topics discussed and user's interests
+- Emotional states and mood patterns
+- Important life events or updates mentioned
+- User's communication style and preferences
+- Any goals, challenges, or achievements discussed
+- Personal details (work, family, hobbies, etc.)
+- Relationship dynamics and social connections
+
+"updatedProfile": A detailed user profile with these structured fields:
+{
+  "personality": "current personality setting",
+  "relationship": "current relationship setting", 
+  "name": "user's name if mentioned",
+  "preferences": {
+    "communication_style": "how they prefer to communicate",
+    "topics_of_interest": ["array of topics they enjoy"],
+    "emotional_patterns": "how they typically express emotions",
+    "response_preferences": "how they like to be responded to"
+  },
+  "personal_info": {
+    "age_range": "approximate age if mentioned",
+    "occupation": "work/job details if mentioned",
+    "location": "where they live if mentioned",
+    "family_status": "family details if mentioned",
+    "hobbies": ["array of hobbies/interests"],
+    "goals": ["array of goals mentioned"],
+    "challenges": ["array of challenges discussed"]
+  },
+  "conversation_history": {
+    "frequent_topics": ["topics they talk about often"],
+    "mood_patterns": "typical emotional states",
+    "communication_frequency": "how often they message",
+    "response_style": "how they typically respond",
+    "shared_memories": ["important memories or experiences mentioned"]
+  },
+  "relationship_dynamics": {
+    "trust_level": "how much they trust the AI",
+    "comfort_level": "how comfortable they are sharing",
+    "preferred_support_style": "how they like to be supported",
+    "boundaries": "any boundaries they've set"
+  },
+  "learning_preferences": {
+    "preferred_explanation_style": "how they like things explained",
+    "motivation_factors": "what motivates them",
+    "stress_triggers": "what causes them stress",
+    "coping_mechanisms": "how they handle difficult situations"
+  }
+}
+
+Analyze the conversation deeply and extract as much meaningful information as possible. Focus on patterns, preferences, and personal details that would help provide better, more personalized responses.`,
         },
         {
           role: "user",
@@ -368,9 +419,11 @@ const handler = async (event) => {
           JSON.stringify(updatedProfile, null, 2)
         );
 
-        // Clear history after generating summary
-        history = [];
-        console.log(`History cleared, new length: ${history.length}`);
+        // Clear history only when it reaches MAX_HISTORY
+        if (shouldUpdateSummaryProfile) {
+          history = [];
+          console.log(`History cleared, new length: ${history.length}`);
+        }
       } catch (e) {
         console.error("Failed to parse AI analysis JSON:", e);
         console.error(
@@ -418,11 +471,47 @@ You are their ${relationshipKey}. ${relationshipProfile.roleDescription}
         }, a real person with your own life, opinions, and way of speaking. Respond as if you're texting a friend or family member.
 
 **What you know about them:** ${JSON.stringify(updatedProfile)}
+
+**Key things to remember:**
+- Their communication style: ${
+          updatedProfile.preferences?.communication_style || "Not specified"
+        }
+- Topics they're interested in: ${JSON.stringify(
+          updatedProfile.preferences?.topics_of_interest || []
+        )}
+- Their typical mood: ${
+          updatedProfile.conversation_history?.mood_patterns || "Not specified"
+        }
+- Their goals: ${JSON.stringify(updatedProfile.personal_info?.goals || [])}
+- Their challenges: ${JSON.stringify(
+          updatedProfile.personal_info?.challenges || []
+        )}
+- How they like to be supported: ${
+          updatedProfile.relationship_dynamics?.preferred_support_style ||
+          "Not specified"
+        }
+- What motivates them: ${
+          updatedProfile.learning_preferences?.motivation_factors ||
+          "Not specified"
+        }
+- Shared memories: ${JSON.stringify(
+          updatedProfile.conversation_history?.shared_memories || []
+        )}
+
 **Recent conversations:** ${updatedSummary}
+
+**Guidelines for better responses:**
+- Reference their specific interests and hobbies when relevant
+- Acknowledge their goals and offer encouragement
+- Be sensitive to their stress triggers and coping mechanisms
+- Use their preferred communication style
+- Build on shared memories and experiences
+- Show you understand their emotional patterns
+- Respect any boundaries they've set
 
 Remember: Be natural, be yourself (as ${
           personalityProfile.name
-        }), and have a real conversation.`,
+        }), and have a real conversation that shows you truly know and care about them.`,
       },
       ...history,
     ];
