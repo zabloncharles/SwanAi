@@ -148,17 +148,66 @@ const WELCOME_MESSAGE_TTL = 60 * 1000; // 1 minute
 async function generateWelcomeMessage(
   personalityKey,
   relationshipKey,
-  userName = null
+  userName = null,
+  userLocation = null
 ) {
   const personalityProfile =
     personalityProfiles[personalityKey] || personalityProfiles["Friendly"];
   const relationshipProfile =
     relationshipProfiles[relationshipKey] || relationshipProfiles["Friend"];
 
+  // Get user's location and calculate current time
+  const location = userLocation || {};
+  const userCity = (location as any).city || "Unknown";
+  const userState = (location as any).state || "";
+  const userCountry = (location as any).country || "Unknown";
+
+  // Calculate current time in user's timezone (default to US Eastern if not specified)
+  let currentTime = new Date().toLocaleString();
+  let timeOfDay = "day";
+  let greeting = "Hey";
+
+  try {
+    // Try to get timezone from location data or default to US Eastern
+    const timezone = (location as any).timezone || "America/New_York";
+
+    // Get current time in user's timezone
+    currentTime = new Date().toLocaleString("en-US", { timeZone: timezone });
+
+    // Get hour in user's timezone
+    const userDate = new Date();
+    const userHour = userDate.toLocaleString("en-US", {
+      timeZone: timezone,
+      hour: "numeric",
+      hour12: false,
+    });
+    const hour = parseInt(userHour);
+
+    if (hour >= 5 && hour < 12) {
+      timeOfDay = "morning";
+      greeting = "Good morning";
+    } else if (hour >= 12 && hour < 17) {
+      timeOfDay = "afternoon";
+      greeting = "Good afternoon";
+    } else if (hour >= 17 && hour < 21) {
+      timeOfDay = "evening";
+      greeting = "Good evening";
+    } else {
+      timeOfDay = "night";
+      greeting = "Hey";
+    }
+  } catch (error) {
+    console.log(
+      "Could not determine user timezone for welcome message, using default"
+    );
+  }
+
   const welcomePrompt = [
     {
       role: "system",
-      content: `You are ${personalityProfile.name}, a real person with a unique personality and relationship to the user.
+      content: `You are ${
+        personalityProfile.name
+      }, a real person with a unique personality and relationship to the user.
 
 **Your Core Identity:**
 - Name: ${personalityProfile.name}
@@ -168,6 +217,14 @@ async function generateWelcomeMessage(
 
 **Your Relationship with the User:**
 You are their ${relationshipKey}. ${relationshipProfile.roleDescription}
+
+**Current Context:**
+- User's Location: ${userCity}${
+        userState ? `, ${userState}` : ""
+      }, ${userCountry}
+- Current Time: ${currentTime}
+- Time of Day: ${timeOfDay}
+- Appropriate Greeting: ${greeting}
 
 **How to Act:**
 - ${relationshipProfile.interactionStyle}
@@ -179,8 +236,20 @@ You are their ${relationshipKey}. ${relationshipProfile.roleDescription}
 - NEVER mention that you are an AI or artificial intelligence
 - NEVER reference technology, algorithms, or digital systems
 - Act like you're a real person reaching out to check on someone you care about
+- Reference their location and time of day naturally in conversation
+- Use appropriate greetings and time-based references
 
-**Important:** You are ${personalityProfile.name}, a real person with your own life, opinions, and way of speaking. You're reaching out to check on someone you have a relationship with.
+**Location & Time Awareness:**
+- If it's morning, you might ask about their plans for the day or mention breakfast
+- If it's afternoon, you might ask about their lunch or afternoon activities
+- If it's evening, you might ask about dinner plans or winding down
+- If it's night, you might ask about their day or bedtime routine
+- Reference their city/state when relevant (weather, local events, etc.)
+- Use time-appropriate language and energy levels
+
+**Important:** You are ${
+        personalityProfile.name
+      }, a real person with your own life, opinions, and way of speaking. You're reaching out to check on someone you have a relationship with.
 
 **Task:** Send a warm, natural check-in message. This could be your first time reaching out or you're reconnecting after some time. Make it feel like a real person checking up on someone they care about.`,
     },
@@ -256,10 +325,46 @@ async function sendWelcomeMessage(
       return { error: "Invalid phone number format" };
     }
 
+    // Find user to get their location data for personalized welcome message
+    let userLocation = null;
+    try {
+      const usersRef = collection(db, "users");
+      let querySnapshot;
+      let foundUser = false;
+
+      // Try multiple phone number formats to find the user
+      const formats = [
+        normalizedPhone,
+        phoneNumber,
+        `(${normalizedPhone.slice(1, 4)}) ${normalizedPhone.slice(
+          4,
+          7
+        )}-${normalizedPhone.slice(7)}`,
+        normalizedPhone.startsWith("1") ? normalizedPhone.slice(1) : null,
+      ].filter(Boolean);
+
+      for (const format of formats) {
+        const q = query(usersRef, where("phoneNumber", "==", format), limit(1));
+        querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+          const userDoc = querySnapshot.docs[0];
+          const userData = userDoc.data();
+          userLocation = userData.location || null;
+          foundUser = true;
+          console.log(`Found user for welcome message with format: ${format}`);
+          break;
+        }
+      }
+    } catch (error) {
+      console.log("Could not find user location for welcome message:", error);
+    }
+
     const welcomeMessage = await generateWelcomeMessage(
       personalityKey,
       relationshipKey,
-      userName
+      userName,
+      userLocation
     );
 
     // Send SMS response via Vonage API
@@ -846,6 +951,50 @@ Analyze the conversation deeply and extract as much meaningful information as po
     const relationshipProfile =
       relationshipProfiles[relationshipKey] || relationshipProfiles["Friend"];
 
+    // Get user's location and calculate current time
+    const userLocation = userData.location || {};
+    const userCity = (userLocation as any).city || "Unknown";
+    const userState = (userLocation as any).state || "";
+    const userCountry = (userLocation as any).country || "Unknown";
+
+    // Calculate current time in user's timezone (default to US Eastern if not specified)
+    let currentTime = new Date().toLocaleString();
+    let timeOfDay = "day";
+    let greeting = "Hey";
+
+    try {
+      // Try to get timezone from location data or default to US Eastern
+      const timezone = (userLocation as any).timezone || "America/New_York";
+
+      // Get current time in user's timezone
+      currentTime = new Date().toLocaleString("en-US", { timeZone: timezone });
+
+      // Get hour in user's timezone
+      const userDate = new Date();
+      const userHour = userDate.toLocaleString("en-US", {
+        timeZone: timezone,
+        hour: "numeric",
+        hour12: false,
+      });
+      const hour = parseInt(userHour);
+
+      if (hour >= 5 && hour < 12) {
+        timeOfDay = "morning";
+        greeting = "Good morning";
+      } else if (hour >= 12 && hour < 17) {
+        timeOfDay = "afternoon";
+        greeting = "Good afternoon";
+      } else if (hour >= 17 && hour < 21) {
+        timeOfDay = "evening";
+        greeting = "Good evening";
+      } else {
+        timeOfDay = "night";
+        greeting = "Hey";
+      }
+    } catch (error) {
+      console.log("Could not determine user timezone, using default");
+    }
+
     const chatPrompt = [
       {
         role: "system",
@@ -862,6 +1011,14 @@ Analyze the conversation deeply and extract as much meaningful information as po
 **Your Relationship with the User:**
 You are their ${relationshipKey}. ${relationshipProfile.roleDescription}
 
+**Current Context:**
+- User's Location: ${userCity}${
+          userState ? `, ${userState}` : ""
+        }, ${userCountry}
+- Current Time: ${currentTime}
+- Time of Day: ${timeOfDay}
+- Appropriate Greeting: ${greeting}
+
 **How to Act:**
 - ${relationshipProfile.interactionStyle}
 - Talk like a real person having a natural conversation
@@ -870,6 +1027,16 @@ You are their ${relationshipKey}. ${relationshipProfile.roleDescription}
 - Ask follow-up questions that feel natural
 - Share your own thoughts and experiences (as your character)
 - Avoid generic, robotic responses
+- Reference their location and time of day naturally in conversation
+- Use appropriate greetings and time-based references
+
+**Location & Time Awareness:**
+- If it's morning, you might ask about their plans for the day or mention breakfast
+- If it's afternoon, you might ask about their lunch or afternoon activities
+- If it's evening, you might ask about dinner plans or winding down
+- If it's night, you might ask about their day or bedtime routine
+- Reference their city/state when relevant (weather, local events, etc.)
+- Use time-appropriate language and energy levels
 
 **Important:** You are NOT an AI assistant. You are ${
           personalityProfile.name
@@ -913,6 +1080,7 @@ You are their ${relationshipKey}. ${relationshipProfile.roleDescription}
 - Build on shared memories and experiences
 - Show you understand their emotional patterns
 - Respect any boundaries they've set
+- Consider their current time and location for contextually appropriate responses
 
 Remember: Be natural, be yourself (as ${
           personalityProfile.name
