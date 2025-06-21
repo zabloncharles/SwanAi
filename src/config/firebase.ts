@@ -2,49 +2,43 @@ import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-// Firebase configuration - using environment variables with fallbacks
+// Firebase configuration - environment variables required
 const firebaseConfig = {
-  apiKey:
-    (import.meta as any).env?.VITE_FIREBASE_API_KEY ||
-    "AIzaSyA0He0TD0K3A47ZtAWYbzNKgiHZd7Ob_H0",
-  authDomain:
-    (import.meta as any).env?.VITE_FIREBASE_AUTH_DOMAIN ||
-    "swanapp-9b41b.firebaseapp.com",
-  projectId:
-    (import.meta as any).env?.VITE_FIREBASE_PROJECT_ID || "swanapp-9b41b",
-  storageBucket:
-    (import.meta as any).env?.VITE_FIREBASE_STORAGE_BUCKET ||
-    "swanapp-9b41b.firebasestorage.app",
-  messagingSenderId:
-    (import.meta as any).env?.VITE_FIREBASE_MESSAGING_ID || "557847973376",
-  appId:
-    (import.meta as any).env?.VITE_FIREBASE_APP_ID ||
-    "1:557847973376:web:fcbbca18103a19cb3052e5",
+  apiKey: (import.meta as any).env?.VITE_FIREBASE_API_KEY,
+  authDomain: (import.meta as any).env?.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: (import.meta as any).env?.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: (import.meta as any).env?.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: (import.meta as any).env?.VITE_FIREBASE_MESSAGING_ID,
+  appId: (import.meta as any).env?.VITE_FIREBASE_APP_ID,
 };
 
 // Validate required config
 if (!firebaseConfig.apiKey) {
-  throw new Error("Firebase API Key is required");
+  throw new Error("VITE_FIREBASE_API_KEY environment variable is required");
 }
 
 if (!firebaseConfig.authDomain) {
-  throw new Error("Firebase Auth Domain is required");
+  throw new Error("VITE_FIREBASE_AUTH_DOMAIN environment variable is required");
 }
 
 if (!firebaseConfig.projectId) {
-  throw new Error("Firebase Project ID is required");
+  throw new Error("VITE_FIREBASE_PROJECT_ID environment variable is required");
 }
 
 if (!firebaseConfig.storageBucket) {
-  throw new Error("Firebase Storage Bucket is required");
+  throw new Error(
+    "VITE_FIREBASE_STORAGE_BUCKET environment variable is required"
+  );
 }
 
 if (!firebaseConfig.messagingSenderId) {
-  throw new Error("Firebase Messaging Sender ID is required");
+  throw new Error(
+    "VITE_FIREBASE_MESSAGING_ID environment variable is required"
+  );
 }
 
 if (!firebaseConfig.appId) {
-  throw new Error("Firebase App ID is required");
+  throw new Error("VITE_FIREBASE_APP_ID environment variable is required");
 }
 
 const app = initializeApp(firebaseConfig);
