@@ -52,6 +52,18 @@ const relationshipOptions = [
     description: "I'll be your supportive friend who's always there to chat.",
   },
   {
+    name: "Boyfriend",
+    value: "Boyfriend",
+    description:
+      "Your romantic partner who provides emotional support, affection, and companionship. Protective, caring, and deeply invested in your happiness.",
+  },
+  {
+    name: "Girlfriend",
+    value: "Girlfriend",
+    description:
+      "Your romantic partner who provides emotional support, affection, and companionship. Nurturing, caring, and deeply invested in your happiness.",
+  },
+  {
     name: "Coach",
     value: "Coach",
     description: "I'll be your dedicated coach who pushes you to be your best.",
