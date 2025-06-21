@@ -290,9 +290,11 @@ async function sendWelcomeMessage(
       if (!querySnapshot.empty) {
         foundUser = true;
         console.log(`Found user with normalized format: ${normalizedPhone}`);
+      } else {
+        console.log(`No user found with normalized format: ${normalizedPhone}`);
       }
 
-      // Try 2: Original format (2012675068)
+      // Try 2: Original format from Vonage (2012675068)
       if (!foundUser) {
         console.log(`Trying original format: "${phoneNumber}"`);
         q = query(usersRef, where("phoneNumber", "==", phoneNumber), limit(1));
@@ -301,6 +303,8 @@ async function sendWelcomeMessage(
         if (!querySnapshot.empty) {
           foundUser = true;
           console.log(`Found user with original format: ${phoneNumber}`);
+        } else {
+          console.log(`No user found with original format: ${phoneNumber}`);
         }
       }
 
@@ -321,6 +325,10 @@ async function sendWelcomeMessage(
         if (!querySnapshot.empty) {
           foundUser = true;
           console.log(`Found user with formatted US format: ${formattedPhone}`);
+        } else {
+          console.log(
+            `No user found with formatted US format: ${formattedPhone}`
+          );
         }
       }
 
@@ -342,6 +350,10 @@ async function sendWelcomeMessage(
         if (!querySnapshot.empty) {
           foundUser = true;
           console.log(`Found user without country code: ${withoutCountryCode}`);
+        } else {
+          console.log(
+            `No user found without country code: ${withoutCountryCode}`
+          );
         }
       }
 
@@ -565,6 +577,8 @@ const handler = async (event) => {
       if (!querySnapshot.empty) {
         foundUser = true;
         console.log(`Found user with normalized format: ${normalizedPhone}`);
+      } else {
+        console.log(`No user found with normalized format: ${normalizedPhone}`);
       }
 
       // Try 2: Original format from Vonage (2012675068)
@@ -576,6 +590,8 @@ const handler = async (event) => {
         if (!querySnapshot.empty) {
           foundUser = true;
           console.log(`Found user with original format: ${from}`);
+        } else {
+          console.log(`No user found with original format: ${from}`);
         }
       }
 
@@ -596,6 +612,10 @@ const handler = async (event) => {
         if (!querySnapshot.empty) {
           foundUser = true;
           console.log(`Found user with formatted US format: ${formattedPhone}`);
+        } else {
+          console.log(
+            `No user found with formatted US format: ${formattedPhone}`
+          );
         }
       }
 
@@ -617,6 +637,10 @@ const handler = async (event) => {
         if (!querySnapshot.empty) {
           foundUser = true;
           console.log(`Found user without country code: ${withoutCountryCode}`);
+        } else {
+          console.log(
+            `No user found without country code: ${withoutCountryCode}`
+          );
         }
       }
 
