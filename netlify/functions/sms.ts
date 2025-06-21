@@ -391,7 +391,16 @@ async function sendWelcomeMessage(
 }
 
 const handler = async (event) => {
+  console.log(`=== SMS Function Triggered ===`);
+  console.log(`Method: ${event.httpMethod}`);
+  console.log(`Path: ${event.path}`);
+  console.log(`Query params:`, event.queryStringParameters);
+  console.log(`Body:`, event.body ? JSON.parse(event.body) : "No body");
+  console.log(`Headers:`, event.headers);
+  console.log(`==============================`);
+
   if (event.httpMethod !== "POST" && event.httpMethod !== "GET") {
+    console.log(`Method not allowed: ${event.httpMethod}`);
     return {
       statusCode: 405,
       body: "Method Not Allowed",
@@ -456,11 +465,18 @@ const handler = async (event) => {
 
   // Check for valid text
   if (!text || typeof text !== "string" || text.trim() === "") {
+    console.log(`No valid text provided: "${text}"`);
     return {
-      statusCode: 400,
-      body: JSON.stringify({ error: "No message content provided." }),
+      statusCode: 200,
+      body: JSON.stringify({
+        success: false,
+        error: "No message content provided",
+        message: "Message received but no text content found",
+      }),
     };
   }
+
+  console.log(`Processing SMS - From: ${from}, Text: "${text}"`);
 
   // Normalize phone number for consistent querying - always use 12012675068 format
   const normalizePhoneNumber = (phone) => {
