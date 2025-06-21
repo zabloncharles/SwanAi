@@ -463,6 +463,27 @@ const handler = async (event) => {
     text = params.text;
   }
 
+  // Check if this is a delivery receipt from Vonage
+  const isDeliveryReceipt =
+    event.queryStringParameters?.status === "delivered" ||
+    event.queryStringParameters?.status === "failed" ||
+    event.queryStringParameters?.status === "rejected";
+
+  if (isDeliveryReceipt) {
+    console.log(
+      `Processing delivery receipt - Status: ${event.queryStringParameters?.status}, Message ID: ${event.queryStringParameters?.messageId}`
+    );
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        success: true,
+        message: "Delivery receipt processed",
+        status: event.queryStringParameters?.status,
+        messageId: event.queryStringParameters?.messageId,
+      }),
+    };
+  }
+
   // Check for valid text
   if (!text || typeof text !== "string" || text.trim() === "") {
     console.log(`No valid text provided: "${text}"`);
