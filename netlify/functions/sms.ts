@@ -140,6 +140,10 @@ const MAX_HISTORY = 20;
 const userCache = new Map();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+// Rate limiting for welcome messages
+const welcomeMessageCache = new Map();
+const WELCOME_MESSAGE_TTL = 60 * 1000; // 1 minute
+
 // Helper to generate welcome message based on relationship and personality
 async function generateWelcomeMessage(
   personalityKey,
@@ -213,6 +217,16 @@ async function sendWelcomeMessage(
   userName = null
 ) {
   try {
+    // Rate limiting check
+    const rateLimitKey = `welcome_${phoneNumber}`;
+    const lastSent = welcomeMessageCache.get(rateLimitKey);
+    if (lastSent && Date.now() - lastSent < WELCOME_MESSAGE_TTL) {
+      console.log(
+        `Rate limited: Welcome message already sent to ${phoneNumber} recently`
+      );
+      return { message: "Welcome message already sent recently" };
+    }
+
     // Normalize phone number to consistent format
     const normalizePhoneNumber = (phone) => {
       // Remove all non-digit characters
@@ -234,6 +248,14 @@ async function sendWelcomeMessage(
       `Sending check-in message to ${phoneNumber} (normalized: ${normalizedPhone}) as ${personalityKey} ${relationshipKey}`
     );
 
+    // Validate phone number
+    if (!normalizedPhone || normalizedPhone.length < 10) {
+      console.log(
+        `Invalid phone number: ${phoneNumber} (normalized: ${normalizedPhone})`
+      );
+      return { error: "Invalid phone number format" };
+    }
+
     const welcomeMessage = await generateWelcomeMessage(
       personalityKey,
       relationshipKey,
@@ -251,24 +273,76 @@ async function sendWelcomeMessage(
 
     // Clear user history and add only the welcome message for fresh start
     try {
-      // Find the user by phone number - try both normalized and original formats
+      // Find the user by phone number - try multiple formats
       const usersRef = collection(db, "users");
+      let querySnapshot;
+      let foundUser = false;
 
-      // Try normalized phone number first
+      // Try 1: Normalized format (12012675068)
+      console.log(`Trying normalized format: "${normalizedPhone}"`);
       let q = query(
         usersRef,
         where("phoneNumber", "==", normalizedPhone),
         limit(1)
       );
-      let querySnapshot = await getDocs(q);
+      querySnapshot = await getDocs(q);
 
-      // If not found, try original phone number format
-      if (querySnapshot.empty) {
-        console.log(
-          `User not found with normalized phone ${normalizedPhone}, trying original format ${phoneNumber}`
-        );
+      if (!querySnapshot.empty) {
+        foundUser = true;
+        console.log(`Found user with normalized format: ${normalizedPhone}`);
+      }
+
+      // Try 2: Original format (2012675068)
+      if (!foundUser) {
+        console.log(`Trying original format: "${phoneNumber}"`);
         q = query(usersRef, where("phoneNumber", "==", phoneNumber), limit(1));
         querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+          foundUser = true;
+          console.log(`Found user with original format: ${phoneNumber}`);
+        }
+      }
+
+      // Try 3: Formatted US format ((201) 267-5068)
+      if (!foundUser) {
+        const formattedPhone = `(${normalizedPhone.slice(
+          1,
+          4
+        )}) ${normalizedPhone.slice(4, 7)}-${normalizedPhone.slice(7)}`;
+        console.log(`Trying formatted US format: "${formattedPhone}"`);
+        q = query(
+          usersRef,
+          where("phoneNumber", "==", formattedPhone),
+          limit(1)
+        );
+        querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+          foundUser = true;
+          console.log(`Found user with formatted US format: ${formattedPhone}`);
+        }
+      }
+
+      // Try 4: Without country code (2012675068)
+      if (
+        !foundUser &&
+        normalizedPhone.startsWith("1") &&
+        normalizedPhone.length === 11
+      ) {
+        const withoutCountryCode = normalizedPhone.slice(1);
+        console.log(`Trying without country code: "${withoutCountryCode}"`);
+        q = query(
+          usersRef,
+          where("phoneNumber", "==", withoutCountryCode),
+          limit(1)
+        );
+        querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+          foundUser = true;
+          console.log(`Found user without country code: ${withoutCountryCode}`);
+        }
       }
 
       if (!querySnapshot.empty) {
@@ -292,8 +366,9 @@ async function sendWelcomeMessage(
         );
       } else {
         console.log(
-          `User not found for phone number ${phoneNumber} or ${normalizedPhone}`
+          `User not found for phone number ${phoneNumber} or ${normalizedPhone} - continuing without updating history`
         );
+        // Don't fail the welcome message if user is not found - just log and continue
       }
     } catch (error) {
       console.error("Error updating user history:", error);
@@ -304,6 +379,10 @@ async function sendWelcomeMessage(
       "Check-in message sent successfully:",
       JSON.stringify(smsResponse)
     );
+
+    // Update rate limiting cache
+    welcomeMessageCache.set(rateLimitKey, Date.now());
+
     return smsResponse;
   } catch (error) {
     console.error("Error sending check-in message:", error);
@@ -427,16 +506,76 @@ const handler = async (event) => {
       // Fetch from database
       const usersRef = collection(db, "users");
 
-      // Use limit(1) since we only need one user and phone numbers should be unique
-      const q = query(
+      // Try multiple phone number formats since database might store them differently
+      let querySnapshot;
+      let foundUser = false;
+
+      // Try 1: Normalized format (12012675068)
+      console.log(`Trying normalized format: "${normalizedPhone}"`);
+      let q = query(
         usersRef,
         where("phoneNumber", "==", normalizedPhone),
         limit(1)
       );
+      querySnapshot = await getDocs(q);
 
-      console.log(`Querying for phone number: "${normalizedPhone}"`);
+      if (!querySnapshot.empty) {
+        foundUser = true;
+        console.log(`Found user with normalized format: ${normalizedPhone}`);
+      }
 
-      const querySnapshot = await getDocs(q);
+      // Try 2: Original format from Vonage (2012675068)
+      if (!foundUser) {
+        console.log(`Trying original format: "${from}"`);
+        q = query(usersRef, where("phoneNumber", "==", from), limit(1));
+        querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+          foundUser = true;
+          console.log(`Found user with original format: ${from}`);
+        }
+      }
+
+      // Try 3: Formatted US format ((201) 267-5068)
+      if (!foundUser) {
+        const formattedPhone = `(${normalizedPhone.slice(
+          1,
+          4
+        )}) ${normalizedPhone.slice(4, 7)}-${normalizedPhone.slice(7)}`;
+        console.log(`Trying formatted US format: "${formattedPhone}"`);
+        q = query(
+          usersRef,
+          where("phoneNumber", "==", formattedPhone),
+          limit(1)
+        );
+        querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+          foundUser = true;
+          console.log(`Found user with formatted US format: ${formattedPhone}`);
+        }
+      }
+
+      // Try 4: Without country code (2012675068)
+      if (
+        !foundUser &&
+        normalizedPhone.startsWith("1") &&
+        normalizedPhone.length === 11
+      ) {
+        const withoutCountryCode = normalizedPhone.slice(1);
+        console.log(`Trying without country code: "${withoutCountryCode}"`);
+        q = query(
+          usersRef,
+          where("phoneNumber", "==", withoutCountryCode),
+          limit(1)
+        );
+        querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+          foundUser = true;
+          console.log(`Found user without country code: ${withoutCountryCode}`);
+        }
+      }
 
       const queryTime = Date.now() - queryStartTime;
       console.log(
@@ -464,34 +603,10 @@ const handler = async (event) => {
           `Sample phone numbers in database: ${existingPhones.join(", ")}`
         );
 
-        // Try the original phone number format as fallback
-        console.log(`Trying original phone number format: "${from}"`);
-        const fallbackQuery = query(
-          usersRef,
-          where("phoneNumber", "==", from),
-          limit(1)
-        );
-        const fallbackSnapshot = await getDocs(fallbackQuery);
-
-        if (!fallbackSnapshot.empty) {
-          console.log(`Found user with original phone format: ${from}`);
-          const userDoc = fallbackSnapshot.docs[0];
-          userData = userDoc.data();
-          userId = userDoc.id;
-          userRef = doc(db, "users", userId);
-
-          // Cache the user data
-          userCache.set(cacheKey, {
-            data: userData,
-            userId: userId,
-            timestamp: Date.now(),
-          });
-        } else {
-          return {
-            statusCode: 404,
-            body: JSON.stringify({ error: "User not found" }),
-          };
-        }
+        return {
+          statusCode: 404,
+          body: JSON.stringify({ error: "User not found" }),
+        };
       }
 
       const userDoc = querySnapshot.docs[0];
