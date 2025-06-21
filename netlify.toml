@@ -22,6 +22,6 @@
 [build.environment]
   NODE_VERSION = "18"
   # Disable secrets scanning for Firebase config values (these are public)
-  SECRETS_SCAN_OMIT_KEYS = "FIREBASE_PROJECT_ID,FIREBASE_AUTH_DOMAIN,VITE_FIREBASE_STORAGE_BUCKET,FIREBASE_MESSAGING_ID,VITE_FIREBASE_APP_ID,FIREBASE_API_KEY,apiKey,authDomain,projectId,storageBucket,messagingSenderId,appId"
-  # Exclude public configuration files from secrets scanning
-  SECRETS_SCAN_OMIT_PATHS = "public/firebase-config.json,src/config/firebase.ts" 
+  SECRETS_SCAN_OMIT_KEYS = "FIREBASE_PROJECT_ID,FIREBASE_AUTH_DOMAIN,VITE_FIREBASE_STORAGE_BUCKET,FIREBASE_MESSAGING_ID,VITE_FIREBASE_APP_ID,FIREBASE_API_KEY,VITE_FIREBASE_PROJECT_ID,VITE_FIREBASE_AUTH_DOMAIN,VITE_FIREBASE_MESSAGING_ID,VITE_FIREBASE_APP_ID,apiKey,authDomain,projectId,storageBucket,messagingSenderId,appId"
+  # Exclude public configuration files and build output from secrets scanning
+  SECRETS_SCAN_OMIT_PATHS = "public/firebase-config.json,src/config/firebase.ts,dist/**/*" 
