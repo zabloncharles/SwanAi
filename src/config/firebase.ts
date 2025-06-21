@@ -6,7 +6,7 @@ import { getFirestore } from "firebase/firestore";
 const firebaseConfig = {
   apiKey:
     (import.meta as any).env?.VITE_FIREBASE_API_KEY ||
-    "AIzaSyBpPDmQmngqShh5SWYZpS008zQTW43c_2g",
+    "AIzaSyA0He0TD0K3A47ZtAWYbzNKgiHZd7Ob_H0",
   authDomain:
     (import.meta as any).env?.VITE_FIREBASE_AUTH_DOMAIN ||
     "swanapp-9b41b.firebaseapp.com",

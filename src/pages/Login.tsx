@@ -108,6 +108,12 @@ export default function Login() {
     setError("");
     setIsLoading(true);
 
+    // Temporary debug - remove after fixing
+    console.log(
+      "Login attempt - API Key starts with:",
+      import.meta.env.VITE_FIREBASE_API_KEY?.substring(0, 10) + "..."
+    );
+
     try {
       if (isSignUp) {
         // Handle sign up
