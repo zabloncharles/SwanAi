@@ -227,12 +227,12 @@ async function sendWelcomeMessage(
       return { message: "Welcome message already sent recently" };
     }
 
-    // Normalize phone number to consistent format
+    // Normalize phone number for consistent querying - always use 12012675068 format
     const normalizePhoneNumber = (phone) => {
       // Remove all non-digit characters
       const cleaned = phone.replace(/\D/g, "");
 
-      // Handle international numbers (add +1 for US numbers if not present)
+      // Always add country code for US numbers
       if (cleaned.length === 10) {
         return `1${cleaned}`; // Add country code for 10-digit US numbers
       } else if (cleaned.startsWith("1") && cleaned.length === 11) {
@@ -462,13 +462,15 @@ const handler = async (event) => {
     };
   }
 
-  // Normalize phone number for consistent querying
+  // Normalize phone number for consistent querying - always use 12012675068 format
   const normalizePhoneNumber = (phone) => {
     // Remove all non-digit characters
     const cleaned = phone.replace(/\D/g, "");
 
-    // Handle international numbers (remove +1 for US numbers)
-    if (cleaned.startsWith("1") && cleaned.length === 11) {
+    // Always add country code for US numbers
+    if (cleaned.length === 10) {
+      return `1${cleaned}`; // Add country code for 10-digit US numbers
+    } else if (cleaned.startsWith("1") && cleaned.length === 11) {
       return cleaned; // Keep the full number with country code
     }
 
@@ -481,8 +483,12 @@ const handler = async (event) => {
 
   if (!normalizedPhone || normalizedPhone.length < 10) {
     return {
-      statusCode: 400,
-      body: JSON.stringify({ error: "Invalid phone number format." }),
+      statusCode: 200,
+      body: JSON.stringify({
+        success: false,
+        error: "Invalid phone number format",
+        message: "Message received but phone number format is invalid",
+      }),
     };
   }
 
@@ -604,8 +610,12 @@ const handler = async (event) => {
         );
 
         return {
-          statusCode: 404,
-          body: JSON.stringify({ error: "User not found" }),
+          statusCode: 200,
+          body: JSON.stringify({
+            success: false,
+            error: "User not found",
+            message: "Message received but user not found in database",
+          }),
         };
       }
 
@@ -626,8 +636,12 @@ const handler = async (event) => {
     if (!userData) {
       console.error(`User data is null for user ID: ${userId}`);
       return {
-        statusCode: 500,
-        body: JSON.stringify({ error: "Invalid user data" }),
+        statusCode: 200,
+        body: JSON.stringify({
+          success: false,
+          error: "Invalid user data",
+          message: "Message received but user data is invalid",
+        }),
       };
     }
 
@@ -926,9 +940,14 @@ Remember: Be natural, be yourself (as ${
     };
   } catch (error) {
     console.error("Error processing SMS:", error);
+    // Always return 200 to Vonage to prevent retries, but log the error
     return {
-      statusCode: 500,
-      body: JSON.stringify({ error: "Internal server error" }),
+      statusCode: 200,
+      body: JSON.stringify({
+        success: false,
+        error: "Message processed with errors",
+        details: error.message,
+      }),
     };
   }
 };
