@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   HomeIcon,
   InboxIcon,
@@ -7,7 +7,7 @@ import {
   ChevronRightIcon,
   CurrencyDollarIcon,
 } from "@heroicons/react/24/outline";
-import { useUser } from '../../components/UserContext';
+import { useUser } from "../../components/UserContext";
 
 interface DashboardSidebarProps {
   activeTab: string;
@@ -24,7 +24,11 @@ const mainNav = [
 
 const salesChannels = [{ label: "Vonage", icon: GlobeAltIcon }];
 
-export default function DashboardSidebar({ activeTab, setActiveTab, onSignOut }: DashboardSidebarProps) {
+export default function DashboardSidebar({
+  activeTab,
+  setActiveTab,
+  onSignOut,
+}: DashboardSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { userData } = useUser();
@@ -65,8 +69,19 @@ export default function DashboardSidebar({ activeTab, setActiveTab, onSignOut }:
   return (
     <>
       {/* Mobile sidebar overlay */}
-      <div className={`fixed inset-0 z-40 bg-black/40 transition-opacity ${mobileOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`} onClick={() => setMobileOpen(false)} />
-      <aside className={`z-50 w-64 flex flex-col border-r border-gray-100 bg-white py-6 px-4 min-h-screen sticky top-0 h-screen transition-all duration-200 ${collapsed ? 'w-20 px-2' : 'w-64 px-4'} ${mobileOpen ? 'fixed left-0 top-0 h-full' : 'hidden md:flex'}`}>
+      <div
+        className={`fixed inset-0 z-40 bg-black/40 transition-opacity ${
+          mobileOpen
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
+        }`}
+        onClick={() => setMobileOpen(false)}
+      />
+      <aside
+        className={`z-50 w-64 flex flex-col border-r border-gray-100 bg-white py-6 px-4 min-h-screen sticky top-0 h-screen transition-all duration-200 ${
+          collapsed ? "w-20 px-2" : "w-64 px-4"
+        } ${mobileOpen ? "fixed left-0 top-0 h-full" : "hidden md:flex"}`}
+      >
         <div className="flex items-center gap-3 mb-8">
           <button
             className="md:hidden p-2 rounded hover:bg-gray-100"
@@ -77,11 +92,14 @@ export default function DashboardSidebar({ activeTab, setActiveTab, onSignOut }:
           </button>
           <div>
             <div className="font-bold text-lg text-gray-900 leading-tight">
-              {!collapsed && 'Dashboard'}
+              {!collapsed && "Dashboard"}
             </div>
             {!collapsed && (
               <div className="text-xs text-gray-400">
-                {userData?.type ? userData.type.charAt(0).toUpperCase() + userData.type.slice(1) : 'User'}
+                {userData?.type
+                  ? userData.type.charAt(0).toUpperCase() +
+                    userData.type.slice(1)
+                  : "User"}
               </div>
             )}
           </div>
@@ -91,17 +109,27 @@ export default function DashboardSidebar({ activeTab, setActiveTab, onSignOut }:
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             <span className="sr-only">Toggle sidebar</span>
-            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+            <svg
+              className="w-5 h-5 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M4 6h16M4 12h16M4 18h16"
+              />
             </svg>
           </button>
         </div>
         <div className="mb-2 text-xs font-semibold text-gray-400 tracking-widest pl-1">
-          {!collapsed && 'MAIN'}
+          {!collapsed && "MAIN"}
         </div>
         {renderNav()}
         <div className="mb-2 text-xs font-semibold text-gray-400 tracking-widest pl-1">
-          {!collapsed && 'INTEGRATIONS'}
+          {!collapsed && "INTEGRATIONS"}
         </div>
         <nav className="space-y-1 mb-6">
           {salesChannels.map(({ label, icon: Icon }) => (
@@ -132,7 +160,7 @@ export default function DashboardSidebar({ activeTab, setActiveTab, onSignOut }:
                 d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
               />
             </svg>
-            {!collapsed && 'Sign Out'}
+            {!collapsed && "Sign Out"}
           </button>
         </nav>
       </aside>
@@ -142,10 +170,20 @@ export default function DashboardSidebar({ activeTab, setActiveTab, onSignOut }:
         onClick={() => setMobileOpen(true)}
         aria-label="Open sidebar"
       >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+        <svg
+          className="w-6 h-6"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            d="M4 6h16M4 12h16M4 18h16"
+          />
         </svg>
       </button>
     </>
   );
-} 
+}

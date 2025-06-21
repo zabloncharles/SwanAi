@@ -30,17 +30,24 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 // Helper to send SMS via Vonage API
-async function sendSms({ apiKey, apiSecret, from, to, text }) {
+async function sendSms({
+  apiKey,
+  apiSecret,
+  from,
+  to,
+  text,
+  ...additionalParams
+}) {
   const url = "https://rest.nexmo.com/sms/json";
-  const response = await axios.post(url, null, {
-    params: {
-      api_key: apiKey,
-      api_secret: apiSecret,
-      to,
-      from,
-      text,
-    },
-  });
+  const params = {
+    api_key: apiKey,
+    api_secret: apiSecret,
+    to,
+    from,
+    text,
+    ...additionalParams,
+  };
+  const response = await axios.post(url, null, { params });
   return response.data;
 }
 
@@ -136,9 +143,90 @@ const relationshipProfiles = {
 
 const MAX_HISTORY = 20;
 
+// Rate limiting configuration
+const RATE_LIMIT = {
+  MAX_REQUESTS_PER_MINUTE: 5,
+  MAX_REQUESTS_PER_HOUR: 50,
+  COOLDOWN_PERIOD_MS: 60000, // 1 minute
+};
+
 // Simple in-memory cache for user data (clears on function restart)
 const userCache = new Map();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// Rate limiting cache
+const rateLimitCache = new Map();
+const RATE_LIMIT_TTL = 60 * 60 * 1000; // 1 hour
+
+// Rate limiting helper function
+function checkRateLimit(phoneNumber) {
+  const now = Date.now();
+  const key = `rate_limit_${phoneNumber}`;
+
+  if (!rateLimitCache.has(key)) {
+    rateLimitCache.set(key, {
+      requests: [],
+      blockedUntil: 0,
+    });
+  }
+
+  const rateData = rateLimitCache.get(key);
+
+  // Check if currently blocked
+  if (now < rateData.blockedUntil) {
+    const remainingBlockTime = Math.ceil((rateData.blockedUntil - now) / 1000);
+    return {
+      allowed: false,
+      reason: `Rate limit exceeded. Try again in ${remainingBlockTime} seconds.`,
+      remainingBlockTime,
+    };
+  }
+
+  // Clean old requests (older than 1 hour)
+  rateData.requests = rateData.requests.filter(
+    (time) => now - time < RATE_LIMIT_TTL
+  );
+
+  // Check hourly limit
+  if (rateData.requests.length >= RATE_LIMIT.MAX_REQUESTS_PER_HOUR) {
+    rateData.blockedUntil = now + RATE_LIMIT.COOLDOWN_PERIOD_MS;
+    return {
+      allowed: false,
+      reason: `Hourly rate limit exceeded (${
+        RATE_LIMIT.MAX_REQUESTS_PER_HOUR
+      } requests/hour). Try again in ${Math.ceil(
+        RATE_LIMIT.COOLDOWN_PERIOD_MS / 1000
+      )} seconds.`,
+      remainingBlockTime: Math.ceil(RATE_LIMIT.COOLDOWN_PERIOD_MS / 1000),
+    };
+  }
+
+  // Check requests in last minute
+  const requestsLastMinute = rateData.requests.filter(
+    (time) => now - time < 60000
+  );
+  if (requestsLastMinute.length >= RATE_LIMIT.MAX_REQUESTS_PER_MINUTE) {
+    rateData.blockedUntil = now + RATE_LIMIT.COOLDOWN_PERIOD_MS;
+    return {
+      allowed: false,
+      reason: `Rate limit exceeded (${
+        RATE_LIMIT.MAX_REQUESTS_PER_MINUTE
+      } requests/minute). Try again in ${Math.ceil(
+        RATE_LIMIT.COOLDOWN_PERIOD_MS / 1000
+      )} seconds.`,
+      remainingBlockTime: Math.ceil(RATE_LIMIT.COOLDOWN_PERIOD_MS / 1000),
+    };
+  }
+
+  // Add current request
+  rateData.requests.push(now);
+
+  return {
+    allowed: true,
+    remainingRequests:
+      RATE_LIMIT.MAX_REQUESTS_PER_HOUR - rateData.requests.length,
+  };
+}
 
 // Helper to generate welcome message based on relationship and personality
 async function generateWelcomeMessage(
@@ -218,11 +306,13 @@ async function sendWelcomeMessage(
       // Remove all non-digit characters
       const cleaned = phone.replace(/\D/g, "");
 
-      // Handle international numbers (add +1 for US numbers if not present)
+      // Handle US phone numbers - ensure they start with 1
       if (cleaned.length === 10) {
         return `1${cleaned}`; // Add country code for 10-digit US numbers
       } else if (cleaned.startsWith("1") && cleaned.length === 11) {
         return cleaned; // Keep the full number with country code
+      } else if (cleaned.length === 11 && !cleaned.startsWith("1")) {
+        return cleaned; // Keep other 11-digit numbers as-is
       }
 
       return cleaned;
@@ -232,6 +322,19 @@ async function sendWelcomeMessage(
 
     console.log(
       `Sending check-in message to ${phoneNumber} (normalized: ${normalizedPhone}) as ${personalityKey} ${relationshipKey}`
+    );
+
+    // Apply rate limiting for welcome messages
+    const rateLimitResult = checkRateLimit(normalizedPhone);
+    if (!rateLimitResult.allowed) {
+      console.log(
+        `Rate limit exceeded for welcome message to ${normalizedPhone}: ${rateLimitResult.reason}`
+      );
+      throw new Error(`Rate limit exceeded: ${rateLimitResult.reason}`);
+    }
+
+    console.log(
+      `Welcome message rate limit check passed for ${normalizedPhone}`
     );
 
     const welcomeMessage = await generateWelcomeMessage(
@@ -247,6 +350,7 @@ async function sendWelcomeMessage(
       from: process.env.VONAGE_PHONE_NUMBER,
       to: normalizedPhone,
       text: welcomeMessage,
+      "status-report-req": false,
     });
 
     // Clear user history and add only the welcome message for fresh start
@@ -312,7 +416,19 @@ async function sendWelcomeMessage(
 }
 
 const handler = async (event) => {
+  // Track function calls for debugging
+  const functionCallId =
+    Date.now().toString(36) + Math.random().toString(36).substr(2);
+  console.log(`=== SMS Function Call ${functionCallId} ===`);
+  console.log(`HTTP Method: ${event.httpMethod}`);
+  console.log(
+    `Query Params:`,
+    JSON.stringify(event.queryStringParameters || {})
+  );
+  console.log(`Headers:`, JSON.stringify(event.headers || {}));
+
   if (event.httpMethod !== "POST" && event.httpMethod !== "GET") {
+    console.log(`Function ${functionCallId}: Method not allowed`);
     return {
       statusCode: 405,
       body: "Method Not Allowed",
@@ -375,22 +491,77 @@ const handler = async (event) => {
     text = params.text;
   }
 
-  // Check for valid text
-  if (!text || typeof text !== "string" || text.trim() === "") {
+  // CRITICAL: Prevent infinite loops by checking for delivery receipts and status updates
+  const isDeliveryReceipt =
+    event.queryStringParameters?.status ||
+    event.queryStringParameters?.["message-status"];
+  const isStatusUpdate =
+    event.queryStringParameters?.type === "delivery-receipt";
+
+  // Check for Vonage delivery receipt webhooks (these come as POST with JSON body)
+  let isVonageDeliveryReceipt = false;
+  if (event.httpMethod === "POST" && event.body) {
+    try {
+      const body = JSON.parse(event.body);
+      // Vonage delivery receipts have these specific fields
+      if (body.messageId && (body.status || body["err-code"] !== undefined)) {
+        isVonageDeliveryReceipt = true;
+        console.log("Received Vonage delivery receipt:", JSON.stringify(body));
+      }
+    } catch (e) {
+      // Not JSON, continue with normal processing
+    }
+  }
+
+  // Check for Vonage inbound message webhooks
+  let isVonageInboundMessage = false;
+  if (event.httpMethod === "POST" && event.body) {
+    try {
+      const body = JSON.parse(event.body);
+      // Vonage inbound messages have these specific fields
+      if (body.msisdn && body.to && body.text && body.messageId) {
+        isVonageInboundMessage = true;
+        console.log("Received Vonage inbound message:", JSON.stringify(body));
+        // Extract data from Vonage webhook format
+        from = body.msisdn;
+        text = body.text;
+      }
+    } catch (e) {
+      // Not JSON, continue with normal processing
+    }
+  }
+
+  if (
+    isDeliveryReceipt ||
+    isStatusUpdate ||
+    isVonageDeliveryReceipt ||
+    !text ||
+    typeof text !== "string" ||
+    text.trim() === ""
+  ) {
+    console.log("Ignoring delivery receipt/status update or empty message");
+    // IMPORTANT: Return 200 to stop Vonage from retrying
     return {
-      statusCode: 400,
-      body: JSON.stringify({ error: "No message content provided." }),
+      statusCode: 200,
+      body: JSON.stringify({
+        success: true,
+        message: "Ignored delivery receipt",
+      }),
     };
   }
 
-  // Normalize phone number for consistent querying
+  // Normalize phone number to consistent format
   const normalizePhoneNumber = (phone) => {
     // Remove all non-digit characters
     const cleaned = phone.replace(/\D/g, "");
 
-    // Handle international numbers (remove +1 for US numbers)
-    if (cleaned.startsWith("1") && cleaned.length === 11) {
+    // Handle US phone numbers - ensure they start with 1
+    if (cleaned.length === 10) {
+      return `1${cleaned}`; // Add country code for 10-digit US numbers
+    } else if (cleaned.startsWith("1") && cleaned.length === 11) {
       return cleaned; // Keep the full number with country code
+    } else if (cleaned.length === 11 && !cleaned.startsWith("1")) {
+      return cleaned; // Keep other 11-digit numbers as-is
     }
 
     return cleaned;
@@ -406,6 +577,34 @@ const handler = async (event) => {
       body: JSON.stringify({ error: "Invalid phone number format." }),
     };
   }
+
+  // Apply rate limiting
+  const rateLimitResult = checkRateLimit(normalizedPhone);
+  if (!rateLimitResult.allowed) {
+    console.log(
+      `Rate limit exceeded for ${normalizedPhone}: ${rateLimitResult.reason}`
+    );
+    const retryAfter = rateLimitResult.remainingBlockTime || 60; // Default to 60 seconds
+    return {
+      statusCode: 429, // Too Many Requests
+      headers: {
+        "Retry-After": retryAfter.toString(),
+        "X-RateLimit-Remaining": "0",
+        "X-RateLimit-Reset": new Date(
+          Date.now() + retryAfter * 1000
+        ).toISOString(),
+      },
+      body: JSON.stringify({
+        error: "Rate limit exceeded",
+        message: rateLimitResult.reason,
+        retryAfter: retryAfter,
+      }),
+    };
+  }
+
+  console.log(
+    `Rate limit check passed for ${normalizedPhone}. Remaining requests: ${rateLimitResult.remainingRequests}`
+  );
 
   try {
     // Performance monitoring
@@ -783,8 +982,21 @@ Remember: Be natural, be yourself (as ${
       from: process.env.VONAGE_PHONE_NUMBER,
       to: normalizedPhone,
       text: aiResponse,
+      "status-report-req": false,
     });
     console.log("Vonage SMS API response:", JSON.stringify(smsResponse));
+
+    // Check for SMS send errors and prevent retries
+    if (smsResponse.messages && smsResponse.messages.length > 0) {
+      const messageStatus = smsResponse.messages[0].status;
+      if (messageStatus !== "0") {
+        console.error(
+          `SMS send failed with status ${messageStatus} for ${normalizedPhone}`
+        );
+        // Don't retry failed SMS sends - just log and continue
+        console.log("SMS send failed, but continuing to avoid retry loops");
+      }
+    }
 
     // Store Vonage remaining balance in analytics/global costPerDay map and increment tokensByDay
     const remainingBalance = smsResponse?.messages?.[0]?.["remaining-balance"];
@@ -810,11 +1022,13 @@ Remember: Be natural, be yourself (as ${
       body: JSON.stringify({ success: true }),
     };
   } catch (error) {
-    console.error("Error processing SMS:", error);
+    console.error(`Function ${functionCallId}: Error processing SMS:`, error);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: "Internal server error" }),
     };
+  } finally {
+    console.log(`=== SMS Function Call ${functionCallId} Completed ===`);
   }
 };
 
