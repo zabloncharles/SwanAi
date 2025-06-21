@@ -20,4 +20,6 @@
   external_node_modules = ["@vonage/server-sdk"]
 
 [build.environment]
-  NODE_VERSION = "18" 
+  NODE_VERSION = "18"
+  # Disable secrets scanning for Firebase config values (these are public)
+  SECRETS_SCAN_OMIT_KEYS = "FIREBASE_PROJECT_ID,FIREBASE_AUTH_DOMAIN,VITE_FIREBASE_STORAGE_BUCKET,FIREBASE_MESSAGING_ID,VITE_FIREBASE_APP_ID" 
