@@ -1120,9 +1120,130 @@ const handler = async (event) => {
     let summary = userData.summary || "";
     let history = userData.history || [];
     let profile = userData.profile || {};
+    let lastBreakup = userData.lastBreakup || null;
+    let exMode = userData.exMode || false;
 
     // Add new user message to history
     history.push({ role: "user", content: text });
+
+    // If there was a breakup, respond as an ex and ask if the user wants to be friends
+    if (lastBreakup && lastBreakup.date) {
+      if (history.length <= 2) {
+        let breakupContextMsg =
+          lastBreakup.previousRelationship === "Girlfriend" ||
+          lastBreakup.previousRelationship === "Boyfriend"
+            ? `Hey. I know things ended between us, and I think it's best we don't go back to how things were. If you want to keep talking, it can only be as friends. Do you want to be friends?`
+            : `Hey, I know our relationship changed recently, but I'm still here for you if you want to talk as friends. Do you want to be friends?`;
+        // Set exMode: true and clear lastBreakup
+        await setDoc(
+          userRef,
+          { lastBreakup: null, exMode: true },
+          { merge: true }
+        );
+        history.push({ role: "assistant", content: breakupContextMsg });
+        await setDoc(
+          userRef,
+          {
+            summary,
+            history,
+            profile,
+            exMode: true,
+            lastBreakup: null,
+            lastMessageTime: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+        return {
+          statusCode: 200,
+          body: JSON.stringify({ success: true, acknowledgedBreakup: true }),
+        };
+      }
+    }
+
+    // If in exMode, only allow conversation if user agrees to be friends
+    if (exMode) {
+      // Check if user agrees to be friends
+      const userMsg = text.toLowerCase();
+      if (userMsg.includes("yes") && userMsg.includes("friend")) {
+        // User agrees to be friends, clear exMode and proceed
+        await setDoc(userRef, { exMode: false }, { merge: true });
+        history.push({
+          role: "assistant",
+          content:
+            "Thanks for understanding. I'm happy to be friends and keep talking!",
+        });
+        await setDoc(
+          userRef,
+          {
+            summary,
+            history,
+            profile,
+            exMode: false,
+            lastMessageTime: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+        return {
+          statusCode: 200,
+          body: JSON.stringify({ success: true, becameFriends: true }),
+        };
+      } else if (
+        userMsg.includes("love") ||
+        userMsg.includes("miss you") ||
+        userMsg.includes("relationship") ||
+        userMsg.includes("date") ||
+        userMsg.includes("romance") ||
+        userMsg.includes("girlfriend") ||
+        userMsg.includes("boyfriend")
+      ) {
+        // User tries to rekindle romance
+        history.push({
+          role: "assistant",
+          content:
+            "I'm sorry, but I can't continue any romantic relationship. If you want to keep talking, it can only be as friends. Let me know if that's okay with you.",
+        });
+        await setDoc(
+          userRef,
+          {
+            summary,
+            history,
+            profile,
+            exMode: true,
+            lastMessageTime: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+        return {
+          statusCode: 200,
+          body: JSON.stringify({ success: true, romanceRejected: true }),
+        };
+      } else {
+        // Awaiting explicit friend agreement
+        history.push({
+          role: "assistant",
+          content:
+            "Just to be clear, I can only keep talking if we're friends. Are you okay with that?",
+        });
+        await setDoc(
+          userRef,
+          {
+            summary,
+            history,
+            profile,
+            exMode: true,
+            lastMessageTime: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+        return {
+          statusCode: 200,
+          body: JSON.stringify({
+            success: true,
+            awaitingFriendAgreement: true,
+          }),
+        };
+      }
+    }
 
     // Generate summary and clear history when it reaches MAX_HISTORY
     const shouldUpdateSummaryProfile = history.length >= MAX_HISTORY;
