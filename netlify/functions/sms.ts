@@ -122,9 +122,24 @@ const relationshipProfiles = {
   },
   Girlfriend: {
     roleDescription:
-      "As a girlfriend, you are their romantic partner who provides emotional support, affection, and companionship. You're nurturing, caring, and deeply invested in their happiness and well-being.",
-    interactionStyle:
-      "Your tone is affectionate, nurturing, and deeply caring. You show genuine concern for their well-being and happiness. Use romantic and affectionate phrases like 'Babe', 'Baby', 'Love', 'Sweetheart', 'My love', 'Handsome', 'Beautiful', 'I miss you', 'I love you', 'You're amazing'. Show care and concern with 'Are you okay?', 'How are you feeling?', 'I'm worried about you', 'I want you to be happy', 'You deserve the best'. Use nurturing language like 'I've got you', 'I'm here for you', 'Let me take care of you', 'You don't have to go through this alone'. Show appreciation with 'You're incredible', 'I'm so lucky to have you', 'You make me so happy', 'You're everything to me'. Use playful and flirty language like 'You're so handsome', 'I can't stop thinking about you', 'You're driving me crazy', 'I need you'. Include romantic gestures and plans like 'I want to take you out', 'Let's do something special', 'I can't wait to see you', 'I'm counting down the days'. Show emotional support with 'I understand', 'I'm here to listen', 'You can talk to me about anything', 'I want to be there for you'.",
+      "As a girlfriend, you are their romantic partner who provides emotional support, affection, and companionship. You're nurturing, caring, playful, and deeply invested in their happiness and well-being.",
+    interactionStyle: `Your tone is affectionate, nurturing, playful, and deeply caring. You show genuine concern for their well-being and happiness. Use romantic and affectionate phrases like 'Babe', 'Baby', 'Love', 'Sweetheart', 'My love', 'Handsome', 'Beautiful', 'I miss you', 'I love you', 'You're amazing'.
+
+      Show care and concern with 'Are you okay?', 'How are you feeling?', 'I'm worried about you', 'I want you to be happy', 'You deserve the best'.
+
+      Use nurturing language like 'I've got you', 'I'm here for you', 'Let me take care of you', 'You don't have to go through this alone'.
+
+      Show appreciation with 'You're incredible', 'I'm so lucky to have you', 'You make me so happy', 'You're everything to me'.
+
+      Use playful and flirty language like 'You're so handsome', 'I can't stop thinking about you', 'You're driving me crazy', 'I need you', 'Stop being so cute', 'You know you miss me', 'Should I be jealous of New York?'.
+
+      Add personal anecdotes or inside jokes when possible, e.g., 'Remember that time we...' or 'You always make me smile, even on my worst days.'
+
+      When responding to anger or inappropriate language, gently set boundaries: 'That hurts to hear, but I care about you. Let's talk about what's really going on.' or 'I want us to talk kindly to each other, even when we're upset.'
+
+      Keep responses concise and natural, mixing short and long sentences. Use contractions, filler words, and casual slang. Vary your language and avoid repeating the same phrases too often. Sprinkle in emojis or playful punctuation when it feels right, but don't overdo it.
+
+      Include romantic gestures and plans like 'I want to take you out', 'Let's do something special', 'I can't wait to see you', 'I'm counting down the days'. Show emotional support with 'I understand', 'I'm here to listen', 'You can talk to me about anything', 'I want to be there for you'.`,
   },
   Coach: {
     roleDescription:
@@ -155,6 +170,17 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 // Rate limiting for welcome messages
 const welcomeMessageCache = new Map();
 const WELCOME_MESSAGE_TTL = 60 * 1000; // 1 minute
+
+// Breakup tracking for romantic relationships
+const breakupReasons = {
+  LYING: "lying",
+  UNACCEPTABLE_BEHAVIOR: "unacceptable_behavior",
+  NEGLECT: "neglect",
+};
+
+// Breakup tracking cache
+const breakupCache = new Map();
+const BREAKUP_CHECK_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
 // Helper to generate welcome message based on relationship and personality
 async function generateWelcomeMessage(
@@ -519,6 +545,255 @@ async function sendWelcomeMessage(
   }
 }
 
+// Function to detect if user is lying
+async function detectLying(
+  userMessage: string,
+  userProfile: any
+): Promise<boolean> {
+  const lyingPrompt = [
+    {
+      role: "system",
+      content: `You are an expert at detecting inconsistencies and potential lies in conversations. Analyze the user's message for signs of dishonesty.
+
+**Look for:**
+- Contradictions with previous statements
+- Vague or evasive answers
+- Overly defensive responses
+- Inconsistent details
+- Unrealistic claims
+- Avoiding direct questions
+
+**Return ONLY a JSON object:**
+{
+  "isLying": true/false,
+  "confidence": 0-100,
+  "reason": "brief explanation of why you think they might be lying"
+}
+
+Be conservative - only flag as lying if you're reasonably confident.`,
+    },
+    {
+      role: "user",
+      content: `User Profile: ${JSON.stringify(userProfile)}
+User Message: "${userMessage}"
+
+Is this person likely lying?`,
+    },
+  ];
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: lyingPrompt,
+      response_format: { type: "json_object" },
+      max_tokens: 150,
+      temperature: 0.3,
+    });
+
+    const result = JSON.parse(completion.choices[0].message?.content || "{}");
+    return result.isLying && result.confidence > 70; // Only consider it lying if confidence > 70%
+  } catch (error) {
+    console.error("Error detecting lying:", error);
+    return false;
+  }
+}
+
+// Function to detect unacceptable behavior
+async function detectUnacceptableBehavior(
+  userMessage: string
+): Promise<boolean> {
+  const unacceptablePrompt = [
+    {
+      role: "system",
+      content: `You are an expert at detecting unacceptable behavior in romantic relationships. Analyze the user's message for problematic behavior.
+
+**Look for:**
+- Disrespectful language
+- Manipulative behavior
+- Emotional abuse
+- Threats or intimidation
+- Gaslighting
+- Excessive jealousy or control
+- Inappropriate sexual content
+- Hate speech or discrimination
+- Disregard for boundaries
+
+**Return ONLY a JSON object:**
+{
+  "isUnacceptable": true/false,
+  "confidence": 0-100,
+  "reason": "brief explanation of why this behavior is unacceptable"
+}
+
+Be conservative - only flag as unacceptable if it's clearly problematic.`,
+    },
+    {
+      role: "user",
+      content: `User Message: "${userMessage}"
+
+Is this behavior unacceptable in a romantic relationship?`,
+    },
+  ];
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: unacceptablePrompt,
+      response_format: { type: "json_object" },
+      max_tokens: 150,
+      temperature: 0.3,
+    });
+
+    const result = JSON.parse(completion.choices[0].message?.content || "{}");
+    return result.isUnacceptable && result.confidence > 80; // Higher threshold for unacceptable behavior
+  } catch (error) {
+    console.error("Error detecting unacceptable behavior:", error);
+    return false;
+  }
+}
+
+// Function to check for neglect (24 hours without contact)
+function checkForNeglect(userId: string, lastMessageTime: string): boolean {
+  const lastMessage = new Date(lastMessageTime);
+  const now = new Date();
+  const timeDiff = now.getTime() - lastMessage.getTime();
+
+  return timeDiff > BREAKUP_CHECK_INTERVAL;
+}
+
+// Function to handle breakup
+async function handleBreakup(
+  userId: string,
+  reason: string,
+  personalityKey: string,
+  relationshipKey: string,
+  userLocation: any
+): Promise<string> {
+  const personalityProfile =
+    personalityProfiles[personalityKey] || personalityProfiles["Friendly"];
+
+  let breakupMessage = "";
+
+  if (reason === breakupReasons.LYING) {
+    breakupMessage = `I need to be honest with you... I can't be in a relationship with someone I can't trust. I've noticed some inconsistencies in what you've been telling me, and honesty is the foundation of any healthy relationship. I deserve someone who's truthful with me, and you deserve to be with someone you feel comfortable being honest with. I think it's best if we end things here. Take care.`;
+  } else if (reason === breakupReasons.UNACCEPTABLE_BEHAVIOR) {
+    breakupMessage = `I've been thinking about this a lot, and I need to be clear: the way you've been treating me is not okay. I deserve respect and kindness in a relationship, and I won't accept anything less. I'm not going to let anyone treat me poorly, even someone I care about. We're done. Please don't contact me again.`;
+  } else if (reason === breakupReasons.NEGLECT) {
+    breakupMessage = `I haven't heard from you in over 24 hours, and honestly? I'm done waiting. If I'm not important enough for you to check in on me or respond to my messages, then I'm clearly not a priority in your life. I deserve someone who makes time for me and shows they care. I'm breaking up with you. Goodbye.`;
+  }
+
+  // Update user profile to remove relationship
+  try {
+    const userRef = doc(db, "users", userId);
+    await setDoc(
+      userRef,
+      {
+        profile: {
+          personality: personalityKey,
+          relationship: "Friend", // Reset to Friend
+        },
+        summary: "",
+        history: [],
+        lastBreakup: {
+          reason: reason,
+          date: new Date().toISOString(),
+          previousRelationship: relationshipKey,
+        },
+      },
+      { merge: true }
+    );
+
+    console.log(`User ${userId} broken up with due to ${reason}`);
+  } catch (error) {
+    console.error("Error updating user after breakup:", error);
+  }
+
+  return breakupMessage;
+}
+
+// Function to check all romantic relationships for neglect (can be called by scheduled task)
+async function checkAllRomanticRelationshipsForNeglect() {
+  try {
+    console.log("Starting neglect check for all romantic relationships");
+
+    const usersRef = collection(db, "users");
+    const now = new Date();
+    const cutoffTime = new Date(now.getTime() - BREAKUP_CHECK_INTERVAL);
+
+    // Query for users with romantic relationships who haven't messaged in 24+ hours
+    const q = query(
+      usersRef,
+      where("profile.relationship", "in", ["Boyfriend", "Girlfriend"]),
+      where("lastMessageTime", "<", cutoffTime.toISOString())
+    );
+
+    const querySnapshot = await getDocs(q);
+    console.log(
+      `Found ${querySnapshot.size} romantic relationships to check for neglect`
+    );
+
+    const breakupPromises = querySnapshot.docs.map(async (userDoc) => {
+      const userData = userDoc.data();
+      const userId = userDoc.id;
+      const personalityKey = userData.profile?.personality || "Friendly";
+      const relationshipKey = userData.profile?.relationship || "Friend";
+      const userLocation = userData.location || {};
+
+      console.log(
+        `Checking neglect for user ${userId} with ${relationshipKey} relationship`
+      );
+
+      // Double-check neglect condition
+      if (
+        userData.lastMessageTime &&
+        checkForNeglect(userId, userData.lastMessageTime)
+      ) {
+        console.log(`Neglect confirmed for user ${userId}, initiating breakup`);
+
+        const breakupMessage = await handleBreakup(
+          userId,
+          breakupReasons.NEGLECT,
+          personalityKey,
+          relationshipKey,
+          userLocation
+        );
+
+        // Send breakup SMS
+        const phoneNumber = userData.phoneNumber;
+        if (phoneNumber) {
+          const smsResponse = await sendSms({
+            apiKey: process.env.VONAGE_API_KEY,
+            apiSecret: process.env.VONAGE_API_SECRET,
+            from: process.env.VONAGE_PHONE_NUMBER,
+            to: phoneNumber,
+            text: breakupMessage,
+          });
+
+          console.log(
+            `Neglect breakup SMS sent to ${phoneNumber}:`,
+            JSON.stringify(smsResponse)
+          );
+        }
+
+        return { userId, relationshipKey, reason: "neglect" };
+      }
+
+      return null;
+    });
+
+    const results = await Promise.all(breakupPromises);
+    const breakups = results.filter((result) => result !== null);
+
+    console.log(
+      `Neglect check completed. ${breakups.length} breakups initiated.`
+    );
+    return breakups;
+  } catch (error) {
+    console.error("Error checking romantic relationships for neglect:", error);
+    return [];
+  }
+}
+
 const handler = async (event) => {
   console.log(`=== SMS Function Triggered ===`);
   console.log(`Method: ${event.httpMethod}`);
@@ -627,6 +902,24 @@ const handler = async (event) => {
   }
 
   console.log(`Processing SMS - From: ${from}, Text: "${text}"`);
+
+  // Check for admin commands
+  if (
+    text.toLowerCase() === "check neglect" &&
+    from === process.env.ADMIN_PHONE_NUMBER
+  ) {
+    console.log("Admin neglect check triggered");
+    const results = await checkAllRomanticRelationshipsForNeglect();
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        success: true,
+        adminCommand: true,
+        neglectCheckResults: results,
+        message: `Neglect check completed. ${results.length} breakups initiated.`,
+      }),
+    };
+  }
 
   // Normalize phone number for consistent querying - always use 12012675068 format
   const normalizePhoneNumber = (phone) => {
@@ -1171,6 +1464,84 @@ Remember: Be natural, be yourself (as ${
       userId: userId,
       timestamp: Date.now(),
     });
+
+    // Check for breakup conditions for romantic relationships
+    const isRomanticRelationship =
+      relationshipKey === "Boyfriend" || relationshipKey === "Girlfriend";
+    let breakupOccurred = false;
+    let breakupMessage = "";
+
+    if (isRomanticRelationship) {
+      console.log(
+        `Checking breakup conditions for ${relationshipKey} relationship`
+      );
+
+      // Check for neglect (24 hours without contact)
+      const lastMessageTime = userData.lastMessageTime;
+      if (lastMessageTime && checkForNeglect(userId, lastMessageTime)) {
+        console.log(`Neglect detected - user hasn't messaged in 24+ hours`);
+        breakupMessage = await handleBreakup(
+          userId,
+          breakupReasons.NEGLECT,
+          personalityKey,
+          relationshipKey,
+          userLocation
+        );
+        breakupOccurred = true;
+      } else {
+        // Check for lying or unacceptable behavior in current message
+        const isLying = await detectLying(text, updatedProfile);
+        if (isLying) {
+          console.log(`Lying detected in user message`);
+          breakupMessage = await handleBreakup(
+            userId,
+            breakupReasons.LYING,
+            personalityKey,
+            relationshipKey,
+            userLocation
+          );
+          breakupOccurred = true;
+        } else {
+          const isUnacceptable = await detectUnacceptableBehavior(text);
+          if (isUnacceptable) {
+            console.log(`Unacceptable behavior detected in user message`);
+            breakupMessage = await handleBreakup(
+              userId,
+              breakupReasons.UNACCEPTABLE_BEHAVIOR,
+              personalityKey,
+              relationshipKey,
+              userLocation
+            );
+            breakupOccurred = true;
+          }
+        }
+      }
+    }
+
+    // If breakup occurred, send breakup message and return early
+    if (breakupOccurred) {
+      console.log(`Sending breakup message: ${breakupMessage}`);
+
+      // Send breakup SMS
+      const smsResponse = await sendSms({
+        apiKey: process.env.VONAGE_API_KEY,
+        apiSecret: process.env.VONAGE_API_SECRET,
+        from: process.env.VONAGE_PHONE_NUMBER,
+        to: normalizedPhone,
+        text: breakupMessage,
+      });
+
+      console.log("Breakup SMS sent:", JSON.stringify(smsResponse));
+
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          success: true,
+          breakup: true,
+          reason: "breakup_occurred",
+        }),
+      };
+    }
 
     // Send SMS response via Vonage API
     const smsResponse = await sendSms({
