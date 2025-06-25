@@ -1855,6 +1855,7 @@ const handler = async (event) => {
         history.length
       }, Profile keys: ${Object.keys(profile).join(", ")}`
     );
+    console.log(`Current exMode status: ${exMode}`);
 
     // Add new user message to history
     history.push({ role: "user", content: sanitizedText });
@@ -1921,7 +1922,10 @@ const handler = async (event) => {
         const friendMessage =
           "Thanks for understanding. I'm happy to be friends and keep talking!";
 
+        console.log(`Setting exMode to false in database`);
         await setDoc(userRef, { exMode: false }, { merge: true });
+        console.log(`exMode set to false successfully`);
+
         history.push({
           role: "assistant",
           content: friendMessage,
@@ -1937,6 +1941,7 @@ const handler = async (event) => {
           },
           { merge: true }
         );
+        console.log(`Final database update completed with exMode: false`);
 
         // Send the friend agreement message via SMS
         try {
@@ -2035,7 +2040,10 @@ const handler = async (event) => {
         const friendMessage =
           "Thanks for understanding. I'm happy to be friends and keep talking!";
 
+        console.log(`Setting exMode to false in database`);
         await setDoc(userRef, { exMode: false }, { merge: true });
+        console.log(`exMode set to false successfully`);
+
         history.push({
           role: "assistant",
           content: friendMessage,
@@ -2051,6 +2059,7 @@ const handler = async (event) => {
           },
           { merge: true }
         );
+        console.log(`Final database update completed with exMode: false`);
 
         // Send the friend agreement message via SMS
         try {
