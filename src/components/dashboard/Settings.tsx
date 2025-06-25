@@ -558,12 +558,41 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
           `Relationship changing from ${userData.profile?.relationship} to ${editedData.profile.relationship}`
         );
 
-        // Keep only the basic relationship and personality settings
         // Clear all learned information for fresh start
         const preservedProfile = {
-          ...editedData.profile,
-          // Keep only the basic relationship and personality settings
-          // Clear all learned information for fresh start
+          relationship: editedData.profile.relationship,
+          personality: editedData.profile.personality,
+          // Clear all learned data fields
+          conversation_history: {},
+          communication_frequency: "Not specified",
+          frequent_topics: [],
+          mood_patterns: "",
+          response_style: "",
+          shared_memories: [],
+          learning_preferences: {},
+          coping_mechanisms: "",
+          motivation_factors: "",
+          preferred_explanation_style: "",
+          stress_triggers: "",
+          name: null,
+          personal_info: {},
+          age_range: null,
+          challenges: [],
+          family_status: null,
+          goals: [],
+          hobbies: [],
+          location: null,
+          occupation: null,
+          preferences: {},
+          communication_style: "",
+          emotional_patterns: "",
+          response_preferences: "",
+          topics_of_interest: [],
+          relationship_dynamics: {},
+          boundaries: "",
+          comfort_level: "",
+          preferred_support_style: "",
+          trust_level: "",
         };
 
         aiSettings = {
@@ -577,6 +606,31 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
         console.log(
           "Relationship change detected - implementing selective memory management"
         );
+
+        // Clear backend cache for this user
+        try {
+          const clearCacheResponse = await fetch("/.netlify/functions/sms", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              action: "clear_user_cache",
+              phoneNumber: userData.phoneNumber,
+            }),
+          });
+
+          if (clearCacheResponse.ok) {
+            console.log("Backend user cache cleared successfully");
+          } else {
+            console.log(
+              "Failed to clear backend cache, but continuing with frontend reset"
+            );
+          }
+        } catch (error) {
+          console.log("Error clearing backend cache:", error);
+          // Don't fail the save operation if cache clearing fails
+        }
       }
 
       await onUpdate(aiSettings);

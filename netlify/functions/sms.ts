@@ -1511,6 +1511,54 @@ const handler = async (event) => {
         };
       }
     }
+
+    // Check if this is a clear user cache request
+    if (body.action === "clear_user_cache") {
+      try {
+        const { phoneNumber } = body;
+
+        if (!phoneNumber) {
+          return {
+            statusCode: 400,
+            body: JSON.stringify({
+              error: "Missing required field: phoneNumber",
+            }),
+          };
+        }
+
+        // Normalize phone number
+        const normalizePhoneNumber = (phone) => {
+          const cleaned = phone.replace(/\D/g, "");
+          if (cleaned.length === 10) {
+            return `1${cleaned}`;
+          } else if (cleaned.startsWith("1") && cleaned.length === 11) {
+            return cleaned;
+          }
+          return cleaned;
+        };
+
+        const normalizedPhone = normalizePhoneNumber(phoneNumber);
+        const cacheKey = `user_${normalizedPhone}`;
+
+        // Clear the user from cache
+        userCache.delete(cacheKey);
+        console.log(`Cleared user cache for phone: ${normalizedPhone}`);
+
+        return {
+          statusCode: 200,
+          body: JSON.stringify({
+            success: true,
+            message: "User cache cleared successfully",
+          }),
+        };
+      } catch (error) {
+        console.error("Error clearing user cache:", error);
+        return {
+          statusCode: 500,
+          body: JSON.stringify({ error: "Failed to clear user cache" }),
+        };
+      }
+    }
   }
 
   let from, text;
