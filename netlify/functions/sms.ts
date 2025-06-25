@@ -2016,14 +2016,21 @@ const handler = async (event) => {
           body: JSON.stringify({ success: true, becameFriends: true }),
         };
       } else if (
-        // Simple agreement to get out of exMode
+        // Simple agreement to get out of exMode - check for exact matches or simple positive responses
         userMsg === "yes" ||
         userMsg === "okay" ||
         userMsg === "ok" ||
         userMsg === "sure" ||
-        userMsg === "fine"
+        userMsg === "fine" ||
+        userMsg === "yeah" ||
+        userMsg === "yep" ||
+        userMsg === "yup" ||
+        userMsg === "alright" ||
+        userMsg === "all right"
       ) {
-        console.log(`User gave simple agreement, clearing exMode`);
+        console.log(
+          `User gave simple agreement: "${userMsg}", clearing exMode`
+        );
         // User agrees to be friends, clear exMode and proceed
         const friendMessage =
           "Thanks for understanding. I'm happy to be friends and keep talking!";
