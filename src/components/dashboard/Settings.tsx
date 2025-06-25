@@ -562,7 +562,7 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
         const preservedProfile = {
           relationship: editedData.profile.relationship,
           personality: editedData.profile.personality,
-          // Clear all learned data fields
+          // Clear all learned data fields but keep basic settings
           conversation_history: {},
           communication_frequency: "Not specified",
           frequent_topics: [],
@@ -583,10 +583,12 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
           hobbies: [],
           location: null,
           occupation: null,
-          preferences: {},
-          communication_style: "",
-          emotional_patterns: "",
-          response_preferences: "",
+          // Keep preferences but clear learned patterns
+          preferences: {
+            communication_style: "",
+            emotional_patterns: "",
+            response_preferences: "",
+          },
           topics_of_interest: [],
           relationship_dynamics: {},
           boundaries: "",
