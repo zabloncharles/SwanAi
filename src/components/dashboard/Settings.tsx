@@ -81,6 +81,12 @@ const friendPersonalities = [
     value: "LaidbackFriend",
     description: "Chill, easygoing, and always down for a cozy night in.",
   },
+  {
+    name: "BoJack Horseman",
+    value: "BoJackHorseman",
+    description:
+      "The complex, self-destructive friend with a dark sense of humor. Brilliant but troubled, always making questionable life choices while somehow being endearing.",
+  },
 ];
 
 const momPersonalities = [
