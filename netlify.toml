@@ -18,6 +18,7 @@
 [functions]
   node_bundler = "esbuild"
   external_node_modules = ["@vonage/server-sdk"]
+  sms = { timeout = 30 }
 
 [build.environment]
   NODE_VERSION = "18"

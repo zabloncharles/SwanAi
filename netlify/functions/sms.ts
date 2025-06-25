@@ -2467,32 +2467,61 @@ Remember: Be natural, be yourself (as ${personalityProfile.name})`,
     console.log(`About to send SMS via Vonage API to: ${normalizedPhone}`);
     console.log(`SMS text: "${smsText}"`);
 
-    const smsResponse = await sendSms({
-      apiKey: process.env.VONAGE_API_KEY,
-      apiSecret: process.env.VONAGE_API_SECRET,
-      from: process.env.VONAGE_PHONE_NUMBER,
-      to: normalizedPhone,
-      text: smsText,
-    });
-    console.log("Vonage SMS API response:", JSON.stringify(smsResponse));
+    try {
+      // Add timeout to SMS sending
+      const smsPromise = sendSms({
+        apiKey: process.env.VONAGE_API_KEY,
+        apiSecret: process.env.VONAGE_API_SECRET,
+        from: process.env.VONAGE_PHONE_NUMBER,
+        to: normalizedPhone,
+        text: smsText,
+      });
 
-    // Store Vonage remaining balance in analytics/global costPerDay map and increment tokensByDay
-    const remainingBalance = smsResponse?.messages?.[0]?.["remaining-balance"];
-    if (remainingBalance !== undefined) {
-      const today = new Date().toISOString().split("T")[0];
-      const analyticsRef = doc(db, "analytics", "global");
-      await setDoc(
-        analyticsRef,
-        {
-          costPerDay: {
-            [today]: parseFloat(remainingBalance),
+      // Set 10 second timeout for SMS sending
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("SMS sending timeout")), 10000);
+      });
+
+      const smsResponse = await Promise.race([smsPromise, timeoutPromise]);
+      console.log("Vonage SMS API response:", JSON.stringify(smsResponse));
+
+      // Check if SMS was sent successfully
+      if (
+        smsResponse.messages &&
+        smsResponse.messages[0] &&
+        smsResponse.messages[0].status === "0"
+      ) {
+        console.log("SMS sent successfully!");
+      } else {
+        console.error("SMS sending failed:", JSON.stringify(smsResponse));
+      }
+
+      // Store Vonage remaining balance in analytics/global costPerDay map and increment tokensByDay
+      const remainingBalance =
+        smsResponse?.messages?.[0]?.["remaining-balance"];
+      if (remainingBalance !== undefined) {
+        const today = new Date().toISOString().split("T")[0];
+        const analyticsRef = doc(db, "analytics", "global");
+        await setDoc(
+          analyticsRef,
+          {
+            costPerDay: {
+              [today]: parseFloat(remainingBalance),
+            },
+            tokensByDay: {
+              [today]: increment(tokensUsed),
+            },
           },
-          tokensByDay: {
-            [today]: increment(tokensUsed),
-          },
-        },
-        { merge: true }
-      );
+          { merge: true }
+        );
+      }
+    } catch (smsError) {
+      console.error("Error sending SMS:", smsError);
+      console.error("SMS Error details:", {
+        message: smsError.message,
+        code: smsError.code,
+        response: smsError.response?.data,
+      });
     }
 
     return {
