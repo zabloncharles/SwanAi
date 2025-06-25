@@ -1960,6 +1960,113 @@ const handler = async (event) => {
           body: JSON.stringify({ success: true, becameFriends: true }),
         };
       } else if (
+        // More flexible friend agreement detection
+        (userMsg.includes("yes") ||
+          userMsg.includes("okay") ||
+          userMsg.includes("sure") ||
+          userMsg.includes("fine")) &&
+        (userMsg.includes("friend") ||
+          userMsg.includes("friends") ||
+          userMsg.includes("ok") ||
+          userMsg.includes("alright"))
+      ) {
+        console.log(
+          `User agreed to be friends (flexible detection), clearing exMode`
+        );
+        // User agrees to be friends, clear exMode and proceed
+        const friendMessage =
+          "Thanks for understanding. I'm happy to be friends and keep talking!";
+
+        await setDoc(userRef, { exMode: false }, { merge: true });
+        history.push({
+          role: "assistant",
+          content: friendMessage,
+        });
+        await setDoc(
+          userRef,
+          {
+            summary,
+            history,
+            profile,
+            exMode: false,
+            lastMessageTime: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+
+        // Send the friend agreement message via SMS
+        try {
+          const smsResponse = await sendSms({
+            apiKey: process.env.VONAGE_API_KEY,
+            apiSecret: process.env.VONAGE_API_SECRET,
+            from: process.env.VONAGE_PHONE_NUMBER,
+            to: normalizedPhone,
+            text: friendMessage,
+          });
+          console.log(
+            "Friend agreement SMS sent:",
+            JSON.stringify(smsResponse)
+          );
+        } catch (smsError) {
+          console.error("Error sending friend agreement SMS:", smsError);
+        }
+
+        return {
+          statusCode: 200,
+          body: JSON.stringify({ success: true, becameFriends: true }),
+        };
+      } else if (
+        // Simple agreement to get out of exMode
+        userMsg === "yes" ||
+        userMsg === "okay" ||
+        userMsg === "ok" ||
+        userMsg === "sure" ||
+        userMsg === "fine"
+      ) {
+        console.log(`User gave simple agreement, clearing exMode`);
+        // User agrees to be friends, clear exMode and proceed
+        const friendMessage =
+          "Thanks for understanding. I'm happy to be friends and keep talking!";
+
+        await setDoc(userRef, { exMode: false }, { merge: true });
+        history.push({
+          role: "assistant",
+          content: friendMessage,
+        });
+        await setDoc(
+          userRef,
+          {
+            summary,
+            history,
+            profile,
+            exMode: false,
+            lastMessageTime: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+
+        // Send the friend agreement message via SMS
+        try {
+          const smsResponse = await sendSms({
+            apiKey: process.env.VONAGE_API_KEY,
+            apiSecret: process.env.VONAGE_API_SECRET,
+            from: process.env.VONAGE_PHONE_NUMBER,
+            to: normalizedPhone,
+            text: friendMessage,
+          });
+          console.log(
+            "Friend agreement SMS sent:",
+            JSON.stringify(smsResponse)
+          );
+        } catch (smsError) {
+          console.error("Error sending friend agreement SMS:", smsError);
+        }
+
+        return {
+          statusCode: 200,
+          body: JSON.stringify({ success: true, becameFriends: true }),
+        };
+      } else if (
         userMsg.includes("love") ||
         userMsg.includes("miss you") ||
         userMsg.includes("relationship") ||
