@@ -23,8 +23,8 @@ import DashboardCharts from "../components/dashboard/DashboardCharts";
 import ProfileInfo from "../components/dashboard/ProfileInfo";
 import ConversationSummary from "../components/dashboard/ConversationSummary";
 import AdminAnalytics from "../components/dashboard/AdminAnalytics";
-import Settings from "../components/dashboard/Settings";
 import Messages from "../components/dashboard/Messages";
+import Settings from "../components/dashboard/Settings";
 import PricingSection from "../components/dashboard/PricingSection";
 import SlimFooter from "../components/SlimFooter";
 
@@ -33,6 +33,8 @@ interface UserData {
   lastName: string;
   email: string;
   phoneNumber: string;
+  age?: string;
+  gender?: string;
   personality?: string;
   aiRelationship?: string;
   createdAt: any;
@@ -248,7 +250,9 @@ export default function Dashboard() {
   const handleSavePhone = async (
     phone: string,
     firstName: string,
-    lastName: string
+    lastName: string,
+    age: string,
+    gender: string
   ) => {
     if (!user) return;
     setPhoneLoading(true);
@@ -259,12 +263,16 @@ export default function Dashboard() {
         phoneNumber: phone,
         firstName: firstName,
         lastName: lastName,
+        age: age,
+        gender: gender,
       });
       setUserData((prev) => ({
         ...prev,
         phoneNumber: phone,
         firstName: firstName,
         lastName: lastName,
+        age: age,
+        gender: gender,
       }));
       setModalVisible(false);
     } catch (error) {
@@ -437,6 +445,8 @@ export default function Dashboard() {
           phone={userData.phoneNumber || ""}
           firstName={userData.firstName || ""}
           lastName={userData.lastName || ""}
+          age={userData.age || ""}
+          gender={userData.gender || ""}
           fadeIn={true}
         />
       )}

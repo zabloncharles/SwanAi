@@ -2,7 +2,13 @@ import React, { useState, useEffect } from "react";
 
 interface PhoneRequiredModalProps {
   open: boolean;
-  onSave: (phone: string, firstName: string, lastName: string) => Promise<void>;
+  onSave: (
+    phone: string,
+    firstName: string,
+    lastName: string,
+    age: string,
+    gender: string
+  ) => Promise<void>;
   loading?: boolean;
   error?: string;
   fadeIn?: boolean;
@@ -10,6 +16,8 @@ interface PhoneRequiredModalProps {
   phone?: string;
   firstName?: string;
   lastName?: string;
+  age?: string;
+  gender?: string;
   onClose?: () => void;
 }
 
@@ -269,6 +277,8 @@ export default function PhoneRequiredModal({
   phone: initialPhone = "",
   firstName: initialFirstName = "",
   lastName: initialLastName = "",
+  age: initialAge = "",
+  gender: initialGender = "",
   onClose,
 }: PhoneRequiredModalProps) {
   const [step, setStep] = useState(startStep);
@@ -279,6 +289,10 @@ export default function PhoneRequiredModal({
   const [success, setSuccess] = useState(false);
   const [selectedCountryCode, setSelectedCountryCode] = useState("+1"); // Default to US
   const [showCountrySelector, setShowCountrySelector] = useState(false);
+  const [age, setAge] = useState(initialAge);
+  const [ageError, setAgeError] = useState("");
+  const [gender, setGender] = useState(initialGender);
+  const [genderError, setGenderError] = useState("");
 
   useEffect(() => {
     setStep(startStep);
@@ -295,6 +309,14 @@ export default function PhoneRequiredModal({
   useEffect(() => {
     setLastName(initialLastName);
   }, [initialLastName]);
+
+  useEffect(() => {
+    setAge(initialAge);
+  }, [initialAge]);
+
+  useEffect(() => {
+    setGender(initialGender);
+  }, [initialGender]);
 
   // Prevent background scrolling when modal is open
   useEffect(() => {
@@ -345,16 +367,22 @@ export default function PhoneRequiredModal({
   }
 
   const handleSave = async () => {
+    if (!validateAge(age) || !validateGender(gender)) {
+      return;
+    }
     const formattedFirstName = formatName(firstName);
     const formattedLastName = formatName(lastName);
-
-    // Convert the formatted phone number to standardized format for Firebase
     const standardizedPhone = standardizePhoneNumber(
       selectedCountryCode,
       phone
     );
-
-    await onSave(standardizedPhone, formattedFirstName, formattedLastName);
+    await onSave(
+      standardizedPhone,
+      formattedFirstName,
+      formattedLastName,
+      age,
+      gender
+    );
     setSuccess(true);
   };
 
@@ -364,6 +392,46 @@ export default function PhoneRequiredModal({
       setStep(2);
     }
   }, [initialPhone, step]);
+
+  // Age validation
+  const validateAge = (ageValue: string) => {
+    const ageNum = parseInt(ageValue);
+    if (!ageValue) {
+      setAgeError("Age is required");
+      return false;
+    }
+    if (isNaN(ageNum) || ageNum < 13 || ageNum > 120) {
+      setAgeError("Age must be between 13 and 120");
+      return false;
+    }
+    setAgeError("");
+    return true;
+  };
+
+  const handleAgeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setAge(value);
+    if (value) {
+      validateAge(value);
+    } else {
+      setAgeError("");
+    }
+  };
+
+  // Gender validation
+  const validateGender = (value: string) => {
+    if (!value) {
+      setGenderError("Gender is required");
+      return false;
+    }
+    setGenderError("");
+    return true;
+  };
+
+  const handleGenderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setGender(e.target.value);
+    validateGender(e.target.value);
+  };
 
   return (
     <div
@@ -579,6 +647,29 @@ export default function PhoneRequiredModal({
                     disabled={loading}
                   />
                 </div>
+                {/* Age input field */}
+                <div className="mb-4">
+                  <label
+                    htmlFor="age"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Age
+                  </label>
+                  <input
+                    id="age"
+                    type="number"
+                    min="1"
+                    max="120"
+                    value={age}
+                    onChange={handleAgeChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                    placeholder="Enter your age"
+                    disabled={loading}
+                  />
+                </div>
+                {ageError && (
+                  <div className="text-red-500 text-xs mb-2">{ageError}</div>
+                )}
                 <div className="mb-4">
                   <label
                     htmlFor="lastName"
@@ -599,6 +690,33 @@ export default function PhoneRequiredModal({
                 {error && (
                   <div className="text-red-500 text-xs mb-2">{error}</div>
                 )}
+                <div className="mb-4">
+                  <label
+                    htmlFor="gender"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Gender
+                  </label>
+                  <select
+                    id="gender"
+                    value={gender}
+                    onChange={handleGenderChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                    disabled={loading}
+                  >
+                    <option value="">Select your gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="nonbinary">Non-binary</option>
+                    <option value="other">Other</option>
+                    <option value="prefer_not_to_say">Prefer not to say</option>
+                  </select>
+                  {genderError && (
+                    <div className="text-red-500 text-xs mt-1">
+                      {genderError}
+                    </div>
+                  )}
+                </div>
                 <div className="flex gap-2">
                   <button
                     className="flex-1 py-3 rounded-lg bg-gray-100 text-gray-700 font-semibold text-lg shadow hover:bg-gray-200 transition"
@@ -610,7 +728,15 @@ export default function PhoneRequiredModal({
                   <button
                     className="flex-1 py-3 rounded-lg bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-semibold text-lg shadow-sm hover:shadow-md transition disabled:opacity-60"
                     onClick={handleSave}
-                    disabled={loading || !firstName || !lastName}
+                    disabled={
+                      loading ||
+                      !firstName ||
+                      !lastName ||
+                      !age ||
+                      !!ageError ||
+                      !gender ||
+                      !!genderError
+                    }
                   >
                     {loading ? "Saving..." : "Save"}
                   </button>

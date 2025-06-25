@@ -56,6 +56,8 @@ export interface UserData {
   lastName?: string;
   email: string;
   phoneNumber?: string;
+  age?: string;
+  gender?: string;
   personality?: string;
   aiRelationship?: string;
   profile?: UserProfile;
@@ -68,4 +70,9 @@ export interface UserData {
   summary?: string;
   history?: Array<{ role: string; content: string }>;
   updatedAt: Date;
+  lastBreakup?: {
+    reason: string;
+    date: string;
+    previousRelationship: string;
+  };
 }
