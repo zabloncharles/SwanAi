@@ -1926,6 +1926,10 @@ const handler = async (event) => {
         await setDoc(userRef, { exMode: false }, { merge: true });
         console.log(`exMode set to false successfully`);
 
+        // Clear the user cache to ensure fresh data is used
+        userCache.delete(cacheKey);
+        console.log(`Cleared user cache to ensure fresh exMode data`);
+
         history.push({
           role: "assistant",
           content: friendMessage,
@@ -1942,6 +1946,10 @@ const handler = async (event) => {
           { merge: true }
         );
         console.log(`Final database update completed with exMode: false`);
+
+        // Clear cache again after final update
+        userCache.delete(cacheKey);
+        console.log(`Cleared user cache after final update`);
 
         // Send the friend agreement message via SMS
         try {
