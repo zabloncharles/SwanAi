@@ -1840,6 +1840,9 @@ const handler = async (event) => {
       };
     }
 
+    console.log(`User data validated successfully for user: ${userId}`);
+    console.log(`User profile: ${JSON.stringify(userData.profile || {})}`);
+
     // Fetch or initialize summary, history, and profile from the initial query
     let summary = userData.summary || "";
     let history = userData.history || [];
@@ -1847,8 +1850,17 @@ const handler = async (event) => {
     let lastBreakup = userData.lastBreakup || null;
     let exMode = userData.exMode || false;
 
+    console.log(
+      `Initialized data - Summary length: ${summary.length}, History length: ${
+        history.length
+      }, Profile keys: ${Object.keys(profile).join(", ")}`
+    );
+
     // Add new user message to history
     history.push({ role: "user", content: sanitizedText });
+    console.log(
+      `Added user message to history. New history length: ${history.length}`
+    );
 
     // If there was a breakup, respond as an ex and ask if the user wants to be friends
     if (lastBreakup && lastBreakup.date) {
@@ -2297,11 +2309,23 @@ Remember: Be natural, be yourself (as ${personalityProfile.name})`,
       },
       ...history,
     ];
+
+    console.log(
+      `About to generate AI response. Chat prompt length: ${chatPrompt.length} messages`
+    );
+    console.log(
+      `Personality: ${personalityKey}, Relationship: ${relationshipKey}`
+    );
+
     const startTime = Date.now();
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: chatPrompt,
     });
+
+    console.log(
+      `AI response generated successfully in ${Date.now() - startTime}ms`
+    );
 
     const responseTime = (Date.now() - startTime) / 1000; // Convert to seconds
     const aiResponse =
@@ -2309,8 +2333,12 @@ Remember: Be natural, be yourself (as ${personalityProfile.name})`,
       "Sorry, I could not process your request.";
     const tokensUsed = completion.usage?.total_tokens || 0;
 
+    console.log(`AI Response: "${aiResponse}"`);
+    console.log(`Tokens used: ${tokensUsed}`);
+
     // Truncate AI response for SMS
     const smsText = truncateForSMS(aiResponse);
+    console.log(`Truncated SMS text: "${smsText}"`);
 
     // Add AI response to history
     history.push({ role: "assistant", content: smsText });
@@ -2436,6 +2464,9 @@ Remember: Be natural, be yourself (as ${personalityProfile.name})`,
     );
 
     // Send SMS response via Vonage API
+    console.log(`About to send SMS via Vonage API to: ${normalizedPhone}`);
+    console.log(`SMS text: "${smsText}"`);
+
     const smsResponse = await sendSms({
       apiKey: process.env.VONAGE_API_KEY,
       apiSecret: process.env.VONAGE_API_SECRET,
