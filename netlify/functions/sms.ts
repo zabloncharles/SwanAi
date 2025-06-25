@@ -1544,11 +1544,24 @@ const handler = async (event) => {
         userCache.delete(cacheKey);
         console.log(`Cleared user cache for phone: ${normalizedPhone}`);
 
+        // Also clear any other related caches
+        const welcomeCacheKey = `welcome_${normalizedPhone}`;
+        welcomeMessageCache.delete(welcomeCacheKey);
+        console.log(
+          `Cleared welcome message cache for phone: ${normalizedPhone}`
+        );
+
+        // Clear breakup cache if it exists
+        const breakupCacheKey = `breakup_${normalizedPhone}`;
+        breakupCache.delete(breakupCacheKey);
+        console.log(`Cleared breakup cache for phone: ${normalizedPhone}`);
+
         return {
           statusCode: 200,
           body: JSON.stringify({
             success: true,
             message: "User cache cleared successfully",
+            clearedCaches: ["user", "welcome", "breakup"],
           }),
         };
       } catch (error) {
