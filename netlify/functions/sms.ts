@@ -1975,29 +1975,52 @@ const handler = async (event) => {
           `User message doesn't contain friend agreement or romance, sending clarification message`
         );
         // Awaiting explicit friend agreement
-        history.push({
-          role: "assistant",
-          content:
-            "Just to be clear, I can only keep talking if we're friends. Are you okay with that?",
-        });
-        await setDoc(
-          userRef,
-          {
-            summary,
-            history,
-            profile,
-            exMode: true,
-            lastMessageTime: new Date().toISOString(),
-          },
-          { merge: true }
-        );
-        return {
-          statusCode: 200,
-          body: JSON.stringify({
-            success: true,
-            awaitingFriendAgreement: true,
-          }),
-        };
+        try {
+          console.log(`Adding clarification message to history`);
+          history.push({
+            role: "assistant",
+            content:
+              "Just to be clear, I can only keep talking if we're friends. Are you okay with that?",
+          });
+
+          console.log(`Saving updated history to database`);
+          await setDoc(
+            userRef,
+            {
+              summary,
+              history,
+              profile,
+              exMode: true,
+              lastMessageTime: new Date().toISOString(),
+            },
+            { merge: true }
+          );
+
+          console.log(`Database updated successfully, returning response`);
+          return {
+            statusCode: 200,
+            body: JSON.stringify({
+              success: true,
+              awaitingFriendAgreement: true,
+            }),
+          };
+        } catch (error) {
+          console.error("Error in exMode clarification response:", error);
+          console.error("Error details:", {
+            message: error.message,
+            code: error.code,
+            stack: error.stack,
+          });
+          // Return error response but don't fail the function
+          return {
+            statusCode: 200,
+            body: JSON.stringify({
+              success: false,
+              error: "Failed to process exMode response",
+              details: error.message,
+            }),
+          };
+        }
       }
     }
 
