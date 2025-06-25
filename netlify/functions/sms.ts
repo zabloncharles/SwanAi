@@ -1557,12 +1557,19 @@ function cleanCache() {
 
 const handler = async (event) => {
   console.log(`=== SMS Function Triggered ===`);
+  console.log(`Timestamp: ${new Date().toISOString()}`);
   console.log(`Method: ${event.httpMethod}`);
   console.log(`Path: ${event.path}`);
+  console.log(`URL: ${event.url || "N/A"}`);
   console.log(`Query params:`, event.queryStringParameters);
   console.log(`Body:`, event.body ? JSON.parse(event.body) : "No body");
   console.log(`Headers:`, event.headers);
+  console.log(`User Agent: ${event.headers["user-agent"] || "N/A"}`);
+  console.log(`Content Type: ${event.headers["content-type"] || "N/A"}`);
   console.log(`==============================`);
+
+  // Log raw event for debugging
+  console.log(`Raw event object:`, JSON.stringify(event, null, 2));
 
   if (event.httpMethod !== "POST" && event.httpMethod !== "GET") {
     console.log(`Method not allowed: ${event.httpMethod}`);
