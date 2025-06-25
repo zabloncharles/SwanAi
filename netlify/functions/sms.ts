@@ -34,28 +34,53 @@ async function sendSms({ apiKey, apiSecret, from, to, text }) {
   console.log(`Attempting to send SMS to ${to} from ${from}`);
   console.log(`Message content: "${text}"`);
 
-  // Clean the message text to avoid carrier filtering
+  // Validate required parameters
+  if (!apiKey || !apiSecret || !from || !to || !text) {
+    console.error("Missing required SMS parameters:", {
+      apiKey: !!apiKey,
+      apiSecret: !!apiSecret,
+      from: !!from,
+      to: !!to,
+      text: !!text,
+    });
+    return {
+      error: true,
+      message: "Missing required SMS parameters",
+    };
+  }
+
+  // Clean the message text to avoid carrier filtering, but be less aggressive
   const cleanText = text
-    .replace(/[^\w\s.,!?-]/g, "") // Remove special characters that might trigger filters
+    .replace(/[^\w\s.,!?\-'"]/g, "") // Allow more characters including quotes and apostrophes
     .replace(/\s+/g, " ") // Normalize whitespace
     .trim();
+
+  // Ensure we have valid text after cleaning
+  if (!cleanText || cleanText.length === 0) {
+    console.error("Text is empty after cleaning");
+    return {
+      error: true,
+      message: "Text is empty after cleaning",
+    };
+  }
 
   console.log(`Cleaned message content: "${cleanText}"`);
 
   const url = "https://rest.nexmo.com/sms/json";
 
   try {
+    // Use simpler parameters to avoid potential issues
     const response = await axios.post(url, null, {
       params: {
         api_key: apiKey,
         api_secret: apiSecret,
-        to,
-        from,
+        to: to,
+        from: from,
         text: cleanText,
-        // Add additional parameters to improve delivery
-        "status-report-req": "1", // Request delivery status
-        "client-ref": `swan-${Date.now()}`, // Add client reference for tracking
-        type: "text", // Explicitly specify text message type
+        // Remove potentially problematic parameters
+        // 'status-report-req': '1',
+        // 'client-ref': `swan-${Date.now()}`,
+        // 'type': 'text',
       },
       timeout: 15000, // 15 second timeout
     });
@@ -2317,6 +2342,21 @@ You are their ${relationshipKey}. ${relationshipProfile.roleDescription}
     // Send SMS response via Vonage API
     console.log(`About to send SMS via Vonage API to: ${normalizedPhone}`);
     console.log(`SMS text: "${smsText}"`);
+    console.log(`From number: ${process.env.VONAGE_PHONE_NUMBER}`);
+    console.log(
+      `API Key: ${process.env.VONAGE_API_KEY ? "Present" : "Missing"}`
+    );
+    console.log(
+      `API Secret: ${process.env.VONAGE_API_SECRET ? "Present" : "Missing"}`
+    );
+
+    // Try different phone number formats for Vonage
+    let phoneToUse = normalizedPhone;
+    if (normalizedPhone.startsWith("1") && normalizedPhone.length === 11) {
+      // Try without country code for US numbers
+      phoneToUse = normalizedPhone.slice(1);
+      console.log(`Trying phone number without country code: ${phoneToUse}`);
+    }
 
     try {
       // Add timeout to SMS sending
@@ -2324,7 +2364,7 @@ You are their ${relationshipKey}. ${relationshipProfile.roleDescription}
         apiKey: process.env.VONAGE_API_KEY,
         apiSecret: process.env.VONAGE_API_SECRET,
         from: process.env.VONAGE_PHONE_NUMBER,
-        to: normalizedPhone,
+        to: phoneToUse,
         text: smsText,
       });
 
