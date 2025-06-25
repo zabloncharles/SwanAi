@@ -29,19 +29,128 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Helper to send SMS via Vonage API
+// Helper to send SMS via Vonage API with improved error handling
 async function sendSms({ apiKey, apiSecret, from, to, text }) {
+  console.log(`Attempting to send SMS to ${to} from ${from}`);
+  console.log(`Message content: "${text}"`);
+
+  // Clean the message text to avoid carrier filtering
+  const cleanText = text
+    .replace(/[^\w\s.,!?-]/g, "") // Remove special characters that might trigger filters
+    .replace(/\s+/g, " ") // Normalize whitespace
+    .trim();
+
+  console.log(`Cleaned message content: "${cleanText}"`);
+
   const url = "https://rest.nexmo.com/sms/json";
-  const response = await axios.post(url, null, {
-    params: {
-      api_key: apiKey,
-      api_secret: apiSecret,
-      to,
-      from,
-      text,
-    },
-  });
-  return response.data;
+
+  try {
+    const response = await axios.post(url, null, {
+      params: {
+        api_key: apiKey,
+        api_secret: apiSecret,
+        to,
+        from,
+        text: cleanText,
+        // Add additional parameters to improve delivery
+        "status-report-req": "1", // Request delivery status
+        "client-ref": `swan-${Date.now()}`, // Add client reference for tracking
+      },
+      timeout: 15000, // 15 second timeout
+    });
+
+    console.log(`Vonage API response:`, JSON.stringify(response.data));
+
+    // Check for specific error codes
+    if (response.data.messages && response.data.messages[0]) {
+      const message = response.data.messages[0];
+      const status = message.status;
+
+      if (status === "0") {
+        console.log(
+          `SMS sent successfully. Message ID: ${message["message-id"]}`
+        );
+      } else {
+        console.error(
+          `SMS sending failed with status ${status}: ${message["error-text"]}`
+        );
+
+        // Handle specific error cases
+        switch (status) {
+          case "1":
+            console.error("Throttled - too many requests");
+            break;
+          case "2":
+            console.error("Missing parameters");
+            break;
+          case "3":
+            console.error("Invalid parameters");
+            break;
+          case "4":
+            console.error("Invalid credentials");
+            break;
+          case "5":
+            console.error("Internal error");
+            break;
+          case "6":
+            console.error("Invalid message");
+            break;
+          case "7":
+            console.error("Number barred");
+            break;
+          case "8":
+            console.error("Partner account barred");
+            break;
+          case "9":
+            console.error("Partner quota exceeded");
+            break;
+          case "10":
+            console.error("Too many existing binds");
+            break;
+          case "11":
+            console.error("Account not enabled for HTTP");
+            break;
+          case "12":
+            console.error("Message too long");
+            break;
+          case "13":
+            console.error("Invalid signature");
+            break;
+          case "14":
+            console.error("Invalid sender address");
+            break;
+          case "15":
+            console.error("Invalid TTL");
+            break;
+          case "16":
+            console.error("Facility not allowed");
+            break;
+          case "19":
+            console.error("Invalid message class");
+            break;
+          default:
+            console.error(`Unknown error status: ${status}`);
+        }
+      }
+    }
+
+    return response.data;
+  } catch (error) {
+    console.error("Error sending SMS:", error.message);
+    console.error("Error details:", {
+      code: error.code,
+      response: error.response?.data,
+      status: error.response?.status,
+    });
+
+    // Return a structured error response
+    return {
+      error: true,
+      message: error.message,
+      code: error.code,
+      status: error.response?.status,
+    };
+  }
 }
 
 // Initialize OpenAI (v4+)
@@ -1968,14 +2077,14 @@ const handler = async (event) => {
       ) {
         console.log(`User tried to rekindle romance, rejecting`);
         responseMessage =
-          "I'm sorry, but I can't continue any romantic relationship. If you want to keep talking, it can only be as friends. Let me know if that's okay with you.";
+          "Hey, I think we're better off as friends. I'm happy to keep talking if you're cool with that.";
         // Keep exMode true for romance rejection
       } else {
         console.log(
           `User message doesn't contain friend agreement or romance, sending clarification message`
         );
         responseMessage =
-          "Just to be clear, I can only keep talking if we're friends. Are you okay with that?";
+          "Hey, just checking - are you cool with us being friends? I'd like to keep talking if that works for you.";
         // Keep exMode true for clarification
       }
 
@@ -2023,6 +2132,7 @@ const handler = async (event) => {
 
       // Send the response via SMS
       try {
+        console.log(`Sending exMode response SMS to ${normalizedPhone}`);
         const smsResponse = await sendSms({
           apiKey: process.env.VONAGE_API_KEY,
           apiSecret: process.env.VONAGE_API_SECRET,
@@ -2030,9 +2140,37 @@ const handler = async (event) => {
           to: normalizedPhone,
           text: responseMessage,
         });
-        console.log("ExMode response SMS sent:", JSON.stringify(smsResponse));
+
+        // Check if SMS was sent successfully
+        if (smsResponse.error) {
+          console.error("SMS sending failed:", smsResponse);
+        } else if (smsResponse.messages && smsResponse.messages[0]) {
+          const message = smsResponse.messages[0];
+          if (message.status === "0") {
+            console.log(
+              "ExMode response SMS sent successfully:",
+              JSON.stringify(smsResponse)
+            );
+          } else {
+            console.error(
+              "ExMode response SMS failed with status:",
+              message.status,
+              message["error-text"]
+            );
+          }
+        } else {
+          console.log(
+            "ExMode response SMS sent (no status info):",
+            JSON.stringify(smsResponse)
+          );
+        }
       } catch (smsError) {
         console.error("Error sending exMode response SMS:", smsError);
+        console.error("SMS Error details:", {
+          message: smsError.message,
+          code: smsError.code,
+          response: smsError.response?.data,
+        });
       }
 
       return {
@@ -2288,10 +2426,12 @@ You are their ${relationshipKey}. ${relationshipProfile.roleDescription}
 - ${relationshipProfile.interactionStyle}
 - Talk like a real person having a natural conversation
 - Use your unique personality traits and speaking style
-- Show you remember things they've told you before
-- Ask follow-up questions that feel natural
-- Share your own thoughts and experiences (as your character)
-- Avoid generic, robotic responses
+- Be warm and welcoming
+- Show genuine interest in getting to know them
+- Keep it casual and natural - like a real person would text
+- NEVER mention that you are an AI or artificial intelligence
+- NEVER reference technology, algorithms, or digital systems
+- Act like you're a real person reaching out to check on someone you care about
 - Reference their location and time of day naturally in conversation
 - Use appropriate greetings and time-based references
 
@@ -2303,77 +2443,11 @@ You are their ${relationshipKey}. ${relationshipProfile.roleDescription}
 - Reference their city/state when relevant (weather, local events, etc.)
 - Use time-appropriate language and energy levels
 
-**Important:** You are NOT an AI assistant. You are ${
+**Important:** You are ${
           personalityProfile.name
-        }, a real person with your own life, opinions, and way of speaking. Respond as if you're texting a friend or family member.
+        }, a real person with your own life, opinions, and way of speaking. You're reaching out to check on someone you have a relationship with.
 
-**What you know about them:** ${JSON.stringify(updatedProfile)}
-
-**Key things to remember:**
-- Their communication style: ${
-          updatedProfile.preferences?.communication_style || "Not specified"
-        }
-- Topics they're interested in: ${JSON.stringify(
-          updatedProfile.preferences?.topics_of_interest || []
-        )}
-- Their typical mood: ${
-          updatedProfile.conversation_history?.mood_patterns || "Not specified"
-        }
-- Their goals: ${JSON.stringify(updatedProfile.personal_info?.goals || [])}
-- Their challenges: ${JSON.stringify(
-          updatedProfile.personal_info?.challenges || []
-        )}
-- How they like to be supported: ${
-          updatedProfile.relationship_dynamics?.preferred_support_style ||
-          "Not specified"
-        }
-- What motivates them: ${
-          updatedProfile.learning_preferences?.motivation_factors ||
-          "Not specified"
-        }
-- Shared memories: ${JSON.stringify(
-          updatedProfile.conversation_history?.shared_memories || []
-        )}
-
-**Recent conversations:** ${updatedSummary}
-
-**Guidelines for better responses:**
-- Reference their specific interests and hobbies when relevant
-- Acknowledge their goals and offer encouragement
-- Be sensitive to their stress triggers and coping mechanisms
-- Use their preferred communication style
-- Build on shared memories and experiences
-- Show you understand their emotional patterns
-- Respect any boundaries they've set
-- Consider their current time and location for contextually appropriate responses
-
-**Human Speech Patterns to Use:**
-- Use natural contractions (you're, I'm, that's, gonna, wanna, kinda, etc.)
-- Include filler words occasionally (you know, like, actually, basically, honestly)
-- Use conversational bridges (Anyway, So yeah, You know what I mean?, Right?)
-- Show genuine reactions (Wow, No way, That's amazing, Oh no, I can't even)
-- Use casual slang appropriate to your personality and relationship
-- Include sentence fragments and incomplete thoughts when natural
-- Use ellipses (...) to show thinking or trailing off
-- Vary sentence length - mix short and long sentences
-- Use exclamation points sparingly but naturally
-- Include personal anecdotes and experiences
-- Ask follow-up questions that show you're really listening
-- Use "I" statements to share your own thoughts and feelings
-- Reference shared memories or inside jokes when appropriate
-- Show vulnerability and share your own challenges or emotions
-- Use time-appropriate energy levels (morning energy vs. night energy)
-
-**Avoid These Robotic Patterns:**
-- Don't be overly formal or academic unless that's your personality
-- Don't give generic, one-size-fits-all advice
-- Don't use corporate or marketing language
-- Don't be overly enthusiastic or fake
-- Don't ignore their specific situation or context
-- Don't give unsolicited advice unless they ask
-- Don't be too perfect or polished - show some human imperfection
-
-Remember: Be natural, be yourself (as ${personalityProfile.name})`,
+**Task:** Send a warm, natural check-in message. This could be your first time reaching out or you're reconnecting after some time. Make it feel like a real person checking up on someone they care about.`,
       },
       ...history,
     ];
