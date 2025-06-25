@@ -1918,11 +1918,13 @@ const handler = async (event) => {
       if (userMsg.includes("yes") && userMsg.includes("friend")) {
         console.log(`User agreed to be friends, clearing exMode`);
         // User agrees to be friends, clear exMode and proceed
+        const friendMessage =
+          "Thanks for understanding. I'm happy to be friends and keep talking!";
+
         await setDoc(userRef, { exMode: false }, { merge: true });
         history.push({
           role: "assistant",
-          content:
-            "Thanks for understanding. I'm happy to be friends and keep talking!",
+          content: friendMessage,
         });
         await setDoc(
           userRef,
@@ -1935,6 +1937,24 @@ const handler = async (event) => {
           },
           { merge: true }
         );
+
+        // Send the friend agreement message via SMS
+        try {
+          const smsResponse = await sendSms({
+            apiKey: process.env.VONAGE_API_KEY,
+            apiSecret: process.env.VONAGE_API_SECRET,
+            from: process.env.VONAGE_PHONE_NUMBER,
+            to: normalizedPhone,
+            text: friendMessage,
+          });
+          console.log(
+            "Friend agreement SMS sent:",
+            JSON.stringify(smsResponse)
+          );
+        } catch (smsError) {
+          console.error("Error sending friend agreement SMS:", smsError);
+        }
+
         return {
           statusCode: 200,
           body: JSON.stringify({ success: true, becameFriends: true }),
@@ -1950,10 +1970,12 @@ const handler = async (event) => {
       ) {
         console.log(`User tried to rekindle romance, rejecting`);
         // User tries to rekindle romance
+        const romanceRejectionMessage =
+          "I'm sorry, but I can't continue any romantic relationship. If you want to keep talking, it can only be as friends. Let me know if that's okay with you.";
+
         history.push({
           role: "assistant",
-          content:
-            "I'm sorry, but I can't continue any romantic relationship. If you want to keep talking, it can only be as friends. Let me know if that's okay with you.",
+          content: romanceRejectionMessage,
         });
         await setDoc(
           userRef,
@@ -1966,6 +1988,24 @@ const handler = async (event) => {
           },
           { merge: true }
         );
+
+        // Send the romance rejection message via SMS
+        try {
+          const smsResponse = await sendSms({
+            apiKey: process.env.VONAGE_API_KEY,
+            apiSecret: process.env.VONAGE_API_SECRET,
+            from: process.env.VONAGE_PHONE_NUMBER,
+            to: normalizedPhone,
+            text: romanceRejectionMessage,
+          });
+          console.log(
+            "Romance rejection SMS sent:",
+            JSON.stringify(smsResponse)
+          );
+        } catch (smsError) {
+          console.error("Error sending romance rejection SMS:", smsError);
+        }
+
         return {
           statusCode: 200,
           body: JSON.stringify({ success: true, romanceRejected: true }),
@@ -1977,10 +2017,12 @@ const handler = async (event) => {
         // Awaiting explicit friend agreement
         try {
           console.log(`Adding clarification message to history`);
+          const clarificationMessage =
+            "Just to be clear, I can only keep talking if we're friends. Are you okay with that?";
+
           history.push({
             role: "assistant",
-            content:
-              "Just to be clear, I can only keep talking if we're friends. Are you okay with that?",
+            content: clarificationMessage,
           });
 
           console.log(`Saving updated history to database`);
@@ -1996,7 +2038,28 @@ const handler = async (event) => {
             { merge: true }
           );
 
-          console.log(`Database updated successfully, returning response`);
+          console.log(
+            `Database updated successfully, sending SMS clarification message`
+          );
+
+          // Send the clarification message via SMS
+          try {
+            const smsResponse = await sendSms({
+              apiKey: process.env.VONAGE_API_KEY,
+              apiSecret: process.env.VONAGE_API_SECRET,
+              from: process.env.VONAGE_PHONE_NUMBER,
+              to: normalizedPhone,
+              text: clarificationMessage,
+            });
+            console.log(
+              "ExMode clarification SMS sent:",
+              JSON.stringify(smsResponse)
+            );
+          } catch (smsError) {
+            console.error("Error sending exMode clarification SMS:", smsError);
+          }
+
+          console.log(`Returning response`);
           return {
             statusCode: 200,
             body: JSON.stringify({
