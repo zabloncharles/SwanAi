@@ -1862,8 +1862,15 @@ const handler = async (event) => {
       `Added user message to history. New history length: ${history.length}`
     );
 
+    console.log(
+      `Checking breakup conditions - lastBreakup: ${JSON.stringify(
+        lastBreakup
+      )}, exMode: ${exMode}`
+    );
+
     // If there was a breakup, respond as an ex and ask if the user wants to be friends
     if (lastBreakup && lastBreakup.date) {
+      console.log(`Breakup detected, handling breakup logic`);
       if (history.length <= 2) {
         let breakupContextMsg =
           lastBreakup.previousRelationship === "Girlfriend" ||
@@ -1896,8 +1903,13 @@ const handler = async (event) => {
       }
     }
 
+    console.log(
+      `No breakup detected, proceeding with normal conversation flow`
+    );
+
     // If in exMode, only allow conversation if user agrees to be friends
     if (exMode) {
+      console.log(`User is in exMode, checking if they agree to be friends`);
       // Check if user agrees to be friends
       const userMsg = sanitizedText.toLowerCase();
       if (userMsg.includes("yes") && userMsg.includes("friend")) {
@@ -1980,6 +1992,10 @@ const handler = async (event) => {
         };
       }
     }
+
+    console.log(
+      `User is not in exMode, proceeding with AI response generation`
+    );
 
     // Generate summary and clear history when it reaches MAX_HISTORY
     const shouldUpdateSummaryProfile = history.length >= MAX_HISTORY;
