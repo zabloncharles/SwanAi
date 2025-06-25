@@ -2299,8 +2299,8 @@ You are their ${relationshipKey}. ${relationshipProfile.roleDescription}
     console.log(`AI Response: "${aiResponse}"`);
     console.log(`Tokens used: ${tokensUsed}`);
 
-    // Truncate AI response for SMS
-    const smsText = truncateForSMS(aiResponse);
+    // Truncate AI response for SMS (strict 160 char limit)
+    const smsText = truncateForSMS(aiResponse, 160);
     console.log(`Truncated SMS text: "${smsText}"`);
 
     // Add AI response to history
