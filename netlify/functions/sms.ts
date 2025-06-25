@@ -1551,7 +1551,6 @@ const handler = async (event) => {
           `Cleared welcome message cache for phone: ${normalizedPhone}`
         );
 
-        // Clear breakup cache if it exists
         const breakupCacheKey = `breakup_${normalizedPhone}`;
         breakupCache.delete(breakupCacheKey);
         console.log(`Cleared breakup cache for phone: ${normalizedPhone}`);
@@ -1927,122 +1926,22 @@ const handler = async (event) => {
       // Check if user agrees to be friends
       const userMsg = sanitizedText.toLowerCase();
       console.log(`User message (lowercase): "${userMsg}"`);
-      console.log(`Checking for "yes" and "friend" in message`);
+      console.log(`Checking for friend agreement in message`);
 
-      if (userMsg.includes("yes") && userMsg.includes("friend")) {
-        console.log(`User agreed to be friends, clearing exMode`);
-        // User agrees to be friends, clear exMode and proceed
-        const friendMessage =
-          "Thanks for understanding. I'm happy to be friends and keep talking!";
+      let shouldClearExMode = false;
+      let responseMessage = "";
 
-        console.log(`Setting exMode to false in database`);
-        await setDoc(userRef, { exMode: false }, { merge: true });
-        console.log(`exMode set to false successfully`);
-
-        // Clear the user cache to ensure fresh data is used
-        userCache.delete(cacheKey);
-        console.log(`Cleared user cache to ensure fresh exMode data`);
-
-        history.push({
-          role: "assistant",
-          content: friendMessage,
-        });
-        await setDoc(
-          userRef,
-          {
-            summary,
-            history,
-            profile,
-            exMode: false,
-            lastMessageTime: new Date().toISOString(),
-          },
-          { merge: true }
-        );
-        console.log(`Final database update completed with exMode: false`);
-
-        // Clear cache again after final update
-        userCache.delete(cacheKey);
-        console.log(`Cleared user cache after final update`);
-
-        // Send the friend agreement message via SMS
-        try {
-          const smsResponse = await sendSms({
-            apiKey: process.env.VONAGE_API_KEY,
-            apiSecret: process.env.VONAGE_API_SECRET,
-            from: process.env.VONAGE_PHONE_NUMBER,
-            to: normalizedPhone,
-            text: friendMessage,
-          });
-          console.log(
-            "Friend agreement SMS sent:",
-            JSON.stringify(smsResponse)
-          );
-        } catch (smsError) {
-          console.error("Error sending friend agreement SMS:", smsError);
-        }
-
-        return {
-          statusCode: 200,
-          body: JSON.stringify({ success: true, becameFriends: true }),
-        };
-      } else if (
-        // More flexible friend agreement detection
-        (userMsg.includes("yes") ||
+      // Check for various forms of friend agreement
+      if (
+        (userMsg.includes("yes") && userMsg.includes("friend")) ||
+        ((userMsg.includes("yes") ||
           userMsg.includes("okay") ||
           userMsg.includes("sure") ||
           userMsg.includes("fine")) &&
-        (userMsg.includes("friend") ||
-          userMsg.includes("friends") ||
-          userMsg.includes("ok") ||
-          userMsg.includes("alright"))
-      ) {
-        console.log(
-          `User agreed to be friends (flexible detection), clearing exMode`
-        );
-        // User agrees to be friends, clear exMode and proceed
-        const friendMessage =
-          "Thanks for understanding. I'm happy to be friends and keep talking!";
-
-        await setDoc(userRef, { exMode: false }, { merge: true });
-        history.push({
-          role: "assistant",
-          content: friendMessage,
-        });
-        await setDoc(
-          userRef,
-          {
-            summary,
-            history,
-            profile,
-            exMode: false,
-            lastMessageTime: new Date().toISOString(),
-          },
-          { merge: true }
-        );
-
-        // Send the friend agreement message via SMS
-        try {
-          const smsResponse = await sendSms({
-            apiKey: process.env.VONAGE_API_KEY,
-            apiSecret: process.env.VONAGE_API_SECRET,
-            from: process.env.VONAGE_PHONE_NUMBER,
-            to: normalizedPhone,
-            text: friendMessage,
-          });
-          console.log(
-            "Friend agreement SMS sent:",
-            JSON.stringify(smsResponse)
-          );
-        } catch (smsError) {
-          console.error("Error sending friend agreement SMS:", smsError);
-        }
-
-        return {
-          statusCode: 200,
-          body: JSON.stringify({ success: true, becameFriends: true }),
-        };
-      } else if (
-        // Simple agreement to get out of exMode - check for exact matches or simple positive responses
+          (userMsg.includes("friend") ||
+            userMsg.includes("friends") ||
+            userMsg.includes("ok") ||
+            userMsg.includes("alright"))) ||
         userMsg === "yes" ||
         userMsg === "okay" ||
         userMsg === "ok" ||
@@ -2054,55 +1953,10 @@ const handler = async (event) => {
         userMsg === "alright" ||
         userMsg === "all right"
       ) {
-        console.log(
-          `User gave simple agreement: "${userMsg}", clearing exMode`
-        );
-        // User agrees to be friends, clear exMode and proceed
-        const friendMessage =
+        console.log(`User agreed to be friends, clearing exMode`);
+        shouldClearExMode = true;
+        responseMessage =
           "Thanks for understanding. I'm happy to be friends and keep talking!";
-
-        console.log(`Setting exMode to false in database`);
-        await setDoc(userRef, { exMode: false }, { merge: true });
-        console.log(`exMode set to false successfully`);
-
-        history.push({
-          role: "assistant",
-          content: friendMessage,
-        });
-        await setDoc(
-          userRef,
-          {
-            summary,
-            history,
-            profile,
-            exMode: false,
-            lastMessageTime: new Date().toISOString(),
-          },
-          { merge: true }
-        );
-        console.log(`Final database update completed with exMode: false`);
-
-        // Send the friend agreement message via SMS
-        try {
-          const smsResponse = await sendSms({
-            apiKey: process.env.VONAGE_API_KEY,
-            apiSecret: process.env.VONAGE_API_SECRET,
-            from: process.env.VONAGE_PHONE_NUMBER,
-            to: normalizedPhone,
-            text: friendMessage,
-          });
-          console.log(
-            "Friend agreement SMS sent:",
-            JSON.stringify(smsResponse)
-          );
-        } catch (smsError) {
-          console.error("Error sending friend agreement SMS:", smsError);
-        }
-
-        return {
-          statusCode: 200,
-          body: JSON.stringify({ success: true, becameFriends: true }),
-        };
       } else if (
         userMsg.includes("love") ||
         userMsg.includes("miss you") ||
@@ -2113,122 +1967,82 @@ const handler = async (event) => {
         userMsg.includes("boyfriend")
       ) {
         console.log(`User tried to rekindle romance, rejecting`);
-        // User tries to rekindle romance
-        const romanceRejectionMessage =
+        responseMessage =
           "I'm sorry, but I can't continue any romantic relationship. If you want to keep talking, it can only be as friends. Let me know if that's okay with you.";
-
-        history.push({
-          role: "assistant",
-          content: romanceRejectionMessage,
-        });
-        await setDoc(
-          userRef,
-          {
-            summary,
-            history,
-            profile,
-            exMode: true,
-            lastMessageTime: new Date().toISOString(),
-          },
-          { merge: true }
-        );
-
-        // Send the romance rejection message via SMS
-        try {
-          const smsResponse = await sendSms({
-            apiKey: process.env.VONAGE_API_KEY,
-            apiSecret: process.env.VONAGE_API_SECRET,
-            from: process.env.VONAGE_PHONE_NUMBER,
-            to: normalizedPhone,
-            text: romanceRejectionMessage,
-          });
-          console.log(
-            "Romance rejection SMS sent:",
-            JSON.stringify(smsResponse)
-          );
-        } catch (smsError) {
-          console.error("Error sending romance rejection SMS:", smsError);
-        }
-
-        return {
-          statusCode: 200,
-          body: JSON.stringify({ success: true, romanceRejected: true }),
-        };
+        // Keep exMode true for romance rejection
       } else {
         console.log(
           `User message doesn't contain friend agreement or romance, sending clarification message`
         );
-        // Awaiting explicit friend agreement
-        try {
-          console.log(`Adding clarification message to history`);
-          const clarificationMessage =
-            "Just to be clear, I can only keep talking if we're friends. Are you okay with that?";
-
-          history.push({
-            role: "assistant",
-            content: clarificationMessage,
-          });
-
-          console.log(`Saving updated history to database`);
-          await setDoc(
-            userRef,
-            {
-              summary,
-              history,
-              profile,
-              exMode: true,
-              lastMessageTime: new Date().toISOString(),
-            },
-            { merge: true }
-          );
-
-          console.log(
-            `Database updated successfully, sending SMS clarification message`
-          );
-
-          // Send the clarification message via SMS
-          try {
-            const smsResponse = await sendSms({
-              apiKey: process.env.VONAGE_API_KEY,
-              apiSecret: process.env.VONAGE_API_SECRET,
-              from: process.env.VONAGE_PHONE_NUMBER,
-              to: normalizedPhone,
-              text: clarificationMessage,
-            });
-            console.log(
-              "ExMode clarification SMS sent:",
-              JSON.stringify(smsResponse)
-            );
-          } catch (smsError) {
-            console.error("Error sending exMode clarification SMS:", smsError);
-          }
-
-          console.log(`Returning response`);
-          return {
-            statusCode: 200,
-            body: JSON.stringify({
-              success: true,
-              awaitingFriendAgreement: true,
-            }),
-          };
-        } catch (error) {
-          console.error("Error in exMode clarification response:", error);
-          console.error("Error details:", {
-            message: error.message,
-            code: error.code,
-            stack: error.stack,
-          });
-          // Return error response but don't fail the function
-          return {
-            statusCode: 200,
-            body: JSON.stringify({
-              success: false,
-              error: "Failed to process exMode response",
-              details: error.message,
-            }),
-          };
-        }
+        responseMessage =
+          "Just to be clear, I can only keep talking if we're friends. Are you okay with that?";
+        // Keep exMode true for clarification
       }
+
+      // Add response to history
+      history.push({
+        role: "assistant",
+        content: responseMessage,
+      });
+
+      // Update database with new exMode status and history
+      const updateData: any = {
+        summary,
+        history,
+        profile,
+        lastMessageTime: new Date().toISOString(),
+      };
+
+      if (shouldClearExMode) {
+        console.log(`Setting exMode to false in database`);
+        updateData.exMode = false;
+      } else {
+        console.log(`Keeping exMode as true in database`);
+        updateData.exMode = true;
+      }
+
+      await setDoc(userRef, updateData, { merge: true });
+      console.log(
+        `Database updated successfully with exMode: ${updateData.exMode}`
+      );
+
+      // Clear cache to ensure fresh data is used
+      userCache.delete(cacheKey);
+      console.log(`Cleared user cache to ensure fresh exMode data`);
+
+      // Also clear any other related caches to prevent stale data
+      const welcomeCacheKey = `welcome_${normalizedPhone}`;
+      welcomeMessageCache.delete(welcomeCacheKey);
+      console.log(
+        `Cleared welcome message cache for phone: ${normalizedPhone}`
+      );
+
+      const breakupCacheKey = `breakup_${normalizedPhone}`;
+      breakupCache.delete(breakupCacheKey);
+      console.log(`Cleared breakup cache for phone: ${normalizedPhone}`);
+
+      // Send the response via SMS
+      try {
+        const smsResponse = await sendSms({
+          apiKey: process.env.VONAGE_API_KEY,
+          apiSecret: process.env.VONAGE_API_SECRET,
+          from: process.env.VONAGE_PHONE_NUMBER,
+          to: normalizedPhone,
+          text: responseMessage,
+        });
+        console.log("ExMode response SMS sent:", JSON.stringify(smsResponse));
+      } catch (smsError) {
+        console.error("Error sending exMode response SMS:", smsError);
+      }
+
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          success: true,
+          exModeHandled: true,
+          exModeCleared: shouldClearExMode,
+        }),
+      };
     }
 
     console.log(
