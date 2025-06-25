@@ -1912,7 +1912,11 @@ const handler = async (event) => {
       console.log(`User is in exMode, checking if they agree to be friends`);
       // Check if user agrees to be friends
       const userMsg = sanitizedText.toLowerCase();
+      console.log(`User message (lowercase): "${userMsg}"`);
+      console.log(`Checking for "yes" and "friend" in message`);
+
       if (userMsg.includes("yes") && userMsg.includes("friend")) {
+        console.log(`User agreed to be friends, clearing exMode`);
         // User agrees to be friends, clear exMode and proceed
         await setDoc(userRef, { exMode: false }, { merge: true });
         history.push({
@@ -1944,6 +1948,7 @@ const handler = async (event) => {
         userMsg.includes("girlfriend") ||
         userMsg.includes("boyfriend")
       ) {
+        console.log(`User tried to rekindle romance, rejecting`);
         // User tries to rekindle romance
         history.push({
           role: "assistant",
@@ -1966,6 +1971,9 @@ const handler = async (event) => {
           body: JSON.stringify({ success: true, romanceRejected: true }),
         };
       } else {
+        console.log(
+          `User message doesn't contain friend agreement or romance, sending clarification message`
+        );
         // Awaiting explicit friend agreement
         history.push({
           role: "assistant",
