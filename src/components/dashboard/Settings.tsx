@@ -595,6 +595,8 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
           comfort_level: "",
           preferred_support_style: "",
           trust_level: "",
+          // Clear exMode when relationship changes
+          exMode: false,
         };
 
         aiSettings = {
