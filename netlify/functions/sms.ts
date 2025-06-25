@@ -55,6 +55,7 @@ async function sendSms({ apiKey, apiSecret, from, to, text }) {
         // Add additional parameters to improve delivery
         "status-report-req": "1", // Request delivery status
         "client-ref": `swan-${Date.now()}`, // Add client reference for tracking
+        type: "text", // Explicitly specify text message type
       },
       timeout: 15000, // 15 second timeout
     });
@@ -1701,16 +1702,40 @@ const handler = async (event) => {
     event.queryStringParameters?.status === "rejected";
 
   if (isDeliveryReceipt) {
+    const status = event.queryStringParameters?.status;
+    const errorCode = event.queryStringParameters?.["err-code"];
+    const messageId = event.queryStringParameters?.messageId;
+    const networkCode = event.queryStringParameters?.["network-code"];
+
     console.log(
-      `Processing delivery receipt - Status: ${event.queryStringParameters?.status}, Message ID: ${event.queryStringParameters?.messageId}`
+      `Processing delivery receipt - Status: ${status}, Error Code: ${errorCode}, Message ID: ${messageId}, Network: ${networkCode}`
     );
+
+    // Handle specific error codes
+    if (status === "failed" && errorCode === "39") {
+      console.error(
+        "CARRIER ERROR 39: Bad message type or message type not supported"
+      );
+      console.error(
+        "This usually means the carrier is rejecting the message format or content"
+      );
+      console.error("Possible solutions:");
+      console.error(
+        "1. Get a new Vonage number with better carrier reputation"
+      );
+      console.error("2. Simplify message content to avoid filtering");
+      console.error("3. Contact Vonage support about number reputation");
+    }
+
     return {
       statusCode: 200,
       body: JSON.stringify({
         success: true,
         message: "Delivery receipt processed",
-        status: event.queryStringParameters?.status,
-        messageId: event.queryStringParameters?.messageId,
+        status: status,
+        errorCode: errorCode,
+        messageId: messageId,
+        networkCode: networkCode,
       }),
     };
   }
@@ -2064,8 +2089,7 @@ const handler = async (event) => {
       ) {
         console.log(`User agreed to be friends, clearing exMode`);
         shouldClearExMode = true;
-        responseMessage =
-          "Thanks for understanding. I'm happy to be friends and keep talking!";
+        responseMessage = "Cool! Let's chat!";
       } else if (
         userMsg.includes("love") ||
         userMsg.includes("miss you") ||
@@ -2076,15 +2100,13 @@ const handler = async (event) => {
         userMsg.includes("boyfriend")
       ) {
         console.log(`User tried to rekindle romance, rejecting`);
-        responseMessage =
-          "Hey, I think we're better off as friends. I'm happy to keep talking if you're cool with that.";
+        responseMessage = "Hey, let's just be friends ok?";
         // Keep exMode true for romance rejection
       } else {
         console.log(
           `User message doesn't contain friend agreement or romance, sending clarification message`
         );
-        responseMessage =
-          "Hey, just checking - are you cool with us being friends? I'd like to keep talking if that works for you.";
+        responseMessage = "Hey! Are we good as friends?";
         // Keep exMode true for clarification
       }
 
