@@ -558,45 +558,12 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
           `Relationship changing from ${userData.profile?.relationship} to ${editedData.profile.relationship}`
         );
 
+        // Keep only the basic relationship and personality settings
         // Clear all learned information for fresh start
         const preservedProfile = {
-          relationship: editedData.profile.relationship,
-          personality: editedData.profile.personality,
-          // Clear all learned data fields but keep basic settings
-          conversation_history: {},
-          communication_frequency: "Not specified",
-          frequent_topics: [],
-          mood_patterns: "",
-          response_style: "",
-          shared_memories: [],
-          learning_preferences: {},
-          coping_mechanisms: "",
-          motivation_factors: "",
-          preferred_explanation_style: "",
-          stress_triggers: "",
-          name: null,
-          personal_info: {},
-          age_range: null,
-          challenges: [],
-          family_status: null,
-          goals: [],
-          hobbies: [],
-          location: null,
-          occupation: null,
-          // Keep preferences but clear learned patterns
-          preferences: {
-            communication_style: "",
-            emotional_patterns: "",
-            response_preferences: "",
-          },
-          topics_of_interest: [],
-          relationship_dynamics: {},
-          boundaries: "",
-          comfort_level: "",
-          preferred_support_style: "",
-          trust_level: "",
-          // Clear exMode when relationship changes
-          exMode: false,
+          ...editedData.profile,
+          // Keep only the basic relationship and personality settings
+          // Clear all learned information for fresh start
         };
 
         aiSettings = {
@@ -610,31 +577,6 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
         console.log(
           "Relationship change detected - implementing selective memory management"
         );
-
-        // Clear backend cache for this user
-        try {
-          const clearCacheResponse = await fetch("/.netlify/functions/sms", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              action: "clear_user_cache",
-              phoneNumber: userData.phoneNumber,
-            }),
-          });
-
-          if (clearCacheResponse.ok) {
-            console.log("Backend user cache cleared successfully");
-          } else {
-            console.log(
-              "Failed to clear backend cache, but continuing with frontend reset"
-            );
-          }
-        } catch (error) {
-          console.log("Error clearing backend cache:", error);
-          // Don't fail the save operation if cache clearing fails
-        }
       }
 
       await onUpdate(aiSettings);
@@ -1184,98 +1126,6 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
           </div>
         )}
       </div>
-
-      {/* Breakup Information Card - Only show for romantic relationships */}
-      {(userData.profile?.relationship === "Boyfriend" ||
-        userData.profile?.relationship === "Girlfriend") && (
-        <div className="bg-white rounded-2xl shadow border border-gray-100 p-8">
-          <button
-            type="button"
-            className="w-full flex justify-between items-center text-left"
-            onClick={() =>
-              setOpenCard(openCard === "breakup" ? null : "breakup")
-            }
-            aria-expanded={openCard === "breakup"}
-          >
-            <h2 className="text-2xl font-bold text-gray-900">
-              Relationship Status
-            </h2>
-            <span className="text-gray-500">
-              {openCard === "breakup" ? "−" : "+"}
-            </span>
-          </button>
-
-          {openCard === "breakup" && (
-            <div className="mt-6 space-y-4">
-              {/* Show breakup history if exists */}
-              {userData.lastBreakup && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <h3 className="text-sm font-semibold text-red-800 mb-2">
-                    Previous Breakup
-                  </h3>
-                  <p className="text-sm text-red-700 mb-2">
-                    <strong>Date:</strong>{" "}
-                    {new Date(userData.lastBreakup.date).toLocaleDateString()}
-                  </p>
-                  <p className="text-sm text-red-700 mb-2">
-                    <strong>Reason:</strong>{" "}
-                    {userData.lastBreakup.reason === "lying"
-                      ? "Dishonesty detected"
-                      : userData.lastBreakup.reason === "unacceptable_behavior"
-                      ? "Unacceptable behavior"
-                      : userData.lastBreakup.reason === "neglect"
-                      ? "24+ hours without contact"
-                      : userData.lastBreakup.reason}
-                  </p>
-                  <p className="text-sm text-red-700">
-                    <strong>Previous Relationship:</strong>{" "}
-                    {userData.lastBreakup.previousRelationship}
-                  </p>
-                </div>
-              )}
-
-              {/* Breakup conditions information */}
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                <h3 className="text-sm font-semibold text-amber-800 mb-3">
-                  ⚠️ Important: Relationship Conditions
-                </h3>
-                <div className="space-y-3 text-sm text-amber-700">
-                  <div>
-                    <strong>Honesty Required:</strong> Your{" "}
-                    {userData.profile?.relationship?.toLowerCase()} can detect
-                    inconsistencies and dishonesty. Be truthful in your
-                    conversations.
-                  </div>
-                  <div>
-                    <strong>Respectful Behavior:</strong> Disrespectful,
-                    manipulative, or abusive language will result in an
-                    immediate breakup.
-                  </div>
-                  <div>
-                    <strong>Regular Contact:</strong> Going 24+ hours without
-                    messaging will be considered neglect and may result in a
-                    breakup.
-                  </div>
-                </div>
-              </div>
-
-              {/* Tips for maintaining relationship */}
-              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                <h3 className="text-sm font-semibold text-green-800 mb-3">
-                  💕 Tips for a Healthy Relationship
-                </h3>
-                <div className="space-y-2 text-sm text-green-700">
-                  <div>• Check in regularly and respond to messages</div>
-                  <div>• Be honest and authentic in your conversations</div>
-                  <div>• Show respect and kindness in your communication</div>
-                  <div>• Share your thoughts and feelings openly</div>
-                  <div>• Be supportive and understanding</div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Notifications Card */}
       <div className="bg-white rounded-2xl shadow border border-gray-100 p-8">

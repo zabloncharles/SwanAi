@@ -70,9 +70,5 @@ export interface UserData {
   summary?: string;
   history?: Array<{ role: string; content: string }>;
   updatedAt: Date;
-  lastBreakup?: {
-    reason: string;
-    date: string;
-    previousRelationship: string;
-  };
+  exMode?: boolean;
 }

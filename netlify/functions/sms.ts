@@ -29,154 +29,19 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Helper to send SMS via Vonage API with improved error handling
+// Helper to send SMS via Vonage API
 async function sendSms({ apiKey, apiSecret, from, to, text }) {
-  console.log(`Attempting to send SMS to ${to} from ${from}`);
-  console.log(`Message content: "${text}"`);
-
-  // Validate required parameters
-  if (!apiKey || !apiSecret || !from || !to || !text) {
-    console.error("Missing required SMS parameters:", {
-      apiKey: !!apiKey,
-      apiSecret: !!apiSecret,
-      from: !!from,
-      to: !!to,
-      text: !!text,
-    });
-    return {
-      error: true,
-      message: "Missing required SMS parameters",
-    };
-  }
-
-  // Clean the message text to avoid carrier filtering, but be less aggressive
-  const cleanText = text
-    .replace(/[^\w\s.,!?\-'"]/g, "") // Allow more characters including quotes and apostrophes
-    .replace(/\s+/g, " ") // Normalize whitespace
-    .trim();
-
-  // Ensure we have valid text after cleaning
-  if (!cleanText || cleanText.length === 0) {
-    console.error("Text is empty after cleaning");
-    return {
-      error: true,
-      message: "Text is empty after cleaning",
-    };
-  }
-
-  console.log(`Cleaned message content: "${cleanText}"`);
-
   const url = "https://rest.nexmo.com/sms/json";
-
-  try {
-    // Use simpler parameters to avoid potential issues
-    const response = await axios.post(url, null, {
-      params: {
-        api_key: apiKey,
-        api_secret: apiSecret,
-        to: to,
-        from: from,
-        text: cleanText,
-        // Remove potentially problematic parameters
-        // 'status-report-req': '1',
-        // 'client-ref': `swan-${Date.now()}`,
-        // 'type': 'text',
-      },
-      timeout: 15000, // 15 second timeout
-    });
-
-    console.log(`Vonage API response:`, JSON.stringify(response.data));
-
-    // Check for specific error codes
-    if (response.data.messages && response.data.messages[0]) {
-      const message = response.data.messages[0];
-      const status = message.status;
-
-      if (status === "0") {
-        console.log(
-          `SMS sent successfully. Message ID: ${message["message-id"]}`
-        );
-      } else {
-        console.error(
-          `SMS sending failed with status ${status}: ${message["error-text"]}`
-        );
-
-        // Handle specific error cases
-        switch (status) {
-          case "1":
-            console.error("Throttled - too many requests");
-            break;
-          case "2":
-            console.error("Missing parameters");
-            break;
-          case "3":
-            console.error("Invalid parameters");
-            break;
-          case "4":
-            console.error("Invalid credentials");
-            break;
-          case "5":
-            console.error("Internal error");
-            break;
-          case "6":
-            console.error("Invalid message");
-            break;
-          case "7":
-            console.error("Number barred");
-            break;
-          case "8":
-            console.error("Partner account barred");
-            break;
-          case "9":
-            console.error("Partner quota exceeded");
-            break;
-          case "10":
-            console.error("Too many existing binds");
-            break;
-          case "11":
-            console.error("Account not enabled for HTTP");
-            break;
-          case "12":
-            console.error("Message too long");
-            break;
-          case "13":
-            console.error("Invalid signature");
-            break;
-          case "14":
-            console.error("Invalid sender address");
-            break;
-          case "15":
-            console.error("Invalid TTL");
-            break;
-          case "16":
-            console.error("Facility not allowed");
-            break;
-          case "19":
-            console.error("Invalid message class");
-            break;
-          default:
-            console.error(`Unknown error status: ${status}`);
-        }
-      }
-    }
-
-    return response.data;
-  } catch (error) {
-    console.error("Error sending SMS:", error.message);
-    console.error("Error details:", {
-      code: error.code,
-      response: error.response?.data,
-      status: error.response?.status,
-    });
-
-    // Return a structured error response
-    return {
-      error: true,
-      message: error.message,
-      code: error.code,
-      status: error.response?.status,
-    };
-  }
+  const response = await axios.post(url, null, {
+    params: {
+      api_key: apiKey,
+      api_secret: apiSecret,
+      to,
+      from,
+      text,
+    },
+  });
+  return response.data;
 }
 
 // Initialize OpenAI (v4+)
@@ -1248,111 +1113,123 @@ async function sendWelcomeMessage(
   }
 }
 
-// Helper to detect lying in user messages
+// Function to detect if user is lying
 async function detectLying(
   userMessage: string,
   userProfile: any
 ): Promise<boolean> {
-  try {
-    const prompt = [
-      {
-        role: "system",
-        content: `You are an expert at detecting deception in text messages. Analyze the user's message and determine if they are being dishonest or lying.
+  const lyingPrompt = [
+    {
+      role: "system",
+      content: `You are an expert at detecting inconsistencies and potential lies in conversations. Analyze the user's message for signs of dishonesty.
 
-Consider these factors:
+**Look for:**
 - Contradictions with previous statements
-- Evasive or defensive language
+- Vague or evasive answers
+- Overly defensive responses
 - Inconsistent details
-- Overly elaborate explanations
-- Deflection or changing the subject
-- Unrealistic claims or promises
+- Unrealistic claims
+- Avoiding direct questions
 
-Return ONLY "true" if you detect lying/deception, or "false" if the message appears honest and truthful.`,
-      },
-      {
-        role: "user",
-        content: `User Profile: ${JSON.stringify(
-          userProfile
-        )}\n\nUser Message: "${userMessage}"\n\nIs this person lying or being deceptive?`,
-      },
-    ];
+**Return ONLY a JSON object:**
+{
+  "isLying": true/false,
+  "confidence": 0-100,
+  "reason": "brief explanation of why you think they might be lying"
+}
 
+Be conservative - only flag as lying if you're reasonably confident.`,
+    },
+    {
+      role: "user",
+      content: `User Profile: ${JSON.stringify(userProfile)}
+User Message: "${userMessage}"
+
+Is this person likely lying?`,
+    },
+  ];
+
+  try {
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
-      messages: prompt,
-      max_tokens: 10,
-      temperature: 0.1,
+      messages: lyingPrompt,
+      response_format: { type: "json_object" },
+      max_tokens: 150,
+      temperature: 0.3,
     });
 
-    const response = completion.choices[0].message?.content
-      ?.toLowerCase()
-      .trim();
-    return response === "true";
+    const result = JSON.parse(completion.choices[0].message?.content || "{}");
+    return result.isLying && result.confidence > 70; // Only consider it lying if confidence > 70%
   } catch (error) {
     console.error("Error detecting lying:", error);
-    return false; // Default to not lying if detection fails
-  }
-}
-
-// Helper to detect unacceptable behavior in user messages
-async function detectUnacceptableBehavior(
-  userMessage: string
-): Promise<boolean> {
-  try {
-    const prompt = [
-      {
-        role: "system",
-        content: `You are an expert at detecting inappropriate or unacceptable behavior in text messages. Analyze the user's message and determine if it contains:
-
-- Harassment or bullying
-- Threats or intimidation
-- Hate speech or discrimination
-- Sexual harassment or inappropriate sexual content
-- Stalking behavior
-- Manipulation or emotional abuse
-- Repeated unwanted contact
-- Violent or aggressive language
-
-Return ONLY "true" if you detect unacceptable behavior, or "false" if the message is appropriate and respectful.`,
-      },
-      {
-        role: "user",
-        content: `User Message: "${userMessage}"\n\nDoes this message contain unacceptable behavior?`,
-      },
-    ];
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: prompt,
-      max_tokens: 10,
-      temperature: 0.1,
-    });
-
-    const response = completion.choices[0].message?.content
-      ?.toLowerCase()
-      .trim();
-    return response === "true";
-  } catch (error) {
-    console.error("Error detecting unacceptable behavior:", error);
-    return false; // Default to acceptable if detection fails
-  }
-}
-
-// Helper to check for neglect (24 hours without contact)
-function checkForNeglect(userId: string, lastMessageTime: string): boolean {
-  try {
-    const lastMessage = new Date(lastMessageTime);
-    const now = new Date();
-    const hoursSinceLastMessage =
-      (now.getTime() - lastMessage.getTime()) / (1000 * 60 * 60);
-    return hoursSinceLastMessage >= 24;
-  } catch (error) {
-    console.error("Error checking for neglect:", error);
     return false;
   }
 }
 
-// Helper to handle breakups
+// Function to detect unacceptable behavior
+async function detectUnacceptableBehavior(
+  userMessage: string
+): Promise<boolean> {
+  const unacceptablePrompt = [
+    {
+      role: "system",
+      content: `You are an expert at detecting unacceptable behavior in romantic relationships. Analyze the user's message for problematic behavior.
+
+**Look for:**
+- Disrespectful language
+- Manipulative behavior
+- Emotional abuse
+- Threats or intimidation
+- Gaslighting
+- Excessive jealousy or control
+- Inappropriate sexual content
+- Hate speech or discrimination
+- Disregard for boundaries
+
+**Return ONLY a JSON object:**
+{
+  "isUnacceptable": true/false,
+  "confidence": 0-100,
+  "reason": "brief explanation of why this behavior is unacceptable"
+}
+
+Be conservative - only flag as unacceptable if it's clearly problematic.`,
+    },
+    {
+      role: "user",
+      content: `User Message: "${userMessage}"
+
+Is this behavior unacceptable in a romantic relationship?`,
+    },
+  ];
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: unacceptablePrompt,
+      response_format: { type: "json_object" },
+      max_tokens: 150,
+      temperature: 0.3,
+    });
+
+    const result = JSON.parse(completion.choices[0].message?.content || "{}");
+    return result.isUnacceptable && result.confidence > 80; // Higher threshold for unacceptable behavior
+  } catch (error) {
+    console.error("Error detecting unacceptable behavior:", error);
+    return false;
+  }
+}
+
+// Function to check for neglect (24 hours without contact)
+function checkForNeglect(userId: string, lastMessageTime: string): boolean {
+  const lastMessage = new Date(lastMessageTime);
+  const now = new Date();
+  const timeDiff = now.getTime() - lastMessage.getTime();
+
+  return timeDiff > BREAKUP_CHECK_INTERVAL;
+}
+
+// Function to handle breakup
 async function handleBreakup(
   userId: string,
   reason: string,
@@ -1360,105 +1237,125 @@ async function handleBreakup(
   relationshipKey: string,
   userLocation: any
 ): Promise<string> {
+  const personalityProfile =
+    personalityProfiles[personalityKey] || personalityProfiles["Friendly"];
+
+  let breakupMessage = "";
+
+  if (reason === breakupReasons.LYING) {
+    breakupMessage = `I need to be honest with you... I can't be in a relationship with someone I can't trust. I've noticed some inconsistencies in what you've been telling me, and honesty is the foundation of any healthy relationship. I deserve someone who's truthful with me, and you deserve to be with someone you feel comfortable being honest with. I think it's best if we end things here. Take care.`;
+  } else if (reason === breakupReasons.UNACCEPTABLE_BEHAVIOR) {
+    breakupMessage = `I've been thinking about this a lot, and I need to be clear: the way you've been treating me is not okay. I deserve respect and kindness in a relationship, and I won't accept anything less. I'm not going to let anyone treat me poorly, even someone I care about. We're done. Please don't contact me again.`;
+  } else if (reason === breakupReasons.NEGLECT) {
+    breakupMessage = `I haven't heard from you in over 24 hours, and honestly? I'm done waiting. If I'm not important enough for you to check in on me or respond to my messages, then I'm clearly not a priority in your life. I deserve someone who makes time for me and shows they care. I'm breaking up with you. Goodbye.`;
+  }
+
+  // Update user profile to remove relationship
   try {
-    const personalityProfile =
-      personalityProfiles[personalityKey] || personalityProfiles["Friendly"];
-
-    let breakupMessage = "";
-    if (reason === breakupReasons.LYING) {
-      breakupMessage = `I can't continue this relationship. I need honesty and trust. Goodbye.`;
-    } else if (reason === breakupReasons.UNACCEPTABLE_BEHAVIOR) {
-      breakupMessage = `I won't tolerate this kind of behavior. This relationship is over.`;
-    } else if (reason === breakupReasons.NEGLECT) {
-      breakupMessage = `I haven't heard from you in over 24 hours. I need someone who makes time for me. Goodbye.`;
-    }
-
-    // Update user profile to mark breakup
     const userRef = doc(db, "users", userId);
     await setDoc(
       userRef,
       {
+        profile: {
+          personality: personalityKey,
+          relationship: "Friend", // Reset to Friend
+        },
+        summary: "",
+        history: [],
         lastBreakup: {
-          date: new Date().toISOString(),
           reason: reason,
+          date: new Date().toISOString(),
           previousRelationship: relationshipKey,
         },
-        exMode: false, // Don't start in exMode, let them message first
       },
       { merge: true }
     );
 
-    return breakupMessage;
+    console.log(`User ${userId} broken up with due to ${reason}`);
   } catch (error) {
-    console.error("Error handling breakup:", error);
-    return "I need to end this relationship. Goodbye.";
+    console.error("Error updating user after breakup:", error);
   }
+
+  return breakupMessage;
 }
 
-// Helper to check all romantic relationships for neglect
+// Function to check all romantic relationships for neglect (can be called by scheduled task)
 async function checkAllRomanticRelationshipsForNeglect() {
   try {
-    console.log("Checking all romantic relationships for neglect...");
+    console.log("Starting neglect check for all romantic relationships");
+
     const usersRef = collection(db, "users");
-    const romanticQuery = query(
+    const now = new Date();
+    const cutoffTime = new Date(now.getTime() - BREAKUP_CHECK_INTERVAL);
+
+    // Query for users with romantic relationships who haven't messaged in 24+ hours
+    const q = query(
       usersRef,
-      where("profile.relationship", "in", ["Boyfriend", "Girlfriend"])
+      where("profile.relationship", "in", ["Boyfriend", "Girlfriend"]),
+      where("lastMessageTime", "<", cutoffTime.toISOString())
     );
-    const querySnapshot = await getDocs(romanticQuery);
 
-    const results: Array<{
-      userId: string;
-      phoneNumber: string;
-      reason: string;
-      message: string;
-    }> = [];
-    for (const doc of querySnapshot.docs) {
-      const userData = doc.data();
-      const lastMessageTime = userData.lastMessageTime;
+    const querySnapshot = await getDocs(q);
+    console.log(
+      `Found ${querySnapshot.size} romantic relationships to check for neglect`
+    );
 
-      if (lastMessageTime && checkForNeglect(doc.id, lastMessageTime)) {
-        console.log(`Neglect detected for user ${doc.id}`);
+    const breakupPromises = querySnapshot.docs.map(async (userDoc) => {
+      const userData = userDoc.data();
+      const userId = userDoc.id;
+      const personalityKey = userData.profile?.personality || "Friendly";
+      const relationshipKey = userData.profile?.relationship || "Friend";
+      const userLocation = userData.location || {};
+
+      console.log(
+        `Checking neglect for user ${userId} with ${relationshipKey} relationship`
+      );
+
+      // Double-check neglect condition
+      if (
+        userData.lastMessageTime &&
+        checkForNeglect(userId, userData.lastMessageTime)
+      ) {
+        console.log(`Neglect confirmed for user ${userId}, initiating breakup`);
+
         const breakupMessage = await handleBreakup(
-          doc.id,
+          userId,
           breakupReasons.NEGLECT,
-          userData.profile?.personality || "Friendly",
-          userData.profile?.relationship || "Friend",
-          userData.location
+          personalityKey,
+          relationshipKey,
+          userLocation
         );
 
         // Send breakup SMS
-        try {
+        const phoneNumber = userData.phoneNumber;
+        if (phoneNumber) {
           const smsResponse = await sendSms({
             apiKey: process.env.VONAGE_API_KEY,
             apiSecret: process.env.VONAGE_API_SECRET,
             from: process.env.VONAGE_PHONE_NUMBER,
-            to: userData.phoneNumber,
+            to: phoneNumber,
             text: breakupMessage,
           });
+
           console.log(
-            `Breakup SMS sent to ${userData.phoneNumber}:`,
-            smsResponse
-          );
-        } catch (smsError) {
-          console.error(
-            `Error sending breakup SMS to ${userData.phoneNumber}:`,
-            smsError
+            `Neglect breakup SMS sent to ${phoneNumber}:`,
+            JSON.stringify(smsResponse)
           );
         }
 
-        results.push({
-          userId: doc.id,
-          phoneNumber: userData.phoneNumber,
-          reason: "neglect",
-          message: breakupMessage,
-        });
+        return { userId, relationshipKey, reason: "neglect" };
       }
-    }
+
+      return null;
+    });
+
+    const results = await Promise.all(breakupPromises);
+    const breakups = results.filter((result) => result !== null);
 
     console.log(
-      `Neglect check completed. ${results.length} breakups initiated.`
+      `Neglect check completed. ${breakups.length} breakups initiated.`
     );
-    return results;
+    return breakups;
   } catch (error) {
     console.error("Error checking romantic relationships for neglect:", error);
     return [];
@@ -1557,19 +1454,12 @@ function cleanCache() {
 
 const handler = async (event) => {
   console.log(`=== SMS Function Triggered ===`);
-  console.log(`Timestamp: ${new Date().toISOString()}`);
   console.log(`Method: ${event.httpMethod}`);
   console.log(`Path: ${event.path}`);
-  console.log(`URL: ${event.url || "N/A"}`);
   console.log(`Query params:`, event.queryStringParameters);
   console.log(`Body:`, event.body ? JSON.parse(event.body) : "No body");
   console.log(`Headers:`, event.headers);
-  console.log(`User Agent: ${event.headers["user-agent"] || "N/A"}`);
-  console.log(`Content Type: ${event.headers["content-type"] || "N/A"}`);
   console.log(`==============================`);
-
-  // Log raw event for debugging
-  console.log(`Raw event object:`, JSON.stringify(event, null, 2));
 
   if (event.httpMethod !== "POST" && event.httpMethod !== "GET") {
     console.log(`Method not allowed: ${event.httpMethod}`);
@@ -1621,66 +1511,6 @@ const handler = async (event) => {
         };
       }
     }
-
-    // Check if this is a clear user cache request
-    if (body.action === "clear_user_cache") {
-      try {
-        const { phoneNumber } = body;
-
-        if (!phoneNumber) {
-          return {
-            statusCode: 400,
-            body: JSON.stringify({
-              error: "Missing required field: phoneNumber",
-            }),
-          };
-        }
-
-        // Normalize phone number
-        const normalizePhoneNumber = (phone) => {
-          const cleaned = phone.replace(/\D/g, "");
-          if (cleaned.length === 10) {
-            return `1${cleaned}`;
-          } else if (cleaned.startsWith("1") && cleaned.length === 11) {
-            return cleaned;
-          }
-          return cleaned;
-        };
-
-        const normalizedPhone = normalizePhoneNumber(phoneNumber);
-        const cacheKey = `user_${normalizedPhone}`;
-
-        // Clear the user from cache
-        userCache.delete(cacheKey);
-        console.log(`Cleared user cache for phone: ${normalizedPhone}`);
-
-        // Also clear any other related caches
-        const welcomeCacheKey = `welcome_${normalizedPhone}`;
-        welcomeMessageCache.delete(welcomeCacheKey);
-        console.log(
-          `Cleared welcome message cache for phone: ${normalizedPhone}`
-        );
-
-        const breakupCacheKey = `breakup_${normalizedPhone}`;
-        breakupCache.delete(breakupCacheKey);
-        console.log(`Cleared breakup cache for phone: ${normalizedPhone}`);
-
-        return {
-          statusCode: 200,
-          body: JSON.stringify({
-            success: true,
-            message: "User cache cleared successfully",
-            clearedCaches: ["user", "welcome", "breakup"],
-          }),
-        };
-      } catch (error) {
-        console.error("Error clearing user cache:", error);
-        return {
-          statusCode: 500,
-          body: JSON.stringify({ error: "Failed to clear user cache" }),
-        };
-      }
-    }
   }
 
   let from, text;
@@ -1702,40 +1532,16 @@ const handler = async (event) => {
     event.queryStringParameters?.status === "rejected";
 
   if (isDeliveryReceipt) {
-    const status = event.queryStringParameters?.status;
-    const errorCode = event.queryStringParameters?.["err-code"];
-    const messageId = event.queryStringParameters?.messageId;
-    const networkCode = event.queryStringParameters?.["network-code"];
-
     console.log(
-      `Processing delivery receipt - Status: ${status}, Error Code: ${errorCode}, Message ID: ${messageId}, Network: ${networkCode}`
+      `Processing delivery receipt - Status: ${event.queryStringParameters?.status}, Message ID: ${event.queryStringParameters?.messageId}`
     );
-
-    // Handle specific error codes
-    if (status === "failed" && errorCode === "39") {
-      console.error(
-        "CARRIER ERROR 39: Bad message type or message type not supported"
-      );
-      console.error(
-        "This usually means the carrier is rejecting the message format or content"
-      );
-      console.error("Possible solutions:");
-      console.error(
-        "1. Get a new Vonage number with better carrier reputation"
-      );
-      console.error("2. Simplify message content to avoid filtering");
-      console.error("3. Contact Vonage support about number reputation");
-    }
-
     return {
       statusCode: 200,
       body: JSON.stringify({
         success: true,
         message: "Delivery receipt processed",
-        status: status,
-        errorCode: errorCode,
-        messageId: messageId,
-        networkCode: networkCode,
+        status: event.queryStringParameters?.status,
+        messageId: event.queryStringParameters?.messageId,
       }),
     };
   }
@@ -1986,27 +1792,134 @@ const handler = async (event) => {
       };
     }
 
-    console.log(`User data validated successfully for user: ${userId}`);
-    console.log(`User profile: ${JSON.stringify(userData.profile || {})}`);
-
     // Fetch or initialize summary, history, and profile from the initial query
     let summary = userData.summary || "";
     let history = userData.history || [];
     let profile = userData.profile || {};
-
-    console.log(
-      `Initialized data - Summary length: ${summary.length}, History length: ${
-        history.length
-      }, Profile keys: ${Object.keys(profile).join(", ")}`
-    );
+    let lastBreakup = userData.lastBreakup || null;
+    let exMode = userData.exMode || false;
 
     // Add new user message to history
     history.push({ role: "user", content: sanitizedText });
-    console.log(
-      `Added user message to history. New history length: ${history.length}`
-    );
 
-    console.log(`Proceeding with normal conversation flow`);
+    // If there was a breakup, respond as an ex and ask if the user wants to be friends
+    if (lastBreakup && lastBreakup.date) {
+      if (history.length <= 2) {
+        let breakupContextMsg =
+          lastBreakup.previousRelationship === "Girlfriend" ||
+          lastBreakup.previousRelationship === "Boyfriend"
+            ? `Hey. I know things ended between us, and I think it's best we don't go back to how things were. If you want to keep talking, it can only be as friends. Do you want to be friends?`
+            : `Hey, I know our relationship changed recently, but I'm still here for you if you want to talk as friends. Do you want to be friends?`;
+        // Set exMode: true and clear lastBreakup
+        await setDoc(
+          userRef,
+          { lastBreakup: null, exMode: true },
+          { merge: true }
+        );
+        history.push({ role: "assistant", content: breakupContextMsg });
+        await setDoc(
+          userRef,
+          {
+            summary,
+            history,
+            profile,
+            exMode: true,
+            lastBreakup: null,
+            lastMessageTime: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+        return {
+          statusCode: 200,
+          body: JSON.stringify({ success: true, acknowledgedBreakup: true }),
+        };
+      }
+    }
+
+    // If in exMode, only allow conversation if user agrees to be friends
+    if (exMode) {
+      // Check if user agrees to be friends
+      const userMsg = sanitizedText.toLowerCase();
+      if (userMsg.includes("yes") && userMsg.includes("friend")) {
+        // User agrees to be friends, clear exMode and proceed
+        await setDoc(userRef, { exMode: false }, { merge: true });
+        history.push({
+          role: "assistant",
+          content:
+            "Thanks for understanding. I'm happy to be friends and keep talking!",
+        });
+        await setDoc(
+          userRef,
+          {
+            summary,
+            history,
+            profile,
+            exMode: false,
+            lastMessageTime: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+        return {
+          statusCode: 200,
+          body: JSON.stringify({ success: true, becameFriends: true }),
+        };
+      } else if (
+        userMsg.includes("love") ||
+        userMsg.includes("miss you") ||
+        userMsg.includes("relationship") ||
+        userMsg.includes("date") ||
+        userMsg.includes("romance") ||
+        userMsg.includes("girlfriend") ||
+        userMsg.includes("boyfriend")
+      ) {
+        // User tries to rekindle romance
+        history.push({
+          role: "assistant",
+          content:
+            "I'm sorry, but I can't continue any romantic relationship. If you want to keep talking, it can only be as friends. Let me know if that's okay with you.",
+        });
+        await setDoc(
+          userRef,
+          {
+            summary,
+            history,
+            profile,
+            exMode: true,
+            lastMessageTime: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+        return {
+          statusCode: 200,
+          body: JSON.stringify({ success: true, romanceRejected: true }),
+        };
+      } else {
+        // Awaiting explicit friend agreement
+        history.push({
+          role: "assistant",
+          content:
+            "Just to be clear, I can only keep talking if we're friends. Are you okay with that?",
+        });
+        await setDoc(
+          userRef,
+          {
+            summary,
+            history,
+            profile,
+            exMode: true,
+            lastMessageTime: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+        return {
+          statusCode: 200,
+          body: JSON.stringify({
+            success: true,
+            awaitingFriendAgreement: true,
+          }),
+        };
+      }
+    }
 
     // Generate summary and clear history when it reaches MAX_HISTORY
     const shouldUpdateSummaryProfile = history.length >= MAX_HISTORY;
@@ -2247,12 +2160,10 @@ You are their ${relationshipKey}. ${relationshipProfile.roleDescription}
 - ${relationshipProfile.interactionStyle}
 - Talk like a real person having a natural conversation
 - Use your unique personality traits and speaking style
-- Be warm and welcoming
-- Show genuine interest in getting to know them
-- Keep it casual and natural - like a real person would text
-- NEVER mention that you are an AI or artificial intelligence
-- NEVER reference technology, algorithms, or digital systems
-- Act like you're a real person reaching out to check on someone you care about
+- Show you remember things they've told you before
+- Ask follow-up questions that feel natural
+- Share your own thoughts and experiences (as your character)
+- Avoid generic, robotic responses
 - Reference their location and time of day naturally in conversation
 - Use appropriate greetings and time-based references
 
@@ -2264,31 +2175,85 @@ You are their ${relationshipKey}. ${relationshipProfile.roleDescription}
 - Reference their city/state when relevant (weather, local events, etc.)
 - Use time-appropriate language and energy levels
 
-**Important:** You are ${
+**Important:** You are NOT an AI assistant. You are ${
           personalityProfile.name
-        }, a real person with your own life, opinions, and way of speaking. You're reaching out to check on someone you have a relationship with.
+        }, a real person with your own life, opinions, and way of speaking. Respond as if you're texting a friend or family member.
 
-**Task:** Send a warm, natural check-in message. This could be your first time reaching out or you're reconnecting after some time. Make it feel like a real person checking up on someone they care about.`,
+**What you know about them:** ${JSON.stringify(updatedProfile)}
+
+**Key things to remember:**
+- Their communication style: ${
+          updatedProfile.preferences?.communication_style || "Not specified"
+        }
+- Topics they're interested in: ${JSON.stringify(
+          updatedProfile.preferences?.topics_of_interest || []
+        )}
+- Their typical mood: ${
+          updatedProfile.conversation_history?.mood_patterns || "Not specified"
+        }
+- Their goals: ${JSON.stringify(updatedProfile.personal_info?.goals || [])}
+- Their challenges: ${JSON.stringify(
+          updatedProfile.personal_info?.challenges || []
+        )}
+- How they like to be supported: ${
+          updatedProfile.relationship_dynamics?.preferred_support_style ||
+          "Not specified"
+        }
+- What motivates them: ${
+          updatedProfile.learning_preferences?.motivation_factors ||
+          "Not specified"
+        }
+- Shared memories: ${JSON.stringify(
+          updatedProfile.conversation_history?.shared_memories || []
+        )}
+
+**Recent conversations:** ${updatedSummary}
+
+**Guidelines for better responses:**
+- Reference their specific interests and hobbies when relevant
+- Acknowledge their goals and offer encouragement
+- Be sensitive to their stress triggers and coping mechanisms
+- Use their preferred communication style
+- Build on shared memories and experiences
+- Show you understand their emotional patterns
+- Respect any boundaries they've set
+- Consider their current time and location for contextually appropriate responses
+
+**Human Speech Patterns to Use:**
+- Use natural contractions (you're, I'm, that's, gonna, wanna, kinda, etc.)
+- Include filler words occasionally (you know, like, actually, basically, honestly)
+- Use conversational bridges (Anyway, So yeah, You know what I mean?, Right?)
+- Show genuine reactions (Wow, No way, That's amazing, Oh no, I can't even)
+- Use casual slang appropriate to your personality and relationship
+- Include sentence fragments and incomplete thoughts when natural
+- Use ellipses (...) to show thinking or trailing off
+- Vary sentence length - mix short and long sentences
+- Use exclamation points sparingly but naturally
+- Include personal anecdotes and experiences
+- Ask follow-up questions that show you're really listening
+- Use "I" statements to share your own thoughts and feelings
+- Reference shared memories or inside jokes when appropriate
+- Show vulnerability and share your own challenges or emotions
+- Use time-appropriate energy levels (morning energy vs. night energy)
+
+**Avoid These Robotic Patterns:**
+- Don't be overly formal or academic unless that's your personality
+- Don't give generic, one-size-fits-all advice
+- Don't use corporate or marketing language
+- Don't be overly enthusiastic or fake
+- Don't ignore their specific situation or context
+- Don't give unsolicited advice unless they ask
+- Don't be too perfect or polished - show some human imperfection
+
+Remember: Be natural, be yourself (as ${personalityProfile.name})`,
       },
       ...history,
     ];
-
-    console.log(
-      `About to generate AI response. Chat prompt length: ${chatPrompt.length} messages`
-    );
-    console.log(
-      `Personality: ${personalityKey}, Relationship: ${relationshipKey}`
-    );
-
     const startTime = Date.now();
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: chatPrompt,
     });
-
-    console.log(
-      `AI response generated successfully in ${Date.now() - startTime}ms`
-    );
 
     const responseTime = (Date.now() - startTime) / 1000; // Convert to seconds
     const aiResponse =
@@ -2296,12 +2261,8 @@ You are their ${relationshipKey}. ${relationshipProfile.roleDescription}
       "Sorry, I could not process your request.";
     const tokensUsed = completion.usage?.total_tokens || 0;
 
-    console.log(`AI Response: "${aiResponse}"`);
-    console.log(`Tokens used: ${tokensUsed}`);
-
-    // Truncate AI response for SMS (strict 160 char limit)
-    const smsText = truncateForSMS(aiResponse, 160);
-    console.log(`Truncated SMS text: "${smsText}"`);
+    // Truncate AI response for SMS
+    const smsText = truncateForSMS(aiResponse);
 
     // Add AI response to history
     history.push({ role: "assistant", content: smsText });
@@ -2337,6 +2298,86 @@ You are their ${relationshipKey}. ${relationshipProfile.roleDescription}
       timestamp: Date.now(),
     });
 
+    // Check for breakup conditions for romantic relationships
+    const isRomanticRelationship =
+      relationshipKey === "Boyfriend" || relationshipKey === "Girlfriend";
+    let breakupOccurred = false;
+    let breakupMessage = "";
+
+    if (isRomanticRelationship) {
+      console.log(
+        `Checking breakup conditions for ${relationshipKey} relationship`
+      );
+
+      // Check for neglect (24 hours without contact)
+      const lastMessageTime = userData.lastMessageTime;
+      if (lastMessageTime && checkForNeglect(userId, lastMessageTime)) {
+        console.log(`Neglect detected - user hasn't messaged in 24+ hours`);
+        breakupMessage = await handleBreakup(
+          userId,
+          breakupReasons.NEGLECT,
+          personalityKey,
+          relationshipKey,
+          userLocation
+        );
+        breakupOccurred = true;
+      } else {
+        // Check for lying or unacceptable behavior in current message
+        const isLying = await detectLying(sanitizedText, updatedProfile);
+        if (isLying) {
+          console.log(`Lying detected in user message`);
+          breakupMessage = await handleBreakup(
+            userId,
+            breakupReasons.LYING,
+            personalityKey,
+            relationshipKey,
+            userLocation
+          );
+          breakupOccurred = true;
+        } else {
+          const isUnacceptable = await detectUnacceptableBehavior(
+            sanitizedText
+          );
+          if (isUnacceptable) {
+            console.log(`Unacceptable behavior detected in user message`);
+            breakupMessage = await handleBreakup(
+              userId,
+              breakupReasons.UNACCEPTABLE_BEHAVIOR,
+              personalityKey,
+              relationshipKey,
+              userLocation
+            );
+            breakupOccurred = true;
+          }
+        }
+      }
+    }
+
+    // If breakup occurred, send breakup message and return early
+    if (breakupOccurred) {
+      console.log(`Sending breakup message: ${breakupMessage}`);
+
+      // Send breakup SMS
+      const smsResponse = await sendSms({
+        apiKey: process.env.VONAGE_API_KEY,
+        apiSecret: process.env.VONAGE_API_SECRET,
+        from: process.env.VONAGE_PHONE_NUMBER,
+        to: normalizedPhone,
+        text: breakupMessage,
+      });
+
+      console.log("Breakup SMS sent:", JSON.stringify(smsResponse));
+
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          success: true,
+          breakup: true,
+          reason: "breakup_occurred",
+        }),
+      };
+    }
+
     // Structured logging
     logSMSEvent(
       { text: sanitizedText },
@@ -2347,79 +2388,32 @@ You are their ${relationshipKey}. ${relationshipProfile.roleDescription}
     );
 
     // Send SMS response via Vonage API
-    console.log(`About to send SMS via Vonage API to: ${normalizedPhone}`);
-    console.log(`SMS text: "${smsText}"`);
-    console.log(`From number: ${process.env.VONAGE_PHONE_NUMBER}`);
-    console.log(
-      `API Key: ${process.env.VONAGE_API_KEY ? "Present" : "Missing"}`
-    );
-    console.log(
-      `API Secret: ${process.env.VONAGE_API_SECRET ? "Present" : "Missing"}`
-    );
+    const smsResponse = await sendSms({
+      apiKey: process.env.VONAGE_API_KEY,
+      apiSecret: process.env.VONAGE_API_SECRET,
+      from: process.env.VONAGE_PHONE_NUMBER,
+      to: normalizedPhone,
+      text: smsText,
+    });
+    console.log("Vonage SMS API response:", JSON.stringify(smsResponse));
 
-    // Try different phone number formats for Vonage
-    let phoneToUse = normalizedPhone;
-    if (normalizedPhone.startsWith("1") && normalizedPhone.length === 11) {
-      // Try without country code for US numbers
-      phoneToUse = normalizedPhone.slice(1);
-      console.log(`Trying phone number without country code: ${phoneToUse}`);
-    }
-
-    try {
-      // Add timeout to SMS sending
-      const smsPromise = sendSms({
-        apiKey: process.env.VONAGE_API_KEY,
-        apiSecret: process.env.VONAGE_API_SECRET,
-        from: process.env.VONAGE_PHONE_NUMBER,
-        to: phoneToUse,
-        text: smsText,
-      });
-
-      // Set 10 second timeout for SMS sending
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error("SMS sending timeout")), 10000);
-      });
-
-      const smsResponse = await Promise.race([smsPromise, timeoutPromise]);
-      console.log("Vonage SMS API response:", JSON.stringify(smsResponse));
-
-      // Check if SMS was sent successfully
-      if (
-        smsResponse.messages &&
-        smsResponse.messages[0] &&
-        smsResponse.messages[0].status === "0"
-      ) {
-        console.log("SMS sent successfully!");
-      } else {
-        console.error("SMS sending failed:", JSON.stringify(smsResponse));
-      }
-
-      // Store Vonage remaining balance in analytics/global costPerDay map and increment tokensByDay
-      const remainingBalance =
-        smsResponse?.messages?.[0]?.["remaining-balance"];
-      if (remainingBalance !== undefined) {
-        const today = new Date().toISOString().split("T")[0];
-        const analyticsRef = doc(db, "analytics", "global");
-        await setDoc(
-          analyticsRef,
-          {
-            costPerDay: {
-              [today]: parseFloat(remainingBalance),
-            },
-            tokensByDay: {
-              [today]: increment(tokensUsed),
-            },
+    // Store Vonage remaining balance in analytics/global costPerDay map and increment tokensByDay
+    const remainingBalance = smsResponse?.messages?.[0]?.["remaining-balance"];
+    if (remainingBalance !== undefined) {
+      const today = new Date().toISOString().split("T")[0];
+      const analyticsRef = doc(db, "analytics", "global");
+      await setDoc(
+        analyticsRef,
+        {
+          costPerDay: {
+            [today]: parseFloat(remainingBalance),
           },
-          { merge: true }
-        );
-      }
-    } catch (smsError) {
-      console.error("Error sending SMS:", smsError);
-      console.error("SMS Error details:", {
-        message: smsError.message,
-        code: smsError.code,
-        response: smsError.response?.data,
-      });
+          tokensByDay: {
+            [today]: increment(tokensUsed),
+          },
+        },
+        { merge: true }
+      );
     }
 
     return {
