@@ -41,9 +41,106 @@ export default function Messages({
     "/images/default-user-avatar.svg"
   );
   const [lastUserMessageTime, setLastUserMessageTime] = useState<number>(0);
-  const [followUpTimeout, setFollowUpTimeout] = useState<NodeJS.Timeout | null>(
-    null
-  );
+  const [followUpTimeout, setFollowUpTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [showCrisisResources, setShowCrisisResources] = useState(false);
+
+  // Crisis detection patterns
+  const crisisPatterns = {
+    selfHarm: [
+      /kill myself/i,
+      /want to die/i,
+      /end my life/i,
+      /hurt myself/i,
+      /cut myself/i,
+      /self harm/i,
+      /suicide/i,
+      /take my life/i,
+      /don't want to live/i,
+      /better off dead/i,
+      /no reason to live/i,
+      /can't go on/i,
+      /give up/i,
+      /end it all/i,
+      /harm myself/i,
+      /bleed out/i,
+      /overdose/i,
+      /hang myself/i,
+      /jump off/i,
+      /crash my car/i,
+      /gun/i,
+      /pills/i,
+      /poison/i,
+    ],
+    severeDistress: [
+      /can't take it anymore/i,
+      /breaking down/i,
+      /losing my mind/i,
+      /going crazy/i,
+      /mental breakdown/i,
+      /complete despair/i,
+      /hopeless/i,
+      /helpless/i,
+      /worthless/i,
+      /burden/i,
+      /everyone would be better off/i,
+      /no one cares/i,
+      /no one understands/i,
+      /all alone/i,
+      /no one to talk to/i,
+      /completely lost/i,
+      /can't function/i,
+      /can't cope/i,
+      /overwhelmed/i,
+      /drowning/i,
+      /suffocating/i,
+      /trapped/i,
+      /no way out/i,
+    ],
+    immediateDanger: [
+      /doing it now/i,
+      /right now/i,
+      /tonight/i,
+      /this moment/i,
+      /immediately/i,
+      /as we speak/i,
+      /currently/i,
+      /in progress/i,
+      /already/i,
+      /started/i,
+      /begun/i,
+      /attempting/i,
+      /trying to/i,
+      /going to/i,
+      /about to/i,
+      /planning to/i,
+      /prepared to/i,
+      /ready to/i,
+      /have the/i,
+      /got the/i,
+      /with me/i,
+      /in my hand/i,
+      /in front of me/i,
+    ]
+  };
+
+  const detectCrisis = (message: string) => {
+    // Check for immediate danger first (highest priority)
+    if (crisisPatterns.immediateDanger.some(pattern => pattern.test(message))) {
+      return 'immediate';
+    }
+    
+    // Check for self-harm ideation
+    if (crisisPatterns.selfHarm.some(pattern => pattern.test(message))) {
+      return 'high';
+    }
+    
+    // Check for severe distress
+    if (crisisPatterns.severeDistress.some(pattern => pattern.test(message))) {
+      return 'moderate';
+    }
+    
+    return 'none';
+  };
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -519,6 +616,13 @@ export default function Messages({
       setFollowUpTimeout(null);
     }
 
+    // Check for crisis keywords
+    const crisisLevel = detectCrisis(message);
+    if (crisisLevel !== 'none') {
+      setShowCrisisResources(true);
+      console.log(`🚨 Crisis detected on frontend: ${crisisLevel}`);
+    }
+
     setSending(true);
 
     try {
@@ -629,6 +733,38 @@ export default function Messages({
 
   return (
     <div className="flex flex-col h-full">
+      {/* Crisis Resources Banner */}
+      {showCrisisResources && (
+        <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-4 rounded-lg">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">
+                Crisis Support Available
+              </h3>
+              <div className="mt-2 text-sm text-red-700">
+                <p>If you're having thoughts of self-harm or suicide, help is available 24/7:</p>
+                <div className="mt-2 space-y-1">
+                  <p><strong>988</strong> - Suicide & Crisis Lifeline (Free & Confidential)</p>
+                  <p><strong>911</strong> - Emergency Services (If in immediate danger)</p>
+                  <p><strong>Crisis Text Line</strong> - Text HOME to 741741</p>
+                </div>
+                <button
+                  onClick={() => setShowCrisisResources(false)}
+                  className="mt-2 text-red-600 hover:text-red-500 underline text-xs"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl shadow-sm flex-1 flex flex-col overflow-hidden">
         <div className="p-6 border-b border-gray-200 flex-shrink-0">
           <h2 className="text-xl font-semibold text-gray-900">
@@ -776,11 +912,7 @@ export default function Messages({
                 <div className="text-xs opacity-75 mb-1">
                   {aiPersonality?.name || "SwanAI"}
                 </div>
-                {aiTypingText ? (
-                  <div className="text-sm italic text-gray-600 mb-2">
-                    {aiTypingText}
-                  </div>
-                ) : null}
+                {/* The aiTypingText state was removed, so this will be null */}
                 <div className="flex space-x-1">
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
                   <div

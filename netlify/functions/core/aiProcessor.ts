@@ -837,6 +837,154 @@ function cleanCache() {
   }
 }
 
+// NEW: Crisis detection and intervention system
+function detectCrisisKeywords(message) {
+  const crisisPatterns = {
+    selfHarm: [
+      /kill myself/i,
+      /want to die/i,
+      /end my life/i,
+      /hurt myself/i,
+      /cut myself/i,
+      /self harm/i,
+      /suicide/i,
+      /take my life/i,
+      /don't want to live/i,
+      /better off dead/i,
+      /no reason to live/i,
+      /can't go on/i,
+      /give up/i,
+      /end it all/i,
+      /harm myself/i,
+      /bleed out/i,
+      /overdose/i,
+      /hang myself/i,
+      /jump off/i,
+      /crash my car/i,
+      /gun/i,
+      /pills/i,
+      /poison/i,
+    ],
+    severeDistress: [
+      /can't take it anymore/i,
+      /breaking down/i,
+      /losing my mind/i,
+      /going crazy/i,
+      /mental breakdown/i,
+      /complete despair/i,
+      /hopeless/i,
+      /helpless/i,
+      /worthless/i,
+      /burden/i,
+      /everyone would be better off/i,
+      /no one cares/i,
+      /no one understands/i,
+      /all alone/i,
+      /no one to talk to/i,
+      /completely lost/i,
+      /can't function/i,
+      /can't cope/i,
+      /overwhelmed/i,
+      /drowning/i,
+      /suffocating/i,
+      /trapped/i,
+      /no way out/i,
+    ],
+    immediateDanger: [
+      /doing it now/i,
+      /right now/i,
+      /tonight/i,
+      /this moment/i,
+      /immediately/i,
+      /as we speak/i,
+      /currently/i,
+      /in progress/i,
+      /already/i,
+      /started/i,
+      /begun/i,
+      /attempting/i,
+      /trying to/i,
+      /going to/i,
+      /about to/i,
+      /planning to/i,
+      /prepared to/i,
+      /ready to/i,
+      /have the/i,
+      /got the/i,
+      /with me/i,
+      /in my hand/i,
+      /in front of me/i,
+    ]
+  };
+
+  const detected = {
+    selfHarm: false,
+    severeDistress: false,
+    immediateDanger: false,
+    crisisLevel: 'none'
+  };
+
+  // Check for immediate danger first (highest priority)
+  if (crisisPatterns.immediateDanger.some(pattern => pattern.test(message))) {
+    detected.immediateDanger = true;
+    detected.crisisLevel = 'immediate';
+  }
+
+  // Check for self-harm ideation
+  if (crisisPatterns.selfHarm.some(pattern => pattern.test(message))) {
+    detected.selfHarm = true;
+    if (detected.crisisLevel === 'none') detected.crisisLevel = 'high';
+  }
+
+  // Check for severe distress
+  if (crisisPatterns.severeDistress.some(pattern => pattern.test(message))) {
+    detected.severeDistress = true;
+    if (detected.crisisLevel === 'none') detected.crisisLevel = 'moderate';
+  }
+
+  return detected;
+}
+
+function generateCrisisResponse(crisisLevel, relationship) {
+  const crisisResponses = {
+    immediate: {
+      Girlfriend: `I'm so worried about you right now. Please, please don't do anything to hurt yourself. I care about you so much and I need you to be safe. Can you promise me you'll call 988 (Suicide & Crisis Lifeline) right now? They have people who can help you through this moment. I'm here for you, but you need professional help right now. Please call them - it's free and confidential.`,
+      Boyfriend: `Babe, I'm really scared for you right now. Please don't do anything to hurt yourself. I love you and I need you to be safe. Can you call 988 right now? It's the Suicide & Crisis Lifeline and they can help you through this. Please promise me you'll call them - it's free and confidential. I'm here for you, but you need immediate professional help.`,
+      Therapist: `I'm very concerned about your safety right now. This is a crisis situation that requires immediate professional intervention. Please call 988 (Suicide & Crisis Lifeline) immediately. They have trained crisis counselors available 24/7. This is not something you should handle alone, and I want you to get the help you need right now.`,
+      Coach: `This is a serious situation that needs immediate attention. Your safety is the most important thing right now. Please call 988 (Suicide & Crisis Lifeline) immediately. They have professionals who can help you through this crisis. Your goals and progress matter, but your life matters more. Please get help right now.`,
+      Friend: `Dude, I'm really worried about you. Please don't do anything to hurt yourself. You matter to me and I need you to be safe. Can you call 988 right now? It's the Suicide & Crisis Lifeline and they can help you through this. Please promise me you'll call them - it's free and confidential.`,
+      Mom: `Honey, I'm so scared for you right now. Please don't do anything to hurt yourself. I love you more than anything and I need you to be safe. Can you call 988 right now? It's the Suicide & Crisis Lifeline and they have people who can help you through this moment. Please promise me you'll call them.`,
+      Dad: `Son, I'm really worried about you right now. Please don't do anything to hurt yourself. I love you and I need you to be safe. Can you call 988 right now? It's the Suicide & Crisis Lifeline and they can help you through this. Please promise me you'll call them - it's free and confidential.`,
+      Cousin: `Cuz, I'm really worried about you right now. Please don't do anything to hurt yourself. You matter to me and I need you to be safe. Can you call 988 right now? It's the Suicide & Crisis Lifeline and they can help you through this. Please promise me you'll call them.`,
+      default: `I'm very concerned about your safety right now. Please call 988 (Suicide & Crisis Lifeline) immediately. They have trained crisis counselors available 24/7 who can help you through this moment. This is not something you should handle alone. Please get help right now.`
+    },
+    high: {
+      Girlfriend: `I'm really worried about you, babe. These thoughts are serious and you shouldn't have to deal with them alone. Can you call 988 (Suicide & Crisis Lifeline) right now? They have people who can help you work through these feelings. I care about you so much and I want you to get the help you need.`,
+      Boyfriend: `Babe, I'm concerned about you. These thoughts are serious and you need professional help. Can you call 988 right now? It's the Suicide & Crisis Lifeline and they can help you through this. I love you and I want you to be safe.`,
+      Therapist: `I'm concerned about these thoughts you're having. This is a serious situation that requires professional intervention. Please call 988 (Suicide & Crisis Lifeline) immediately. They have trained crisis counselors who can help you work through these feelings safely.`,
+      Coach: `These thoughts are serious and need immediate attention. Your safety is the priority right now. Please call 988 (Suicide & Crisis Lifeline) immediately. They have professionals who can help you through this crisis.`,
+      Friend: `Dude, these thoughts are serious. You shouldn't have to deal with this alone. Can you call 988 right now? It's the Suicide & Crisis Lifeline and they can help you work through these feelings. I care about you.`,
+      Mom: `Honey, these thoughts are very serious. I'm worried about you and you need professional help. Can you call 988 right now? It's the Suicide & Crisis Lifeline and they can help you through this. I love you and I want you to be safe.`,
+      Dad: `Son, these thoughts are serious. You need professional help right now. Can you call 988? It's the Suicide & Crisis Lifeline and they can help you work through these feelings. I love you and I want you to be safe.`,
+      Cousin: `Cuz, these thoughts are serious. You shouldn't have to deal with this alone. Can you call 988 right now? It's the Suicide & Crisis Lifeline and they can help you. I care about you.`,
+      default: `These thoughts are serious and require immediate professional attention. Please call 988 (Suicide & Crisis Lifeline) right now. They have trained crisis counselors who can help you work through these feelings safely.`
+    },
+    moderate: {
+      Girlfriend: `I'm worried about you, babe. You seem to be going through a really tough time. Have you considered talking to someone professional about these feelings? There are people who can help you work through this. I care about you and I want you to feel better.`,
+      Boyfriend: `Babe, I'm concerned about how you're feeling. These are serious feelings and you shouldn't have to deal with them alone. Have you thought about talking to a professional? I love you and I want you to get the help you need.`,
+      Therapist: `I'm concerned about the level of distress you're experiencing. These feelings are serious and you deserve professional support. Have you considered reaching out to a crisis hotline or mental health professional? There are resources available to help you.`,
+      Coach: `I'm concerned about how you're feeling. These are serious feelings that need attention. Have you considered talking to a mental health professional? Your well-being is important and there are people who can help you work through this.`,
+      Friend: `Dude, you seem to be going through a really rough time. These feelings are serious and you shouldn't have to deal with them alone. Have you thought about talking to someone professional? I care about you.`,
+      Mom: `Honey, I'm worried about how you're feeling. These are serious feelings and you need support. Have you considered talking to a professional? I love you and I want you to get the help you need.`,
+      Dad: `Son, I'm concerned about how you're feeling. These are serious feelings and you shouldn't handle them alone. Have you thought about talking to a professional? I love you and I want you to be safe.`,
+      Cousin: `Cuz, you seem to be going through a really tough time. These feelings are serious and you shouldn't have to deal with them alone. Have you thought about talking to someone professional? I care about you.`,
+      default: `I'm concerned about the level of distress you're experiencing. These feelings are serious and you deserve professional support. Have you considered reaching out to a crisis hotline or mental health professional? There are resources available to help you.`
+    }
+  };
+
+  return crisisResponses[crisisLevel]?.[relationship] || crisisResponses[crisisLevel]?.default || crisisResponses.moderate.default;
+}
+
 // Main AI processing function
 async function processUserMessage(userId, message) {
   console.log(`Processing message for user ${userId}: "${message}"`);
@@ -1372,21 +1520,47 @@ Remember: Be natural, be yourself (as ${personalityProfile.name})`,
       ...history,
     ];
 
-    const startTime = Date.now();
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: chatPrompt,
-    });
+    // Check for crisis keywords BEFORE generating AI response
+    const crisisDetection = detectCrisisKeywords(message);
+    let aiResponse;
+    let tokensUsed = 0;
+    let responseTime = 0;
 
-    const responseTime = (Date.now() - startTime) / 1000; // Convert to seconds
-    let aiResponse =
-      completion.choices[0].message?.content ||
-      "Sorry, I could not process your request.";
+    if (crisisDetection.crisisLevel !== 'none') {
+      console.log(`🚨 CRISIS DETECTED: ${crisisDetection.crisisLevel}`);
+      console.log(`- Self-harm: ${crisisDetection.selfHarm}`);
+      console.log(`- Severe distress: ${crisisDetection.severeDistress}`);
+      console.log(`- Immediate danger: ${crisisDetection.immediateDanger}`);
+      
+      // Generate crisis response immediately
+      aiResponse = generateCrisisResponse(crisisDetection.crisisLevel, relationshipKey);
+      responseTime = 0.1; // Minimal response time for crisis
+      
+      // Log crisis intervention
+      console.log("🚨 CRISIS INTERVENTION ACTIVATED");
+      console.log(`Relationship: ${relationshipKey}`);
+      console.log(`Crisis Level: ${crisisDetection.crisisLevel}`);
+      console.log("Response:", aiResponse);
+    } else {
+      // Normal AI processing for non-crisis messages
+      const startTime = Date.now();
+      const completion = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: chatPrompt,
+      });
 
-    // Replace any em dashes with regular punctuation
-    aiResponse = aiResponse.replace(/—/g, ", ");
-    aiResponse = aiResponse.replace(/–/g, ", ");
-    const tokensUsed = completion.usage?.total_tokens || 0;
+      responseTime = (Date.now() - startTime) / 1000; // Convert to seconds
+      aiResponse =
+        completion.choices[0].message?.content ||
+        "Sorry, I could not process your request.";
+
+      // Replace any em dashes with regular punctuation
+      aiResponse = aiResponse.replace(/—/g, ", ");
+      aiResponse = aiResponse.replace(/–/g, ", ");
+      tokensUsed = completion.usage?.total_tokens || 0;
+    }
+
+
 
     // Check if user is asking "wyd" and generate POV image
     let povImageUrl = null;
