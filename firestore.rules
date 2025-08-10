@@ -2,10 +2,12 @@ rules_version='2'
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow authenticated users to read users collection
+    // Allow authenticated users and server-side access to users collection
     match /users/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null || 
+        (request.auth == null && request.headers.get("x-nf-request-id") != null);
+      allow write: if (request.auth != null && request.auth.uid == userId) || 
+        (request.auth == null && request.headers.get("x-nf-request-id") != null);
     }
     // Allow authenticated users to read bottom level resumes collection
       match /users/{userId}/resume/{docId} {
@@ -18,10 +20,11 @@ service cloud.firestore {
         (resource == null || resource.data.userId == request.auth.uid);
     }
     
-    // Allow authenticated users to read analytics
+    // Allow authenticated users and server-side access to analytics
     match /analytics/{document=**} {
-      allow read: if request.auth != null;
-      allow write: if false; // Only allow writes through admin SDK
+      allow read: if request.auth != null || 
+        (request.auth == null && request.headers.get("x-nf-request-id") != null);
+      allow write: if request.auth == null && request.headers.get("x-nf-request-id") != null;
     }
     
       // Allow authenticated users to read paths collection
