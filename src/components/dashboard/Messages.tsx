@@ -28,7 +28,7 @@ export default function Messages({ userId }: MessagesProps) {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, aiTyping]);
 
   useEffect(() => {
     const fetchMessages = async () => {
@@ -91,6 +91,10 @@ export default function Messages({ userId }: MessagesProps) {
               : msg
           )
         );
+        // Scroll to show "seen" indicator
+        setTimeout(() => {
+          scrollToBottom();
+        }, 100);
       }, 1000);
 
       // Calculate realistic response time
@@ -99,6 +103,10 @@ export default function Messages({ userId }: MessagesProps) {
       // Show AI typing indicator after "seen" delay
       setTimeout(() => {
         setAiTyping(true);
+        // Scroll to show typing indicator
+        setTimeout(() => {
+          scrollToBottom();
+        }, 100);
       }, 1500);
 
       // Send message to API with delay
