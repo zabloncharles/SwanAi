@@ -13,9 +13,14 @@ interface Message {
 
 interface MessagesProps {
   userId: string;
+  aiPersonality?: {
+    name: string;
+    personality: string;
+    relationship: string;
+  };
 }
 
-export default function Messages({ userId }: MessagesProps) {
+export default function Messages({ userId, aiPersonality }: MessagesProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -192,7 +197,7 @@ export default function Messages({ userId }: MessagesProps) {
                   }`}
                 >
                   <div className="text-xs opacity-75 mb-1">
-                    {message.role === "user" ? "You" : "SwanAI"}
+                    {message.role === "user" ? "You" : aiPersonality?.name || "SwanAI"}
                   </div>
                   <p className="whitespace-pre-wrap text-sm">{message.content}</p>
                   
@@ -225,7 +230,7 @@ export default function Messages({ userId }: MessagesProps) {
           {aiTyping && (
             <div className="flex justify-start">
               <div className="bg-gray-100 text-gray-800 px-4 py-2 rounded-lg">
-                <div className="text-xs opacity-75 mb-1">SwanAI</div>
+                <div className="text-xs opacity-75 mb-1">{aiPersonality?.name || "SwanAI"}</div>
                 <div className="flex space-x-1">
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>

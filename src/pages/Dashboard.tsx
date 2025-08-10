@@ -438,7 +438,17 @@ export default function Dashboard() {
                   {/* Messages tab content */}
                   {activeTab === "Messages" && userData.uid && (
                     <div className="h-[calc(100vh-200px)]">
-                      <Messages userId={userData.uid} />
+                      <Messages 
+                        userId={userData.uid} 
+                        aiPersonality={{
+                          name: userData.profile?.personality === "Professional" ? "Alex Thompson" :
+                                userData.profile?.personality === "Friendly" ? "Sam Rodriguez" :
+                                userData.profile?.personality === "CognitiveTherapist" ? "Dr. Sarah Chen" :
+                                "SwanAI",
+                          personality: userData.profile?.personality || "Friendly",
+                          relationship: userData.profile?.relationship || "Friend"
+                        }}
+                      />
                     </div>
                   )}
                   {/* Settings tab content */}
