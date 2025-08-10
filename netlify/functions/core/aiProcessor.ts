@@ -205,44 +205,45 @@ async function processUserMessage(userId, message) {
 - Personal details (work, family, hobbies, etc.)
 - Relationship dynamics and social connections
 
-"updatedProfile": A detailed user profile with these structured fields:
+"updatedProfile": A detailed user profile with these structured fields. IMPORTANT: Preserve ALL existing information and only ADD or UPDATE new information discovered in this conversation:
+
 {
-  "personality": "current personality setting",
-  "relationship": "current relationship setting", 
-  "name": "user's name if mentioned",
+  "personality": "current personality setting (preserve existing)",
+  "relationship": "current relationship setting (preserve existing)", 
+  "name": "user's name if mentioned (preserve existing)",
   "preferences": {
-    "communication_style": "how they prefer to communicate",
-    "topics_of_interest": ["array of topics they enjoy"],
-    "emotional_patterns": "how they typically express emotions",
-    "response_preferences": "how they like to be responded to"
+    "communication_style": "how they prefer to communicate (preserve existing, update if new info)",
+    "topics_of_interest": ["array of topics they enjoy (merge with existing)"],
+    "emotional_patterns": "how they typically express emotions (preserve existing, update if new info)",
+    "response_preferences": "how they like to be responded to (preserve existing, update if new info)"
   },
   "personal_info": {
-    "age_range": "approximate age if mentioned",
-    "occupation": "work/job details if mentioned",
-    "location": "where they live if mentioned",
-    "family_status": "family details if mentioned",
-    "hobbies": ["array of hobbies/interests"],
-    "goals": ["array of goals mentioned"],
-    "challenges": ["array of challenges discussed"]
+    "age_range": "approximate age if mentioned (preserve existing)",
+    "occupation": "work/job details if mentioned (preserve existing)",
+    "location": "where they live if mentioned (preserve existing)",
+    "family_status": "family details if mentioned (preserve existing)",
+    "hobbies": ["array of hobbies/interests (merge with existing)"],
+    "goals": ["array of goals mentioned (merge with existing)"],
+    "challenges": ["array of challenges discussed (merge with existing)"]
   },
   "conversation_history": {
-    "frequent_topics": ["topics they talk about often"],
-    "mood_patterns": "typical emotional states",
-    "communication_frequency": "how often they message",
-    "response_style": "how they typically respond",
-    "shared_memories": ["important memories or experiences mentioned"]
+    "frequent_topics": ["topics they talk about often (merge with existing)"],
+    "mood_patterns": "typical emotional states (preserve existing, update if new patterns)",
+    "communication_frequency": "how often they message (preserve existing)",
+    "response_style": "how they typically respond (preserve existing, update if new patterns)",
+    "shared_memories": ["important memories or experiences mentioned (merge with existing)"]
   },
   "relationship_dynamics": {
-    "trust_level": "how much they trust the AI",
-    "comfort_level": "how comfortable they are sharing",
-    "preferred_support_style": "how they like to be supported",
-    "boundaries": "any boundaries they've set"
+    "trust_level": "how much they trust the AI (preserve existing, update if changed)",
+    "comfort_level": "how comfortable they are sharing (preserve existing, update if changed)",
+    "preferred_support_style": "how they like to be supported (preserve existing, update if new info)",
+    "boundaries": "any boundaries they've set (preserve existing, update if new info)"
   },
   "learning_preferences": {
-    "preferred_explanation_style": "how they like things explained",
-    "motivation_factors": "what motivates them",
-    "stress_triggers": "what causes them stress",
-    "coping_mechanisms": "how they handle difficult situations"
+    "preferred_explanation_style": "how they like things explained (preserve existing, update if new info)",
+    "motivation_factors": "what motivates them (preserve existing, update if new info)",
+    "stress_triggers": "what causes them stress (preserve existing, update if new info)",
+    "coping_mechanisms": "how they handle difficult situations (preserve existing, update if new info)"
   }
 }
 
@@ -265,7 +266,79 @@ Analyze the conversation deeply and extract as much meaningful information as po
       try {
         const result = JSON.parse(analysisResult.choices[0].message.content);
         updatedSummary = result.updatedSummary || summary;
-        updatedProfile = result.updatedProfile || profile;
+        
+        // Merge the new profile with existing profile data
+        const newProfile = result.updatedProfile || {};
+        
+        // Helper function to merge arrays without duplicates
+        const mergeArrays = (existing = [], newItems = []) => {
+          const combined = [...existing, ...newItems];
+          return [...new Set(combined)]; // Remove duplicates
+        };
+        
+        updatedProfile = {
+          // Preserve existing profile data
+          ...profile,
+          // Merge with new analysis data
+          ...newProfile,
+          // Ensure nested objects are properly merged
+          preferences: {
+            ...(profile?.preferences || {}),
+            ...(newProfile?.preferences || {}),
+            // Merge arrays properly
+            topics_of_interest: mergeArrays(
+              profile?.preferences?.topics_of_interest || [],
+              newProfile?.preferences?.topics_of_interest || []
+            )
+          },
+          personal_info: {
+            ...(profile?.personal_info || {}),
+            ...(newProfile?.personal_info || {}),
+            // Merge arrays properly
+            hobbies: mergeArrays(
+              profile?.personal_info?.hobbies || [],
+              newProfile?.personal_info?.hobbies || []
+            ),
+            goals: mergeArrays(
+              profile?.personal_info?.goals || [],
+              newProfile?.personal_info?.goals || []
+            ),
+            challenges: mergeArrays(
+              profile?.personal_info?.challenges || [],
+              newProfile?.personal_info?.challenges || []
+            )
+          },
+          conversation_history: {
+            ...(profile?.conversation_history || {}),
+            ...(newProfile?.conversation_history || {}),
+            // Merge arrays properly
+            frequent_topics: mergeArrays(
+              profile?.conversation_history?.frequent_topics || [],
+              newProfile?.conversation_history?.frequent_topics || []
+            ),
+            shared_memories: mergeArrays(
+              profile?.conversation_history?.shared_memories || [],
+              newProfile?.conversation_history?.shared_memories || []
+            )
+          },
+          relationship_dynamics: {
+            ...(profile?.relationship_dynamics || {}),
+            ...(newProfile?.relationship_dynamics || {})
+          },
+          learning_preferences: {
+            ...(profile?.learning_preferences || {}),
+            ...(newProfile?.learning_preferences || {})
+          }
+        };
+
+        console.log(`Profile updated successfully`);
+        console.log(`- Personality: ${updatedProfile.personality}`);
+        console.log(`- Relationship: ${updatedProfile.relationship}`);
+        console.log(`- Hobbies: ${updatedProfile.personal_info?.hobbies?.length || 0} items`);
+        console.log(`- Goals: ${updatedProfile.personal_info?.goals?.length || 0} items`);
+        console.log(`- Challenges: ${updatedProfile.personal_info?.challenges?.length || 0} items`);
+        console.log(`- Topics of interest: ${updatedProfile.preferences?.topics_of_interest?.length || 0} items`);
+        console.log(`- Shared memories: ${updatedProfile.conversation_history?.shared_memories?.length || 0} items`);
 
         // Clear history only when it reaches MAX_HISTORY
         if (shouldUpdateSummaryProfile) {
@@ -274,6 +347,7 @@ Analyze the conversation deeply and extract as much meaningful information as po
         }
       } catch (e) {
         console.error("Failed to parse AI analysis JSON:", e);
+        console.error("Raw response:", analysisResult.choices[0].message.content);
         // Keep old summary/profile if parsing fails
       }
     }
