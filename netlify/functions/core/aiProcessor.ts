@@ -838,6 +838,13 @@ function cleanCache() {
   }
 }
 
+// Simple fallback generator for local/dev when OPENAI_API_KEY missing
+function generateFallbackResponse(personalityProfile, relationshipProfile, message, greeting, timeOfDay) {
+  const preface = `${greeting}! (${relationshipProfile ? Object.keys(relationshipProfile).length ? '' : '' : ''})`;
+  const trimmed = message.slice(0, 140);
+  return `${preface} I hear you said: "${trimmed}". I'm here as ${personalityProfile.name}. Let's talk about it.`;
+}
+
 // NEW: Crisis detection and intervention system
 function detectCrisisKeywords(message) {
   const crisisPatterns = {
@@ -1670,6 +1677,37 @@ Remember: Be natural, be yourself (as ${personalityProfile.name})`,
       aiResponse = `${base}\n\n${initialFollowUp}`;
       responseTime = 0.1; // Minimal response time for crisis
       
+      // Persist history (user + assistant crisis response)
+      history.push({ role: "assistant", content: aiResponse });
+      try {
+        await setDoc(
+          userRef,
+          {
+            summary: updatedSummary,
+            history,
+            profile: updatedProfile,
+            tokensUsed: increment(tokensUsed),
+            lastMessageTime: new Date().toISOString(),
+            crisis: crisisState,
+          },
+          { merge: true }
+        );
+      } catch (e) {
+        console.error("Failed to persist crisis message:", e);
+      }
+
+      // Update cache
+      userCache.set(cacheKey, {
+        data: {
+          ...userData,
+          summary: updatedSummary,
+          history,
+          profile: updatedProfile,
+          crisis: crisisState,
+        },
+        timestamp: Date.now(),
+      });
+
       // Return early for crisis (plain result object expected by callers)
       return {
         success: true,
@@ -1710,6 +1748,37 @@ Remember: Be natural, be yourself (as ${personalityProfile.name})`,
         aiResponse = generateCrisisClarifyingFollowUp(relationshipKey, stage);
       }
 
+      // Persist history (user + assistant follow-up)
+      history.push({ role: "assistant", content: aiResponse });
+      try {
+        await setDoc(
+          userRef,
+          {
+            summary: updatedSummary,
+            history,
+            profile: updatedProfile,
+            tokensUsed: increment(0),
+            lastMessageTime: new Date().toISOString(),
+            crisis: crisisState,
+          },
+          { merge: true }
+        );
+      } catch (e) {
+        console.error("Failed to persist crisis follow-up:", e);
+      }
+
+      // Update cache
+      userCache.set(cacheKey, {
+        data: {
+          ...userData,
+          summary: updatedSummary,
+          history,
+          profile: updatedProfile,
+          crisis: crisisState,
+        },
+        timestamp: Date.now(),
+      });
+
       return {
         success: true,
         message: aiResponse,
@@ -1721,21 +1790,34 @@ Remember: Be natural, be yourself (as ${personalityProfile.name})`,
       };
     } else {
       // Normal AI processing for non-crisis messages
-      const startTime = Date.now();
-      const completion = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
-        messages: chatPrompt,
-      });
+      if (!process.env.OPENAI_API_KEY) {
+        // Fallback local response when key is missing in dev
+        aiResponse = generateFallbackResponse(
+          personalityProfile,
+          relationshipProfile,
+          message,
+          greeting,
+          timeOfDay
+        );
+        responseTime = 0.2;
+        tokensUsed = 0;
+      } else {
+        const startTime = Date.now();
+        const completion = await openai.chat.completions.create({
+          model: "gpt-3.5-turbo",
+          messages: chatPrompt,
+        });
 
-      responseTime = (Date.now() - startTime) / 1000; // Convert to seconds
-      aiResponse =
-        completion.choices[0].message?.content ||
-        "Sorry, I could not process your request.";
+        responseTime = (Date.now() - startTime) / 1000; // Convert to seconds
+        aiResponse =
+          completion.choices[0].message?.content ||
+          "Sorry, I could not process your request.";
 
-      // Replace any em dashes with regular punctuation
-      aiResponse = aiResponse.replace(/—/g, ", ");
-      aiResponse = aiResponse.replace(/–/g, ", ");
-      tokensUsed = completion.usage?.total_tokens || 0;
+        // Replace any em dashes with regular punctuation
+        aiResponse = aiResponse.replace(/—/g, ", ");
+        aiResponse = aiResponse.replace(/–/g, ", ");
+        tokensUsed = completion.usage?.total_tokens || 0;
+      }
     }
 
 
