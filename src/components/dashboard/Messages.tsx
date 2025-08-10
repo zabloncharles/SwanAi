@@ -68,7 +68,7 @@ export default function Messages({ userId, aiPersonality, justChangedRelationshi
       
       "James Wilson": `${greeting}, son. I'm James Wilson, your wise dad. I'm here to offer you practical advice, life lessons, and the kind of guidance that comes from years of experience. I believe in hard work, family values, and building character. What's on your mind? Let me give you some fatherly wisdom.`,
       
-      "SwanAI": `${greeting}! I'm your AI companion, here to chat, support, and help you with whatever you need. I'm excited to get to know you better and be part of your journey. What would you like to talk about today?`
+      "SwanAI": `${greeting}! I'm here to chat, support, and help you with whatever you need. I'm excited to get to know you better and be part of your journey. What would you like to talk about today?`
     };
 
     return {
