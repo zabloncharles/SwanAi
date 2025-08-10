@@ -42,6 +42,7 @@ export default function Messages({
   );
   const [lastUserMessageTime, setLastUserMessageTime] = useState<number>(0);
   const followUpTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [followUpSent, setFollowUpSent] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -374,7 +375,12 @@ export default function Messages({
     }
 
     // Only set up follow-up if we have messages and AI personality
-    if (messages.length > 0 && aiPersonality && !justChangedRelationship) {
+    if (
+      messages.length > 0 &&
+      aiPersonality &&
+      !justChangedRelationship &&
+      !followUpSent
+    ) {
       const lastMessage = messages[messages.length - 1];
 
       // Only set timeout if the last message is from the AI (not user)
@@ -390,6 +396,7 @@ export default function Messages({
               timestamp: Date.now(),
             },
           ]);
+          setFollowUpSent(true);
           followUpTimeoutRef.current = null;
         }, 120000); // 2 minutes
       }
@@ -402,7 +409,7 @@ export default function Messages({
         followUpTimeoutRef.current = null;
       }
     };
-  }, [messages, aiPersonality, justChangedRelationship]);
+  }, [messages, aiPersonality, justChangedRelationship, followUpSent]);
 
   const loadAiAvatar = async (personality: string) => {
     try {
@@ -437,6 +444,10 @@ export default function Messages({
     if (followUpTimeoutRef.current) {
       clearTimeout(followUpTimeoutRef.current);
       followUpTimeoutRef.current = null;
+    }
+    // Reset follow-up sent state on user activity
+    if (followUpSent) {
+      setFollowUpSent(false);
     }
 
     setSending(true);
