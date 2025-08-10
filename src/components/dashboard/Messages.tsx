@@ -10,6 +10,7 @@ interface Message {
   role: "user" | "assistant";
   timestamp?: number;
   seen?: boolean;
+  povImageUrl?: string; // POV image URL for "wyd" responses
 }
 
 interface MessagesProps {
@@ -33,8 +34,12 @@ export default function Messages({
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [aiTyping, setAiTyping] = useState(false);
-  const [aiAvatarUrl, setAiAvatarUrl] = useState<string>("/images/default-avatar.svg");
-  const [userAvatarUrl, setUserAvatarUrl] = useState<string>("/images/default-user-avatar.svg");
+  const [aiAvatarUrl, setAiAvatarUrl] = useState<string>(
+    "/images/default-avatar.svg"
+  );
+  const [userAvatarUrl, setUserAvatarUrl] = useState<string>(
+    "/images/default-user-avatar.svg"
+  );
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -166,7 +171,7 @@ export default function Messages({
     // Use relationship-specific introduction if available
     const relationshipIntro = getRelationshipIntroduction(
       personality.relationship,
-      personality.name
+      personality.personality
     );
 
     return {
@@ -243,7 +248,7 @@ export default function Messages({
       const avatarUrl = await getAvatarUrl(personality);
       setAiAvatarUrl(avatarUrl);
     } catch (error) {
-      console.error('Error loading AI avatar:', error);
+      console.error("Error loading AI avatar:", error);
       setAiAvatarUrl("/images/default-avatar.svg");
     }
   };
@@ -316,6 +321,7 @@ export default function Messages({
             role: "assistant",
             content: response.message,
             timestamp: Date.now(),
+            povImageUrl: response.povImageUrl, // Include POV image if generated
           };
           setMessages((prev) => [...prev, aiMessage]);
         } catch (error) {
@@ -422,6 +428,24 @@ export default function Messages({
                     {message.content}
                   </p>
 
+                  {/* POV Image for "wyd" responses */}
+                  {message.role === "assistant" && message.povImageUrl && (
+                    <div className="mt-3">
+                      <img
+                        src={message.povImageUrl}
+                        alt="What I'm doing right now"
+                        className="w-full max-w-xs rounded-lg shadow-md border border-gray-200"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = "none";
+                        }}
+                      />
+                      <p className="text-xs text-gray-500 mt-1 italic">
+                        👓 This is what I'm seeing right now!
+                      </p>
+                    </div>
+                  )}
+
                   {/* Seen indicator for user messages */}
                   {message.role === "user" && message.seen && (
                     <div className="text-xs opacity-50 mt-1 flex items-center justify-end">
@@ -470,7 +494,7 @@ export default function Messages({
                   }}
                 />
               </div>
-              
+
               <div className="bg-gray-100 text-gray-800 px-4 py-2 rounded-lg">
                 <div className="text-xs opacity-75 mb-1">
                   {aiPersonality?.name || "SwanAI"}

@@ -1048,11 +1048,88 @@ Remember: Be natural, be yourself (as ${personalityProfile.name})`,
     let aiResponse =
       completion.choices[0].message?.content ||
       "Sorry, I could not process your request.";
-    
+
     // Replace any em dashes with regular punctuation
-    aiResponse = aiResponse.replace(/—/g, ', ');
-    aiResponse = aiResponse.replace(/–/g, ', ');
+    aiResponse = aiResponse.replace(/—/g, ", ");
+    aiResponse = aiResponse.replace(/–/g, ", ");
     const tokensUsed = completion.usage?.total_tokens || 0;
+
+    // Check if user is asking "wyd" and generate POV image
+    let povImageUrl = null;
+    const wydPatterns = [
+      /wyd/i,
+      /what you doing/i,
+      /what are you doing/i,
+      /what're you doing/i,
+      /what u doing/i,
+      /what you up to/i,
+      /what are you up to/i,
+      /what're you up to/i,
+      /what u up to/i,
+      /what you been up to/i,
+      /what have you been up to/i,
+      /what you been doing/i,
+      /what have you been doing/i,
+      /busy\?/i,
+      /what's going on/i,
+      /whats going on/i,
+      /how's it going/i,
+      /hows it going/i,
+    ];
+
+    const isWYDMessage = wydPatterns.some((pattern) => pattern.test(message));
+
+    if (isWYDMessage) {
+      try {
+        console.log("WYD message detected, generating POV image...");
+
+        // Generate POV image based on personality and context
+        const currentTime = new Date().getHours();
+        const povRequest = {
+          personality: profile.personality || "Friendly",
+          userProfile: {
+            hobbies: profile.hobbies || [],
+            location: profile.location || "",
+            interests: profile.interests || [],
+          },
+          currentTime: currentTime,
+          location: profile.location || "",
+          mood: "neutral", // Could be enhanced with sentiment analysis
+        };
+
+        // Call the POV image generation function
+        try {
+          const povResponse = await fetch(
+            `${
+              process.env.NETLIFY_DEV_URL || "http://localhost:8889"
+            }/.netlify/functions/generate_pov_image`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(povRequest),
+            }
+          );
+
+          if (povResponse.ok) {
+            const povData = await povResponse.json();
+            povImageUrl = povData.imageUrl;
+            console.log("POV image generated:", povImageUrl);
+          } else {
+            console.error(
+              "POV image generation failed with status:",
+              povResponse.status
+            );
+          }
+        } catch (fetchError) {
+          console.error("Error calling POV image function:", fetchError);
+        }
+      } catch (povError) {
+        console.error("Error generating POV image:", povError);
+        // Continue without POV image if generation fails
+      }
+    }
 
     // Add AI response to history
     history.push({ role: "assistant", content: aiResponse });
@@ -1088,6 +1165,7 @@ Remember: Be natural, be yourself (as ${personalityProfile.name})`,
       responseTime,
       updatedSummary,
       updatedProfile,
+      povImageUrl, // Include POV image URL if generated
     };
   } catch (error) {
     console.error("Error processing message:", error);

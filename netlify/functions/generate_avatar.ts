@@ -1,101 +1,128 @@
-import { Handler } from "@netlify/functions";
+const { Handler } = require("@netlify/functions");
 
-const handler: Handler = async (event) => {
+const handler = async (event) => {
+  console.log("=== Generate Avatar Function Triggered ===");
+  console.log("Method:", event.httpMethod);
+  console.log("Path:", event.path);
+  console.log("Headers:", JSON.stringify(event.headers, null, 2));
+
   // Handle CORS
   if (event.httpMethod === "OPTIONS") {
-    return new Response(null, {
-      status: 200,
+    console.log("Handling CORS preflight request");
+    return {
+      statusCode: 200,
       headers: {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Headers": "Content-Type",
         "Access-Control-Allow-Methods": "POST, OPTIONS",
       },
-    });
+    };
   }
 
   if (event.httpMethod !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
+    console.log(`Method not allowed: ${event.httpMethod}`);
+    return {
+      statusCode: 405,
       headers: {
         "Access-Control-Allow-Origin": "*",
         "Content-Type": "application/json",
       },
-    });
+      body: JSON.stringify({ error: "Method not allowed" }),
+    };
   }
 
   try {
     const { prompt, personality } = JSON.parse(event.body || "{}");
+    console.log("Request body:", { prompt, personality });
 
     if (!prompt) {
-      return new Response(JSON.stringify({ error: "Prompt is required" }), {
-        status: 400,
+      console.log("No prompt provided");
+      return {
+        statusCode: 400,
         headers: {
           "Access-Control-Allow-Origin": "*",
           "Content-Type": "application/json",
         },
-      });
+        body: JSON.stringify({ error: "Prompt is required" }),
+      };
     }
 
     console.log(`Generating avatar for personality: ${personality}`);
     console.log(`Prompt: ${prompt}`);
 
+    // Check if DeepAI API key is available
+    const deepaiApiKey = process.env.DEEPAI_API_KEY;
+    if (!deepaiApiKey) {
+      console.error("DeepAI API key not found in environment variables");
+      throw new Error("DeepAI API key not configured");
+    }
+
     // Generate image using DeepAI
     const formData = new FormData();
-    formData.append('text', prompt);
+    formData.append("text", prompt);
 
-    const response = await fetch('https://api.deepai.org/api/text2img', {
-      method: 'POST',
+    console.log("Making request to DeepAI API...");
+    const response = await fetch("https://api.deepai.org/api/text2img", {
+      method: "POST",
       headers: {
-        'api-key': process.env.DEEPAI_API_KEY || '',
+        "api-key": deepaiApiKey,
       },
       body: formData,
     });
 
+    console.log(`DeepAI response status: ${response.status}`);
+
     if (!response.ok) {
-      throw new Error(`DeepAI API error: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      console.error("DeepAI API error response:", errorText);
+      throw new Error(
+        `DeepAI API error: ${response.status} ${response.statusText}`
+      );
     }
 
     const data = await response.json();
+    console.log("DeepAI response data:", data);
+
     const imageUrl = data.output_url;
 
     if (!imageUrl) {
+      console.error("No image URL in DeepAI response");
       throw new Error("Failed to generate image with DeepAI");
     }
 
-    console.log(`Avatar generated successfully for ${personality} using DeepAI`);
+    console.log(
+      `Avatar generated successfully for ${personality} using DeepAI`
+    );
+    console.log(`Image URL: ${imageUrl}`);
 
-    return new Response(
-      JSON.stringify({
+    return {
+      statusCode: 200,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
         imageUrl,
         personality,
         success: true,
         provider: "DeepAI",
       }),
-      {
-        status: 200,
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    };
   } catch (error) {
     console.error("Error generating avatar:", error);
 
-    return new Response(
-      JSON.stringify({
+    return {
+      statusCode: 500,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
         error: "Failed to generate avatar",
         details: error instanceof Error ? error.message : "Unknown error",
       }),
-      {
-        status: 500,
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    };
   }
 };
 
-export default handler;
+module.exports = { handler };

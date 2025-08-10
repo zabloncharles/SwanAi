@@ -102,6 +102,7 @@ const handler = async (event) => {
         responseTime: result.responseTime,
         updatedSummary: result.updatedSummary,
         updatedProfile: result.updatedProfile,
+        povImageUrl: result.povImageUrl, // Include POV image URL if generated
       }),
     };
   } catch (error) {

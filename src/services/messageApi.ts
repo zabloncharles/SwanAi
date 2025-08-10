@@ -5,16 +5,20 @@ interface MessageResponse {
   responseTime: number;
   updatedSummary?: string;
   updatedProfile?: any;
+  povImageUrl?: string; // POV image URL for "wyd" responses
   error?: string;
   details?: string;
 }
 
-export async function sendWebMessage(userId: string, message: string): Promise<MessageResponse> {
+export async function sendWebMessage(
+  userId: string,
+  message: string
+): Promise<MessageResponse> {
   try {
-    const response = await fetch('/.netlify/functions/web_message', {
-      method: 'POST',
+    const response = await fetch("/.netlify/functions/web_message", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         userId,
@@ -24,18 +28,20 @@ export async function sendWebMessage(userId: string, message: string): Promise<M
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      throw new Error(
+        errorData.error || `HTTP error! status: ${response.status}`
+      );
     }
 
     const data: MessageResponse = await response.json();
-    
+
     if (!data.success) {
-      throw new Error(data.error || 'Failed to send message');
+      throw new Error(data.error || "Failed to send message");
     }
 
     return data;
   } catch (error) {
-    console.error('Error sending web message:', error);
+    console.error("Error sending web message:", error);
     throw error;
   }
 }
