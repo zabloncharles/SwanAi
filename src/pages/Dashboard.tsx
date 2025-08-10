@@ -452,7 +452,52 @@ export default function Dashboard() {
                                 userData.profile?.personality === "Bookworm" ? "Aria Patel" :
                                 userData.profile?.personality === "NurturingMom" ? "Maria Garcia" :
                                 userData.profile?.personality === "WiseDad" ? "James Wilson" :
-                                userData.profile?.personality === "CBTTherapist" ? "Dr. Sarah Chen" :
+                                userData.profile?.personality === "EmpatheticTherapist" ? "Dr. Sarah Chen" :
+                                userData.profile?.personality === "SolutionFocusedTherapist" ? "Dr. Sarah Chen" :
+                                userData.profile?.personality === "MindfulnessTherapist" ? "Dr. Sarah Chen" :
+                                userData.profile?.personality === "SupportiveTherapist" ? "Dr. Sarah Chen" :
+                                userData.profile?.personality === "InsightfulTherapist" ? "Dr. Sarah Chen" :
+                                userData.profile?.personality === "Mentor" ? "Alex Thompson" :
+                                userData.profile?.personality === "Rick" ? "SwanAI" :
+                                userData.profile?.personality === "LateFriend" ? "Sam Rodriguez" :
+                                userData.profile?.personality === "FashionableFriend" ? "Emma Rodriguez" :
+                                userData.profile?.personality === "EmotionalFriend" ? "Aria Patel" :
+                                userData.profile?.personality === "LaidbackFriend" ? "Sam Rodriguez" :
+                                userData.profile?.personality === "BoJackHorseman" ? "Mike Chen" :
+                                userData.profile?.personality === "PracticalMom" ? "Maria Garcia" :
+                                userData.profile?.personality === "FunMom" ? "Emma Rodriguez" :
+                                userData.profile?.personality === "WiseMom" ? "Maria Garcia" :
+                                userData.profile?.personality === "ProtectiveMom" ? "Maria Garcia" :
+                                userData.profile?.personality === "EncouragingMom" ? "Maria Garcia" :
+                                userData.profile?.personality === "SteadyDad" ? "James Wilson" :
+                                userData.profile?.personality === "HandyDad" ? "James Wilson" :
+                                userData.profile?.personality === "FunDad" ? "James Wilson" :
+                                userData.profile?.personality === "ProtectiveDad" ? "James Wilson" :
+                                userData.profile?.personality === "SupportiveDad" ? "James Wilson" :
+                                userData.profile?.personality === "RomanticBoyfriend" ? "Sam Rodriguez" :
+                                userData.profile?.personality === "ProtectiveBoyfriend" ? "Sam Rodriguez" :
+                                userData.profile?.personality === "FunBoyfriend" ? "Mike Chen" :
+                                userData.profile?.personality === "SupportiveBoyfriend" ? "Sam Rodriguez" :
+                                userData.profile?.personality === "AmbitiousBoyfriend" ? "Alex Thompson" :
+                                userData.profile?.personality === "ChillBoyfriend" ? "Sam Rodriguez" :
+                                userData.profile?.personality === "CaringGirlfriend" ? "Emma Rodriguez" :
+                                userData.profile?.personality === "FunGirlfriend" ? "Zoe Thompson" :
+                                userData.profile?.personality === "SupportiveGirlfriend" ? "Emma Rodriguez" :
+                                userData.profile?.personality === "RomanticGirlfriend" ? "Emma Rodriguez" :
+                                userData.profile?.personality === "IndependentGirlfriend" ? "Aria Patel" :
+                                userData.profile?.personality === "AdventurousGirlfriend" ? "Zoe Thompson" :
+                                userData.profile?.personality === "MotivationalCoach" ? "Alex Thompson" :
+                                userData.profile?.personality === "StrategicCoach" ? "Alex Thompson" :
+                                userData.profile?.personality === "ToughLoveCoach" ? "James Wilson" :
+                                userData.profile?.personality === "EncouragingCoach" ? "Emma Rodriguez" :
+                                userData.profile?.personality === "AccountabilityCoach" ? "Alex Thompson" :
+                                userData.profile?.personality === "LifeCoach" ? "Alex Thompson" :
+                                userData.profile?.personality === "FunCousin" ? "Zoe Thompson" :
+                                userData.profile?.personality === "CloseCousin" ? "Sam Rodriguez" :
+                                userData.profile?.personality === "AdventurousCousin" ? "Zoe Thompson" :
+                                userData.profile?.personality === "SupportiveCousin" ? "Emma Rodriguez" :
+                                userData.profile?.personality === "WiseCousin" ? "James Wilson" :
+                                userData.profile?.personality === "PartnerInCrimeCousin" ? "Mike Chen" :
                                 "SwanAI",
                           personality: userData.profile?.personality || "Friendly",
                           relationship: userData.profile?.relationship || "Friend"
