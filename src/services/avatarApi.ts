@@ -135,10 +135,25 @@ export const getAvatarUrl = async (personality: string): Promise<string> => {
     const url = await getDownloadURL(storageRef);
     return url;
   } catch (error) {
-    // If not found, generate a new one
-    console.log(`Generating new avatar for ${personality}`);
-    const generatedUrl = await generateAvatar(personality);
-    const storedUrl = await storeAvatar(personality, generatedUrl);
-    return storedUrl;
+    console.log(`Avatar not found in cache for ${personality}, generating new one...`);
+    // If not found or CORS error, generate a new one
+    try {
+      const generatedUrl = await generateAvatar(personality);
+      if (generatedUrl && generatedUrl !== '/images/default-avatar.svg') {
+        // Try to store it, but don't fail if storage doesn't work
+        try {
+          const storedUrl = await storeAvatar(personality, generatedUrl);
+          return storedUrl;
+        } catch (storageError) {
+          console.log('Storage failed, using direct URL:', storageError);
+          return generatedUrl; // Use direct DALL-E URL
+        }
+      } else {
+        return '/images/default-avatar.svg';
+      }
+    } catch (genError) {
+      console.error('Avatar generation failed:', genError);
+      return '/images/default-avatar.svg';
+    }
   }
 };
