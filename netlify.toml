@@ -4,11 +4,11 @@
   functions = "netlify/functions"
 
 [dev]
-  command = "npm run dev"
-  port = 8888
+  port = 8889
   targetPort = 5173
   publish = "dist"
   autoLaunch = true
+  framework = "#custom"
 
 [[redirects]]
   from = "/api/*"

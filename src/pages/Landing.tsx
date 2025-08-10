@@ -5,7 +5,7 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-white to-indigo-50">
       {/* Hero Section */}
-      <section className="w-full pt-36 flex flex-col items-center justify-center px-4 relative overflow-hidden">
+      <section className="w-full pt-60 flex flex-col items-center justify-center px-4 relative overflow-hidden">
         <div className="absolute inset-0">
           <img
             src="/images/hero-bg.jpg"
