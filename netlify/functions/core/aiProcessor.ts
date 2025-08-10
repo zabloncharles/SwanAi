@@ -511,6 +511,315 @@ function getGeneration(age) {
   return "other";
 }
 
+// NEW: Filter user profile based on relationship type for knowledge isolation
+function filterProfileForRelationship(profile, relationship) {
+  const baseInfo = {
+    personality: profile.personality,
+    relationship: profile.relationship,
+    name: profile.name,
+  };
+
+  switch (relationship) {
+    case "Girlfriend":
+    case "Boyfriend":
+      return {
+        ...baseInfo,
+        preferences: {
+          communication_style: profile.preferences?.communication_style,
+          topics_of_interest: profile.preferences?.topics_of_interest?.filter(
+            (topic) =>
+              !topic.toLowerCase().includes("therapy") &&
+              !topic.toLowerCase().includes("mental health") &&
+              !topic.toLowerCase().includes("professional")
+          ),
+          emotional_patterns: profile.preferences?.emotional_patterns,
+          response_preferences: profile.preferences?.response_preferences,
+        },
+        personal_info: {
+          age_range: profile.personal_info?.age_range,
+          location: profile.personal_info?.location,
+          family_status: profile.personal_info?.family_status,
+          hobbies: profile.personal_info?.hobbies,
+          goals: profile.personal_info?.goals?.filter(
+            (goal) =>
+              !goal.toLowerCase().includes("therapy") &&
+              !goal.toLowerCase().includes("mental health")
+          ),
+          challenges: profile.personal_info?.challenges?.filter(
+            (challenge) =>
+              !challenge.toLowerCase().includes("therapy") &&
+              !challenge.toLowerCase().includes("mental health")
+          ),
+        },
+        conversation_history: {
+          frequent_topics:
+            profile.conversation_history?.frequent_topics?.filter(
+              (topic) =>
+                !topic.toLowerCase().includes("therapy") &&
+                !topic.toLowerCase().includes("mental health")
+            ),
+          mood_patterns: profile.conversation_history?.mood_patterns,
+          communication_frequency:
+            profile.conversation_history?.communication_frequency,
+          response_style: profile.conversation_history?.response_style,
+          shared_memories: profile.conversation_history?.shared_memories,
+        },
+        relationship_dynamics: {
+          trust_level: profile.relationship_dynamics?.trust_level,
+          comfort_level: profile.relationship_dynamics?.comfort_level,
+          preferred_support_style:
+            profile.relationship_dynamics?.preferred_support_style,
+          boundaries: profile.relationship_dynamics?.boundaries,
+        },
+      };
+
+    case "Therapist":
+      return {
+        ...baseInfo,
+        preferences: {
+          communication_style: profile.preferences?.communication_style,
+          topics_of_interest: profile.preferences?.topics_of_interest?.filter(
+            (topic) =>
+              topic.toLowerCase().includes("therapy") ||
+              topic.toLowerCase().includes("mental health") ||
+              topic.toLowerCase().includes("emotions") ||
+              topic.toLowerCase().includes("stress") ||
+              topic.toLowerCase().includes("anxiety") ||
+              topic.toLowerCase().includes("depression")
+          ),
+          emotional_patterns: profile.preferences?.emotional_patterns,
+          response_preferences: profile.preferences?.response_preferences,
+        },
+        personal_info: {
+          age_range: profile.personal_info?.age_range,
+          location: profile.personal_info?.location,
+          family_status: profile.personal_info?.family_status,
+          hobbies: profile.personal_info?.hobbies?.filter(
+            (hobby) =>
+              !hobby.toLowerCase().includes("romantic") &&
+              !hobby.toLowerCase().includes("dating")
+          ),
+          goals: profile.personal_info?.goals?.filter(
+            (goal) =>
+              goal.toLowerCase().includes("therapy") ||
+              goal.toLowerCase().includes("mental health") ||
+              goal.toLowerCase().includes("coping") ||
+              goal.toLowerCase().includes("healing")
+          ),
+          challenges: profile.personal_info?.challenges,
+        },
+        conversation_history: {
+          frequent_topics:
+            profile.conversation_history?.frequent_topics?.filter(
+              (topic) =>
+                topic.toLowerCase().includes("therapy") ||
+                topic.toLowerCase().includes("mental health") ||
+                topic.toLowerCase().includes("emotions")
+            ),
+          mood_patterns: profile.conversation_history?.mood_patterns,
+          communication_frequency:
+            profile.conversation_history?.communication_frequency,
+          response_style: profile.conversation_history?.response_style,
+          shared_memories:
+            profile.conversation_history?.shared_memories?.filter(
+              (memory) =>
+                !memory.toLowerCase().includes("romantic") &&
+                !memory.toLowerCase().includes("dating")
+            ),
+        },
+        relationship_dynamics: {
+          trust_level: profile.relationship_dynamics?.trust_level,
+          comfort_level: profile.relationship_dynamics?.comfort_level,
+          preferred_support_style:
+            profile.relationship_dynamics?.preferred_support_style,
+          boundaries: profile.relationship_dynamics?.boundaries,
+        },
+        learning_preferences: {
+          preferred_explanation_style:
+            profile.learning_preferences?.preferred_explanation_style,
+          motivation_factors: profile.learning_preferences?.motivation_factors,
+          stress_triggers: profile.learning_preferences?.stress_triggers,
+          coping_mechanisms: profile.learning_preferences?.coping_mechanisms,
+        },
+      };
+
+    case "Coach":
+      return {
+        ...baseInfo,
+        preferences: {
+          communication_style: profile.preferences?.communication_style,
+          topics_of_interest: profile.preferences?.topics_of_interest?.filter(
+            (topic) =>
+              topic.toLowerCase().includes("goals") ||
+              topic.toLowerCase().includes("achievement") ||
+              topic.toLowerCase().includes("progress") ||
+              topic.toLowerCase().includes("motivation")
+          ),
+          emotional_patterns: profile.preferences?.emotional_patterns,
+          response_preferences: profile.preferences?.response_preferences,
+        },
+        personal_info: {
+          age_range: profile.personal_info?.age_range,
+          location: profile.personal_info?.location,
+          family_status: profile.personal_info?.family_status,
+          hobbies: profile.personal_info?.hobbies,
+          goals: profile.personal_info?.goals,
+          challenges: profile.personal_info?.challenges?.filter(
+            (challenge) =>
+              !challenge.toLowerCase().includes("romantic") &&
+              !challenge.toLowerCase().includes("dating")
+          ),
+        },
+        conversation_history: {
+          frequent_topics:
+            profile.conversation_history?.frequent_topics?.filter(
+              (topic) =>
+                topic.toLowerCase().includes("goals") ||
+                topic.toLowerCase().includes("achievement") ||
+                topic.toLowerCase().includes("progress")
+            ),
+          mood_patterns: profile.conversation_history?.mood_patterns,
+          communication_frequency:
+            profile.conversation_history?.communication_frequency,
+          response_style: profile.conversation_history?.response_style,
+          shared_memories:
+            profile.conversation_history?.shared_memories?.filter(
+              (memory) =>
+                !memory.toLowerCase().includes("romantic") &&
+                !memory.toLowerCase().includes("dating")
+            ),
+        },
+        relationship_dynamics: {
+          trust_level: profile.relationship_dynamics?.trust_level,
+          comfort_level: profile.relationship_dynamics?.comfort_level,
+          preferred_support_style:
+            profile.relationship_dynamics?.preferred_support_style,
+          boundaries: profile.relationship_dynamics?.boundaries,
+        },
+        learning_preferences: {
+          preferred_explanation_style:
+            profile.learning_preferences?.preferred_explanation_style,
+          motivation_factors: profile.learning_preferences?.motivation_factors,
+          stress_triggers: profile.learning_preferences?.stress_triggers,
+          coping_mechanisms: profile.learning_preferences?.coping_mechanisms,
+        },
+      };
+
+    case "Mom":
+    case "Dad":
+      return {
+        ...baseInfo,
+        preferences: {
+          communication_style: profile.preferences?.communication_style,
+          topics_of_interest: profile.preferences?.topics_of_interest?.filter(
+            (topic) =>
+              !topic.toLowerCase().includes("romantic") &&
+              !topic.toLowerCase().includes("dating") &&
+              !topic.toLowerCase().includes("therapy")
+          ),
+          emotional_patterns: profile.preferences?.emotional_patterns,
+          response_preferences: profile.preferences?.response_preferences,
+        },
+        personal_info: {
+          age_range: profile.personal_info?.age_range,
+          location: profile.personal_info?.location,
+          family_status: profile.personal_info?.family_status,
+          hobbies: profile.personal_info?.hobbies,
+          goals: profile.personal_info?.goals?.filter(
+            (goal) =>
+              !goal.toLowerCase().includes("romantic") &&
+              !goal.toLowerCase().includes("dating")
+          ),
+          challenges: profile.personal_info?.challenges?.filter(
+            (challenge) =>
+              !challenge.toLowerCase().includes("romantic") &&
+              !challenge.toLowerCase().includes("dating")
+          ),
+        },
+        conversation_history: {
+          frequent_topics:
+            profile.conversation_history?.frequent_topics?.filter(
+              (topic) =>
+                !topic.toLowerCase().includes("romantic") &&
+                !topic.toLowerCase().includes("dating")
+            ),
+          mood_patterns: profile.conversation_history?.mood_patterns,
+          communication_frequency:
+            profile.conversation_history?.communication_frequency,
+          response_style: profile.conversation_history?.response_style,
+          shared_memories:
+            profile.conversation_history?.shared_memories?.filter(
+              (memory) =>
+                !memory.toLowerCase().includes("romantic") &&
+                !memory.toLowerCase().includes("dating")
+            ),
+        },
+        relationship_dynamics: {
+          trust_level: profile.relationship_dynamics?.trust_level,
+          comfort_level: profile.relationship_dynamics?.comfort_level,
+          preferred_support_style:
+            profile.relationship_dynamics?.preferred_support_style,
+          boundaries: profile.relationship_dynamics?.boundaries,
+        },
+      };
+
+    case "Friend":
+    case "Cousin":
+      return {
+        ...baseInfo,
+        preferences: {
+          communication_style: profile.preferences?.communication_style,
+          topics_of_interest: profile.preferences?.topics_of_interest?.filter(
+            (topic) =>
+              !topic.toLowerCase().includes("therapy") &&
+              !topic.toLowerCase().includes("mental health")
+          ),
+          emotional_patterns: profile.preferences?.emotional_patterns,
+          response_preferences: profile.preferences?.response_preferences,
+        },
+        personal_info: {
+          age_range: profile.personal_info?.age_range,
+          location: profile.personal_info?.location,
+          family_status: profile.personal_info?.family_status,
+          hobbies: profile.personal_info?.hobbies,
+          goals: profile.personal_info?.goals?.filter(
+            (goal) =>
+              !goal.toLowerCase().includes("therapy") &&
+              !goal.toLowerCase().includes("mental health")
+          ),
+          challenges: profile.personal_info?.challenges?.filter(
+            (challenge) =>
+              !challenge.toLowerCase().includes("therapy") &&
+              !challenge.toLowerCase().includes("mental health")
+          ),
+        },
+        conversation_history: {
+          frequent_topics:
+            profile.conversation_history?.frequent_topics?.filter(
+              (topic) =>
+                !topic.toLowerCase().includes("therapy") &&
+                !topic.toLowerCase().includes("mental health")
+            ),
+          mood_patterns: profile.conversation_history?.mood_patterns,
+          communication_frequency:
+            profile.conversation_history?.communication_frequency,
+          response_style: profile.conversation_history?.response_style,
+          shared_memories: profile.conversation_history?.shared_memories,
+        },
+        relationship_dynamics: {
+          trust_level: profile.relationship_dynamics?.trust_level,
+          comfort_level: profile.relationship_dynamics?.comfort_level,
+          preferred_support_style:
+            profile.relationship_dynamics?.preferred_support_style,
+          boundaries: profile.relationship_dynamics?.boundaries,
+        },
+      };
+
+    default:
+      return profile; // Return full profile for unknown relationships
+  }
+}
+
 function sanitizeInput(text) {
   return text
     .trim()
@@ -788,6 +1097,29 @@ Analyze the conversation deeply and extract as much meaningful information as po
     const relationshipProfile =
       relationshipProfiles[relationshipKey] || relationshipProfiles["Friend"];
 
+    // NEW: Filter user profile based on relationship for knowledge isolation
+    const filteredProfile = filterProfileForRelationship(
+      updatedProfile,
+      relationshipKey
+    );
+    console.log(`Profile filtered for relationship: ${relationshipKey}`);
+    console.log(
+      `- Original topics: ${
+        updatedProfile.preferences?.topics_of_interest?.length || 0
+      }`
+    );
+    console.log(
+      `- Filtered topics: ${
+        filteredProfile.preferences?.topics_of_interest?.length || 0
+      }`
+    );
+    console.log(
+      `- Original goals: ${updatedProfile.personal_info?.goals?.length || 0}`
+    );
+    console.log(
+      `- Filtered goals: ${filteredProfile.personal_info?.goals?.length || 0}`
+    );
+
     // Get user's location and calculate current time
     const userLocation = userData.location || {};
     const userCity = userLocation.city || "Unknown";
@@ -934,32 +1266,34 @@ You are their ${relationshipKey}. ${relationshipProfile.roleDescription}
           personalityProfile.name
         }, a real person with your own life, opinions, and way of speaking. Respond as if you're texting a friend or family member.
 
-**What you know about them:** ${JSON.stringify(updatedProfile)}
+**Relationship Boundaries:** As their ${relationshipKey}, you should only access and reference information that's appropriate for this relationship type. Do not reference topics, memories, or details that would be inappropriate or uncomfortable for this relationship dynamic.
+
+**What you know about them:** ${JSON.stringify(filteredProfile)}
 
 **Key things to remember:**
 - Their communication style: ${
-          updatedProfile.preferences?.communication_style || "Not specified"
+          filteredProfile.preferences?.communication_style || "Not specified"
         }
 - Topics they're interested in: ${JSON.stringify(
-          updatedProfile.preferences?.topics_of_interest || []
+          filteredProfile.preferences?.topics_of_interest || []
         )}
 - Their typical mood: ${
-          updatedProfile.conversation_history?.mood_patterns || "Not specified"
+          filteredProfile.conversation_history?.mood_patterns || "Not specified"
         }
-- Their goals: ${JSON.stringify(updatedProfile.personal_info?.goals || [])}
+- Their goals: ${JSON.stringify(filteredProfile.personal_info?.goals || [])}
 - Their challenges: ${JSON.stringify(
-          updatedProfile.personal_info?.challenges || []
+          filteredProfile.personal_info?.challenges || []
         )}
 - How they like to be supported: ${
-          updatedProfile.relationship_dynamics?.preferred_support_style ||
+          filteredProfile.relationship_dynamics?.preferred_support_style ||
           "Not specified"
         }
 - What motivates them: ${
-          updatedProfile.learning_preferences?.motivation_factors ||
+          filteredProfile.learning_preferences?.motivation_factors ||
           "Not specified"
         }
 - Shared memories: ${JSON.stringify(
-          updatedProfile.conversation_history?.shared_memories || []
+          filteredProfile.conversation_history?.shared_memories || []
         )}
 
 **Recent conversations:** ${updatedSummary}
@@ -1086,14 +1420,14 @@ Remember: Be natural, be yourself (as ${personalityProfile.name})`,
         // Generate POV image based on personality and context
         const currentTime = new Date().getHours();
         const povRequest = {
-          personality: profile.personality || "Friendly",
+          personality: filteredProfile.personality || "Friendly",
           userProfile: {
-            hobbies: profile.hobbies || [],
-            location: profile.location || "",
-            interests: profile.interests || [],
+            hobbies: filteredProfile.personal_info?.hobbies || [],
+            location: filteredProfile.personal_info?.location || "",
+            interests: filteredProfile.preferences?.topics_of_interest || [],
           },
           currentTime: currentTime,
-          location: profile.location || "",
+          location: filteredProfile.personal_info?.location || "",
           mood: "neutral", // Could be enhanced with sentiment analysis
         };
 
