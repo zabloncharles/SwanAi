@@ -1137,10 +1137,28 @@ async function processUserMessage(userId, message) {
       const userSnapshot = await getDoc(userRef);
 
       if (!userSnapshot.exists()) {
-        throw new Error("User not found");
+        console.warn(`User ${userId} not found. Creating a new user record.`);
+        // Initialize minimal user record to prevent 500s
+        const initialUserData = {
+          uid: userId,
+          summary: "",
+          history: [],
+          profile: {
+            personality: "Friendly",
+            relationship: "Friend",
+          },
+          createdAt: new Date().toISOString(),
+        };
+        try {
+          await setDoc(userRef, initialUserData, { merge: true });
+        } catch (e) {
+          console.error("Failed to create initial user record:", e);
+          throw e;
+        }
+        userData = initialUserData;
+      } else {
+        userData = userSnapshot.data();
       }
-
-      userData = userSnapshot.data();
 
       // Cache the user data
       userCache.set(cacheKey, {

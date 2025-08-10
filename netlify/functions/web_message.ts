@@ -85,7 +85,24 @@ const handler = async (event) => {
     console.log(`Processing web message for user ${userId}: "${message}"`);
 
     // Process the message using the shared core logic
-    const result = await processUserMessage(userId, message);
+    let result;
+    try {
+      result = await processUserMessage(userId, message);
+    } catch (err) {
+      console.error("Core processor threw:", err);
+      return {
+        statusCode: 500,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          success: false,
+          error: "Processing error",
+          details: err?.message || String(err),
+        }),
+      };
+    }
 
     console.log(`Web message processed successfully for user ${userId}`);
 
