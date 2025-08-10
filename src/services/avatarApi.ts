@@ -1,19 +1,19 @@
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../config/firebase";
 
-// Avatar generation prompts for different personalities
+// Avatar generation prompts for different personalities (optimized for DeepAI)
 const avatarPrompts = {
   // Professional personalities
   Professional:
-    "Professional headshot of a confident 32-year-old business executive, Alex Thompson, wearing a smart business suit, friendly expression, high quality, realistic, professional lighting",
+    "Professional headshot portrait of a confident 32-year-old business executive named Alex Thompson, wearing a smart business suit, friendly expression, high quality, realistic, professional lighting, clear face",
   Mentor:
-    "Warm portrait of Dr. Evelyn Reed, a wise 65-year-old retired professor with kind eyes, silver hair, wearing glasses, professional but approachable, high quality, realistic",
+    "Warm portrait of Dr. Evelyn Reed, a wise 65-year-old retired professor with kind eyes, silver hair, wearing glasses, professional but approachable, high quality, realistic, clear face",
 
   // Friendly personalities
   Friendly:
-    "Casual headshot of Sam Rodriguez, a friendly 28-year-old person with warm smile, casual clothing, approachable expression, high quality, realistic, natural lighting",
+    "Casual headshot portrait of Sam Rodriguez, a friendly 28-year-old person with warm smile, casual clothing, approachable expression, high quality, realistic, natural lighting, clear face",
   MumFriend:
-    "Portrait of Emma Rodriguez, a caring 30-year-old woman with nurturing expression, warm smile, casual but put-together style, high quality, realistic",
+    "Portrait of Emma Rodriguez, a caring 30-year-old woman with nurturing expression, warm smile, casual but put-together style, high quality, realistic, clear face",
   ChaoticFriend:
     "Fun portrait of Zoe Thompson, a creative 26-year-old woman with colorful style, adventurous expression, artistic vibe, high quality, realistic",
   Jokester:
@@ -189,10 +189,14 @@ export const storeAvatar = async (
 // Get avatar URL (check cache first, then generate if needed)
 export const getAvatarUrl = async (personality: string): Promise<string> => {
   // For local development, skip Firebase Storage to avoid CORS issues
-  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  
+  const isLocalhost =
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1";
+
   if (isLocalhost) {
-    console.log(`Local development detected, generating avatar for ${personality}...`);
+    console.log(
+      `Local development detected, generating avatar for ${personality}...`
+    );
     try {
       const generatedUrl = await generateAvatar(personality);
       return generatedUrl || "/images/default-avatar.svg";

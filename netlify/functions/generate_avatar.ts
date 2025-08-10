@@ -1,7 +1,4 @@
 import { Handler } from "@netlify/functions";
-import OpenAI from "openai";
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const handler: Handler = async (event) => {
   // Handle CORS
@@ -42,48 +39,62 @@ const handler: Handler = async (event) => {
     console.log(`Generating avatar for personality: ${personality}`);
     console.log(`Prompt: ${prompt}`);
 
-    // Generate image using DALL-E
-    const response = await openai.images.generate({
-      model: "dall-e-3",
-      prompt: prompt,
-      n: 1,
-      size: "1024x1024",
-      quality: "standard",
-      style: "natural",
+    // Generate image using DeepAI
+    const formData = new FormData();
+    formData.append('text', prompt);
+
+    const response = await fetch('https://api.deepai.org/api/text2img', {
+      method: 'POST',
+      headers: {
+        'api-key': process.env.DEEPAI_API_KEY || '',
+      },
+      body: formData,
     });
 
-    const imageUrl = response.data[0]?.url;
-
-    if (!imageUrl) {
-      throw new Error("Failed to generate image");
+    if (!response.ok) {
+      throw new Error(`DeepAI API error: ${response.status} ${response.statusText}`);
     }
 
-    console.log(`Avatar generated successfully for ${personality}`);
+    const data = await response.json();
+    const imageUrl = data.output_url;
 
-    return new Response(JSON.stringify({
-      imageUrl,
-      personality,
-      success: true,
-    }), {
-      status: 200,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Content-Type": "application/json",
-      },
-    });
+    if (!imageUrl) {
+      throw new Error("Failed to generate image with DeepAI");
+    }
+
+    console.log(`Avatar generated successfully for ${personality} using DeepAI`);
+
+    return new Response(
+      JSON.stringify({
+        imageUrl,
+        personality,
+        success: true,
+        provider: "DeepAI",
+      }),
+      {
+        status: 200,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Content-Type": "application/json",
+        },
+      }
+    );
   } catch (error) {
     console.error("Error generating avatar:", error);
 
-    return new Response(JSON.stringify({
-      error: "Failed to generate avatar",
-      details: error instanceof Error ? error.message : "Unknown error",
-    }), {
-      status: 500,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Content-Type": "application/json",
-      },
-    });
+    return new Response(
+      JSON.stringify({
+        error: "Failed to generate avatar",
+        details: error instanceof Error ? error.message : "Unknown error",
+      }),
+      {
+        status: 500,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Content-Type": "application/json",
+        },
+      }
+    );
   }
 };
 
