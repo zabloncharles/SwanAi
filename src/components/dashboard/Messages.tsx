@@ -41,95 +41,14 @@ export default function Messages({
     "/images/default-user-avatar.svg"
   );
   const [lastUserMessageTime, setLastUserMessageTime] = useState<number>(0);
-  const [followUpTimeout, setFollowUpTimeout] = useState<NodeJS.Timeout | null>(
-    null
-  );
+  const followUpTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Generate personality-specific filler text for typing indicator
-  const generateTypingText = (personality: any, wordCount: number) => {
-    if (wordCount <= 5) return ""; // No filler text for short responses
-
-    const fillerTexts = {
-      Girlfriend: {
-        CaringGirlfriend: "💕 thinking of the perfect way to help you...",
-        FunGirlfriend: "🌟 processing all the drama... 😄",
-        SupportiveGirlfriend: "💪 finding the right words to support you...",
-        RomanticGirlfriend: "💖 thinking about you and what you need...",
-        IndependentGirlfriend: "👋 considering the best advice for you...",
-        AdventurousGirlfriend: "🚀 brainstorming amazing solutions...",
-      },
-      Boyfriend: {
-        RomanticBoyfriend: "💕 thinking about how to make you feel better...",
-        ProtectiveBoyfriend: "🛡️ figuring out how to keep you safe...",
-        FunBoyfriend: "😄 coming up with something fun to say...",
-        SupportiveBoyfriend: "💪 finding the right way to support you...",
-        AmbitiousBoyfriend: "💼 analyzing the situation strategically...",
-        ChillBoyfriend: "😎 taking a moment to think...",
-      },
-      Friend: {
-        MumFriend: "👋 thinking of the best way to take care of you...",
-        ChaoticFriend: "🌟 processing all the chaos... 😂",
-        Jokester: "😄 coming up with the perfect joke...",
-        Bookworm: "📚 searching through my knowledge...",
-        LateFriend: "😅 finally getting my thoughts together...",
-        FashionableFriend: "👗 thinking of the perfect response...",
-        EmotionalFriend: "💕 feeling all the emotions...",
-        LaidbackFriend: "😎 taking it easy while I think...",
-        BoJackHorseman: "thinking about my own problems... but also yours...",
-      },
-      Mom: {
-        NurturingMom: "💕 thinking of the best way to nurture you...",
-        PracticalMom: "👋 organizing my thoughts to help you...",
-        FunMom: "🎉 coming up with something fun to say...",
-        WiseMom: "💭 gathering my motherly wisdom...",
-        ProtectiveMom: "🛡️ thinking of how to keep you safe...",
-        EncouragingMom: "💪 finding the perfect words to encourage you...",
-      },
-      Dad: {
-        WiseDad: "💭 gathering my fatherly wisdom...",
-        SteadyDad: "👋 thinking of steady advice for you...",
-        HandyDad: "🔧 figuring out how to fix this...",
-        FunDad: "😄 coming up with something fun...",
-        ProtectiveDad: "🛡️ thinking of how to protect you...",
-        SupportiveDad: "💪 finding the right way to support you...",
-      },
-      Coach: {
-        MotivationalCoach: "💪 finding the perfect motivation for you...",
-        StrategicCoach: "📋 analyzing the situation strategically...",
-        ToughLoveCoach: "thinking about what you really need to hear...",
-        EncouragingCoach: "🌟 finding the perfect encouragement...",
-        AccountabilityCoach: "checking in on your progress...",
-        LifeCoach: "🎯 focusing on what matters most...",
-      },
-      Cousin: {
-        FunCousin: "🎉 thinking of fun cousin advice...",
-        CloseCousin: "👋 thinking like a sibling would...",
-        AdventurousCousin: "🚀 planning our next adventure...",
-        SupportiveCousin: "💕 thinking of how to support you...",
-        WiseCousin: "💭 gathering my cousin wisdom...",
-        PartnerInCrimeCousin: "😈 thinking of mischief and solutions...",
-      },
-      Therapist: {
-        EmpatheticTherapist: "💙 processing your feelings with care...",
-        CognitiveTherapist: "🧠 analyzing your thoughts carefully...",
-        SolutionFocusedTherapist: "💡 focusing on practical solutions...",
-        MindfulnessTherapist: "🧘‍♀️ being present with your situation...",
-        SupportiveTherapist: "💪 finding the right support for you...",
-        InsightfulTherapist: "💭 gaining deeper understanding...",
-      },
-    };
-
-    const relationshipTexts = fillerTexts[personality.relationship] || {};
-    return (
-      relationshipTexts[personality.personality] ||
-      "thinking of the perfect response..."
-    );
-  };
+  // Filler text removed
 
   // Generate follow-up message based on AI personality
   const generateFollowUpMessage = (personality: any) => {
@@ -449,8 +368,9 @@ export default function Messages({
   // Follow-up message timeout mechanism
   useEffect(() => {
     // Clear existing timeout
-    if (followUpTimeout) {
-      clearTimeout(followUpTimeout);
+    if (followUpTimeoutRef.current) {
+      clearTimeout(followUpTimeoutRef.current);
+      followUpTimeoutRef.current = null;
     }
 
     // Only set up follow-up if we have messages and AI personality
@@ -460,7 +380,7 @@ export default function Messages({
       // Only set timeout if the last message is from the AI (not user)
       if (lastMessage.role === "assistant") {
         // Set timeout for 2 minutes (120000ms) of inactivity
-        const timeout = setTimeout(() => {
+        followUpTimeoutRef.current = setTimeout(() => {
           const followUpMessage = generateFollowUpMessage(aiPersonality);
           setMessages((prev) => [
             ...prev,
@@ -470,19 +390,19 @@ export default function Messages({
               timestamp: Date.now(),
             },
           ]);
+          followUpTimeoutRef.current = null;
         }, 120000); // 2 minutes
-
-        setFollowUpTimeout(timeout);
       }
     }
 
     // Cleanup function
     return () => {
-      if (followUpTimeout) {
-        clearTimeout(followUpTimeout);
+      if (followUpTimeoutRef.current) {
+        clearTimeout(followUpTimeoutRef.current);
+        followUpTimeoutRef.current = null;
       }
     };
-  }, [messages, aiPersonality, justChangedRelationship, followUpTimeout]);
+  }, [messages, aiPersonality, justChangedRelationship]);
 
   const loadAiAvatar = async (personality: string) => {
     try {
@@ -514,9 +434,9 @@ export default function Messages({
     if (!message.trim() || sending) return;
 
     // Clear any existing follow-up timeout when user sends a message
-    if (followUpTimeout) {
-      clearTimeout(followUpTimeout);
-      setFollowUpTimeout(null);
+    if (followUpTimeoutRef.current) {
+      clearTimeout(followUpTimeoutRef.current);
+      followUpTimeoutRef.current = null;
     }
 
     setSending(true);
@@ -562,45 +482,14 @@ export default function Messages({
       setTimeout(async () => {
         try {
           const response = await sendWebMessage(userId, message);
-
-          // Calculate word count for filler text
-          const wordCount = response.message.split(/\s+/).length;
-
-          // Generate and show filler text if response is longer than 5 words
-          if (wordCount > 5 && aiPersonality) {
-            const fillerText = generateTypingText(aiPersonality, wordCount);
-
-            // Add filler text as a message
-            const fillerMessage: Message = {
-              role: "assistant",
-              content: fillerText,
-              timestamp: Date.now(),
-            };
-            setMessages((prev) => [...prev, fillerMessage]);
-
-            // Show filler text for a realistic amount of time before showing the actual response
-            const fillerTime = Math.min(wordCount * 100, 3000); // 100ms per word, max 3 seconds
-
-            setTimeout(() => {
-              // Add AI response after filler text
-              const aiMessage: Message = {
-                role: "assistant",
-                content: response.message,
-                timestamp: Date.now(),
-                povImageUrl: response.povImageUrl, // Include POV image if generated
-              };
-              setMessages((prev) => [...prev, aiMessage]);
-            }, fillerTime);
-          } else {
-            // Add AI response immediately for short responses
-            const aiMessage: Message = {
-              role: "assistant",
-              content: response.message,
-              timestamp: Date.now(),
-              povImageUrl: response.povImageUrl, // Include POV image if generated
-            };
-            setMessages((prev) => [...prev, aiMessage]);
-          }
+          // Always add AI response immediately (filler removed)
+          const aiMessage: Message = {
+            role: "assistant",
+            content: response.message,
+            timestamp: Date.now(),
+            povImageUrl: response.povImageUrl,
+          };
+          setMessages((prev) => [...prev, aiMessage]);
         } catch (error) {
           console.error("Error sending message:", error);
           // Remove the user message if sending failed
@@ -776,11 +665,7 @@ export default function Messages({
                 <div className="text-xs opacity-75 mb-1">
                   {aiPersonality?.name || "SwanAI"}
                 </div>
-                {aiTypingText ? (
-                  <div className="text-sm italic text-gray-600 mb-2">
-                    {aiTypingText}
-                  </div>
-                ) : null}
+                {/* Removed aiTypingText display to avoid undefined reference */}
                 <div className="flex space-x-1">
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
                   <div
