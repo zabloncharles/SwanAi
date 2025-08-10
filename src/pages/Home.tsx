@@ -7,7 +7,7 @@ export default function Home() {
   return (
     <div className="min-h-screen flex flex-col bg-white font-sans">
       {/* Hero Section */}
-      <section className="w-full py-20 border-b border-gray-100 flex flex-col md:flex-row items-center justify-between max-w-7xl mx-auto px-4 relative overflow-hidden">
+      <section className="w-full pt-40 pb-20 border-b border-gray-100 flex flex-col md:flex-row items-center justify-between max-w-7xl mx-auto px-4 relative overflow-hidden">
         {/* Video Background */}
         <video
           autoPlay
