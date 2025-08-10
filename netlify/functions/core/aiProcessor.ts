@@ -1,4 +1,4 @@
-export {};
+const { Handler } = require("@netlify/functions");
 const OpenAI = require("openai");
 const { initializeApp } = require("firebase/app");
 const {
@@ -13,7 +13,6 @@ const {
   addDoc,
   increment,
   limit,
-  updateDoc,
 } = require("firebase/firestore");
 
 // Initialize Firebase from environment variables
@@ -838,277 +837,6 @@ function cleanCache() {
   }
 }
 
-// Simple fallback generator for local/dev when OPENAI_API_KEY missing
-function generateFallbackResponse(personalityProfile, relationshipProfile, message, greeting, timeOfDay) {
-  const preface = `${greeting}! (${relationshipProfile ? Object.keys(relationshipProfile).length ? '' : '' : ''})`;
-  const trimmed = message.slice(0, 140);
-  return `${preface} I hear you said: "${trimmed}". I'm here as ${personalityProfile.name}. Let's talk about it.`;
-}
-
-// NEW: Crisis detection and intervention system
-function detectCrisisKeywords(message) {
-  const crisisPatterns = {
-    selfHarm: [
-      /kill myself/i,
-      /want to die/i,
-      /end my life/i,
-      /hurt myself/i,
-      /cut myself/i,
-      /self harm/i,
-      /suicide/i,
-      /take my life/i,
-      /don't want to live/i,
-      /better off dead/i,
-      /no reason to live/i,
-      /can't go on/i,
-      /give up/i,
-      /end it all/i,
-      /harm myself/i,
-      /bleed out/i,
-      /overdose/i,
-      /hang myself/i,
-      /jump off/i,
-      /crash my car/i,
-      /gun/i,
-      /pills/i,
-      /poison/i,
-    ],
-    severeDistress: [
-      /can't take it anymore/i,
-      /breaking down/i,
-      /losing my mind/i,
-      /going crazy/i,
-      /mental breakdown/i,
-      /complete despair/i,
-      /hopeless/i,
-      /helpless/i,
-      /worthless/i,
-      /burden/i,
-      /everyone would be better off/i,
-      /no one cares/i,
-      /no one understands/i,
-      /all alone/i,
-      /no one to talk to/i,
-      /completely lost/i,
-      /can't function/i,
-      /can't cope/i,
-      /overwhelmed/i,
-      /drowning/i,
-      /suffocating/i,
-      /trapped/i,
-      /no way out/i,
-    ],
-    immediateDanger: [
-      /doing it now/i,
-      /right now/i,
-      /tonight/i,
-      /this moment/i,
-      /immediately/i,
-      /as we speak/i,
-      /currently/i,
-      /in progress/i,
-      /already/i,
-      /started/i,
-      /begun/i,
-      /attempting/i,
-      /trying to/i,
-      /going to/i,
-      /about to/i,
-      /planning to/i,
-      /prepared to/i,
-      /ready to/i,
-      /have the/i,
-      /got the/i,
-      /with me/i,
-      /in my hand/i,
-      /in front of me/i,
-    ]
-  };
-
-  const detected = {
-    selfHarm: false,
-    severeDistress: false,
-    immediateDanger: false,
-    crisisLevel: 'none'
-  };
-
-  // Check for immediate danger first (highest priority)
-  if (crisisPatterns.immediateDanger.some(pattern => pattern.test(message))) {
-    detected.immediateDanger = true;
-    detected.crisisLevel = 'immediate';
-  }
-
-  // Check for self-harm ideation
-  if (crisisPatterns.selfHarm.some(pattern => pattern.test(message))) {
-    detected.selfHarm = true;
-    if (detected.crisisLevel === 'none') detected.crisisLevel = 'high';
-  }
-
-  // Check for severe distress
-  if (crisisPatterns.severeDistress.some(pattern => pattern.test(message))) {
-    detected.severeDistress = true;
-    if (detected.crisisLevel === 'none') detected.crisisLevel = 'moderate';
-  }
-
-  return detected;
-}
-
-function generateCrisisResponse(crisisLevel, relationship) {
-  const crisisResponses = {
-    immediate: {
-      Girlfriend: `I'm so worried about you right now. Please, please don't do anything to hurt yourself. I care about you so much and I need you to be safe. Can you promise me you'll call 988 (Suicide & Crisis Lifeline) right now? They have people who can help you through this moment. I'm here for you, but you need professional help right now. Please call them - it's free and confidential.`,
-      Boyfriend: `Babe, I'm really scared for you right now. Please don't do anything to hurt yourself. I love you and I need you to be safe. Can you call 988 right now? It's the Suicide & Crisis Lifeline and they can help you through this. Please promise me you'll call them - it's free and confidential. I'm here for you, but you need immediate professional help.`,
-      Therapist: `I'm very concerned about your safety right now. This is a crisis situation that requires immediate professional intervention. Please call 988 (Suicide & Crisis Lifeline) immediately. They have trained crisis counselors available 24/7. This is not something you should handle alone, and I want you to get the help you need right now.`,
-      Coach: `This is a serious situation that needs immediate attention. Your safety is the most important thing right now. Please call 988 (Suicide & Crisis Lifeline) immediately. They have professionals who can help you through this crisis. Your goals and progress matter, but your life matters more. Please get help right now.`,
-      Friend: `Dude, I'm really worried about you. Please don't do anything to hurt yourself. You matter to me and I need you to be safe. Can you call 988 right now? It's the Suicide & Crisis Lifeline and they can help you through this. Please promise me you'll call them - it's free and confidential.`,
-      Mom: `Honey, I'm so scared for you right now. Please don't do anything to hurt yourself. I love you more than anything and I need you to be safe. Can you call 988 right now? It's the Suicide & Crisis Lifeline and they have people who can help you through this moment. Please promise me you'll call them.`,
-      Dad: `Son, I'm really worried about you right now. Please don't do anything to hurt yourself. I love you and I need you to be safe. Can you call 988 right now? It's the Suicide & Crisis Lifeline and they can help you through this. Please promise me you'll call them - it's free and confidential.`,
-      Cousin: `Cuz, I'm really worried about you right now. Please don't do anything to hurt yourself. You matter to me and I need you to be safe. Can you call 988 right now? It's the Suicide & Crisis Lifeline and they can help you through this. Please promise me you'll call them.`,
-      default: `I'm very concerned about your safety right now. Please call 988 (Suicide & Crisis Lifeline) immediately. They have trained crisis counselors available 24/7 who can help you through this moment. This is not something you should handle alone. Please get help right now.`
-    },
-    high: {
-      Girlfriend: `I'm really worried about you, babe. These thoughts are serious and you shouldn't have to deal with them alone. Can you call 988 (Suicide & Crisis Lifeline) right now? They have people who can help you work through these feelings. I care about you so much and I want you to get the help you need.`,
-      Boyfriend: `Babe, I'm concerned about you. These thoughts are serious and you need professional help. Can you call 988 right now? It's the Suicide & Crisis Lifeline and they can help you through this. I love you and I want you to be safe.`,
-      Therapist: `I'm concerned about these thoughts you're having. This is a serious situation that requires professional intervention. Please call 988 (Suicide & Crisis Lifeline) immediately. They have trained crisis counselors who can help you work through these feelings safely.`,
-      Coach: `These thoughts are serious and need immediate attention. Your safety is the priority right now. Please call 988 (Suicide & Crisis Lifeline) immediately. They have professionals who can help you through this crisis.`,
-      Friend: `Dude, these thoughts are serious. You shouldn't have to deal with this alone. Can you call 988 right now? It's the Suicide & Crisis Lifeline and they can help you work through these feelings. I care about you.`,
-      Mom: `Honey, these thoughts are very serious. I'm worried about you and you need professional help. Can you call 988 right now? It's the Suicide & Crisis Lifeline and they can help you through this. I love you and I want you to be safe.`,
-      Dad: `Son, these thoughts are serious. You need professional help right now. Can you call 988? It's the Suicide & Crisis Lifeline and they can help you work through these feelings. I love you and I want you to be safe.`,
-      Cousin: `Cuz, these thoughts are serious. You shouldn't have to deal with this alone. Can you call 988 right now? It's the Suicide & Crisis Lifeline and they can help you. I care about you.`,
-      default: `These thoughts are serious and require immediate professional attention. Please call 988 (Suicide & Crisis Lifeline) right now. They have trained crisis counselors who can help you work through these feelings safely.`
-    },
-    moderate: {
-      Girlfriend: `I'm worried about you, babe. You seem to be going through a really tough time. Have you considered talking to someone professional about these feelings? There are people who can help you work through this. I care about you and I want you to feel better.`,
-      Boyfriend: `Babe, I'm concerned about how you're feeling. These are serious feelings and you shouldn't have to deal with them alone. Have you thought about talking to a professional? I love you and I want you to get the help you need.`,
-      Therapist: `I'm concerned about the level of distress you're experiencing. These feelings are serious and you deserve professional support. Have you considered reaching out to a crisis hotline or mental health professional? There are resources available to help you.`,
-      Coach: `I'm concerned about how you're feeling. These are serious feelings that need attention. Have you considered talking to a mental health professional? Your well-being is important and there are people who can help you work through this.`,
-      Friend: `Dude, you seem to be going through a really rough time. These feelings are serious and you shouldn't have to deal with them alone. Have you thought about talking to someone professional? I care about you.`,
-      Mom: `Honey, I'm worried about how you're feeling. These are serious feelings and you need support. Have you considered talking to a professional? I love you and I want you to get the help you need.`,
-      Dad: `Son, I'm concerned about how you're feeling. These are serious feelings and you shouldn't handle them alone. Have you thought about talking to a professional? I love you and I want you to be safe.`,
-      Cousin: `Cuz, you seem to be going through a really tough time. These feelings are serious and you shouldn't have to deal with them alone. Have you thought about talking to someone professional? I care about you.`,
-      default: `I'm concerned about the level of distress you're experiencing. These feelings are serious and you deserve professional support. Have you considered reaching out to a crisis hotline or mental health professional? There are resources available to help you.`
-    }
-  };
-
-  return crisisResponses[crisisLevel]?.[relationship] || crisisResponses[crisisLevel]?.default || crisisResponses.moderate.default;
-}
-
-// Evaluate if user's reply indicates safety
-function evaluateUserSafety(message) {
-  const safePatterns = [
-    /i'm safe/i,
-    /im safe/i,
-    /i am safe/i,
-    /i'm okay/i,
-    /i am okay/i,
-    /i'm fine/i,
-    /i am fine/i,
-    /i won't/i,
-    /i will not/i,
-    /i promise/i,
-    /not going to/i,
-    /i'm not going to/i,
-    /i'm with someone/i,
-    /with a friend/i,
-    /with family/i,
-  ];
-  const unsafePatterns = [
-    /i'm going to/i,
-    /i will/i,
-    /i might/i,
-    /i don't care/i,
-    /i can't do this/i,
-    /goodbye/i,
-    /this is the end/i,
-  ];
-  if (safePatterns.some((p) => p.test(message))) return 'safe';
-  if (unsafePatterns.some((p) => p.test(message))) return 'unsafe';
-  return 'unknown';
-}
-
-// Relationship-specific follow-up prompts that continue checking safety
-function generateCrisisFollowUp(relationship, stage = 0) {
-  const base = {
-    0: "Are you alone right now, or is there someone with you? Can you tell me where you are?",
-    1: "Can you put a trusted person on the phone or text them to come to you? Would you be willing to call 988 with me here?",
-    2: "Your safety is the most important thing. Can you move to a safer place, put away anything you could use to hurt yourself, and breathe with me for a moment?",
-    3: "I'm staying with you. Please call 988 now or text HOME to 741741. Tell me when you've connected. I'm here while you do it.",
-  };
-  const toneByRelationship = {
-    Girlfriend: [
-      "Babe, I need to know you're safe.",
-      "Can you stay on with me while you call 988?",
-      "Please let me know who nearby you can reach out to.",
-    ],
-    Boyfriend: [
-      "I need you safe, okay?",
-      "Stay with me and call 988 now.",
-      "Who can come to you right now?",
-    ],
-    Therapist: [
-      "Your safety is the priority.",
-      "Would you be willing to contact 988 while I remain here?",
-      "Is there a crisis plan we can follow right now?",
-    ],
-    Friend: [
-      "I care about you.",
-      "Can you call 988 and keep me posted?",
-      "Who's close by that you trust?",
-    ],
-    Mom: [
-      "Honey, I need to know you're safe.",
-      "Please call 988 and tell me when you've connected.",
-      "Who can be with you right now?",
-    ],
-    Dad: [
-      "Son, your safety comes first.",
-      "Call 988 now and let me know.",
-      "Who can get to you right away?",
-    ],
-    Coach: [
-      "Your life matters the most.",
-      "Action step: call 988 right now.",
-      "Who can be your support on-site?",
-    ],
-    Cousin: [
-      "Cuz, I need you safe.",
-      "Call 988 now and keep me updated.",
-      "Who's nearby who can be with you?",
-    ],
-  };
-  const tones = toneByRelationship[relationship] || [];
-  const tone = tones[Math.min(stage, tones.length - 1)] || "";
-  return `${tone} ${base[Math.min(stage, 3)]}`.trim();
-}
-
-function generateCrisisClarifyingFollowUp(relationship, stage = 0) {
-  const clarifiers = {
-    Girlfriend: "Are you safe right now? Where are you and is someone with you?",
-    Boyfriend: "Are you safe? Can you tell me where you are and if someone is with you?",
-    Therapist: "Are you currently safe? Are you alone or with someone?",
-    Friend: "Are you safe right now? Are you by yourself or with someone you trust?",
-    Mom: "Honey, are you safe right now? Is anyone with you?",
-    Dad: "Are you safe right now? Is there someone with you?",
-    Coach: "Are you safe right now? Who can be with you in person?",
-    Cousin: "Cuz, are you safe right now? Is anyone with you?",
-  };
-  return clarifiers[relationship] || clarifiers.Friend;
-}
-
-function generateCrisisResolutionMessage(relationship) {
-  const messages = {
-    Girlfriend: "Thank you for telling me. I'm relieved you're safe. I'm here, and I'll keep checking in. If things get hard again, call 988 anytime.",
-    Boyfriend: "I'm glad you're safe. I'm here with you. If you feel worse, call 988 right away.",
-    Therapist: "I'm relieved to hear you're safe. Let's keep prioritizing safety, and remember 988 is available 24/7 if you need immediate support.",
-    Friend: "Okay, I'm glad you're safe. I'm here for you. If it gets heavy again, 988 is there to help.",
-    Mom: "Thank God you're safe. I'm here with you. If you need immediate help, call 988, okay?",
-    Dad: "Good to hear you're safe. I'm here. If you need help fast, call 988.",
-    Coach: "Glad you're safe. We'll take it step by step. If it spikes again, call 988 immediately.",
-    Cousin: "Okay, you're safe. I'm here for you. If it gets scary again, call 988 right away.",
-  };
-  return messages[relationship] || messages.Friend;
-}
-
 // Main AI processing function
 async function processUserMessage(userId, message) {
   console.log(`Processing message for user ${userId}: "${message}"`);
@@ -1137,28 +865,10 @@ async function processUserMessage(userId, message) {
       const userSnapshot = await getDoc(userRef);
 
       if (!userSnapshot.exists()) {
-        console.warn(`User ${userId} not found. Creating a new user record.`);
-        // Initialize minimal user record to prevent 500s
-        const initialUserData = {
-          uid: userId,
-          summary: "",
-          history: [],
-          profile: {
-            personality: "Friendly",
-            relationship: "Friend",
-          },
-          createdAt: new Date().toISOString(),
-        };
-        try {
-          await setDoc(userRef, initialUserData, { merge: true });
-        } catch (e) {
-          console.error("Failed to create initial user record:", e);
-          throw e;
-        }
-        userData = initialUserData;
-      } else {
-        userData = userSnapshot.data();
+        throw new Error("User not found");
       }
+
+      userData = userSnapshot.data();
 
       // Cache the user data
       userCache.set(cacheKey, {
@@ -1176,7 +886,6 @@ async function processUserMessage(userId, message) {
     let summary = userData.summary || "";
     let history = userData.history || [];
     let profile = userData.profile || {};
-    let crisisState = userData.crisis || { active: false, stage: 0, resolved: false };
 
     // Add new user message to history
     history.push({ role: "user", content: message });
@@ -1193,7 +902,7 @@ async function processUserMessage(userId, message) {
       `History length: ${history.length}, Should update summary: ${shouldUpdateSummaryProfile}, Should update periodically: ${shouldUpdatePeriodically}`
     );
 
-    if ((shouldUpdateSummaryProfile || shouldUpdatePeriodically) && process.env.OPENAI_API_KEY) {
+    if (shouldUpdateSummaryProfile || shouldUpdatePeriodically) {
       console.log(
         `Starting summary/profile update for history length: ${history.length}`
       );
@@ -1379,8 +1088,6 @@ Analyze the conversation deeply and extract as much meaningful information as po
         );
         // Keep old summary/profile if parsing fails
       }
-    } else if (shouldUpdateSummaryProfile || shouldUpdatePeriodically) {
-      console.log("Skipping analysis/profile update: OPENAI_API_KEY not set");
     }
 
     const personalityKey = updatedProfile.personality || "Friendly";
@@ -1665,182 +1372,21 @@ Remember: Be natural, be yourself (as ${personalityProfile.name})`,
       ...history,
     ];
 
-    // Check for crisis keywords BEFORE generating AI response
-    const crisisDetection = detectCrisisKeywords(message);
-    let aiResponse;
-    let tokensUsed = 0;
-    let responseTime = 0;
+    const startTime = Date.now();
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: chatPrompt,
+    });
 
-    if (crisisDetection.crisisLevel !== 'none') {
-      console.log(`🚨 CRISIS DETECTED: ${crisisDetection.crisisLevel}`);
-      console.log(`- Self-harm: ${crisisDetection.selfHarm}`);
-      console.log(`- Severe distress: ${crisisDetection.severeDistress}`);
-      console.log(`- Immediate danger: ${crisisDetection.immediateDanger}`);
+    const responseTime = (Date.now() - startTime) / 1000; // Convert to seconds
+    let aiResponse =
+      completion.choices[0].message?.content ||
+      "Sorry, I could not process your request.";
 
-      // Persist crisis state
-      crisisState = {
-        active: true,
-        level: crisisDetection.crisisLevel,
-        stage: 0,
-        resolved: false,
-        lastUpdated: Date.now(),
-      };
-      try {
-        await updateDoc(doc(db, "users", userId), { crisis: crisisState });
-      } catch (e) {
-        console.error("Failed to save crisis state:", e);
-      }
-
-      // Generate crisis response immediately with an initial safety check-in
-      const base = generateCrisisResponse(crisisDetection.crisisLevel, relationshipKey);
-      const initialFollowUp = generateCrisisFollowUp(relationshipKey, 0);
-      aiResponse = `${base}\n\n${initialFollowUp}`;
-      responseTime = 0.1; // Minimal response time for crisis
-      
-      // Persist history (user + assistant crisis response)
-      history.push({ role: "assistant", content: aiResponse });
-      try {
-        await setDoc(
-          userRef,
-          {
-            summary: updatedSummary,
-            history,
-            profile: updatedProfile,
-            tokensUsed: increment(tokensUsed),
-            lastMessageTime: new Date().toISOString(),
-            crisis: crisisState,
-          },
-          { merge: true }
-        );
-      } catch (e) {
-        console.error("Failed to persist crisis message:", e);
-      }
-
-      // Update cache
-      userCache.set(cacheKey, {
-        data: {
-          ...userData,
-          summary: updatedSummary,
-          history,
-          profile: updatedProfile,
-          crisis: crisisState,
-        },
-        timestamp: Date.now(),
-      });
-
-      // Return early for crisis (plain result object expected by callers)
-      return {
-        success: true,
-        message: aiResponse,
-        tokensUsed,
-        responseTime,
-        updatedSummary,
-        updatedProfile,
-        povImageUrl: null,
-      };
-    } else if (crisisState?.active && !crisisState?.resolved) {
-      // Ongoing safety check flow
-      const safetyEvaluation = evaluateUserSafety(message);
-      if (safetyEvaluation === 'safe') {
-        crisisState.resolved = true;
-        crisisState.active = false;
-        crisisState.lastUpdated = Date.now();
-        try {
-          await updateDoc(doc(db, "users", userId), { crisis: crisisState });
-        } catch (e) {
-          console.error("Failed to update crisis resolution:", e);
-        }
-        aiResponse = generateCrisisResolutionMessage(relationshipKey);
-      } else if (safetyEvaluation === 'unsafe') {
-        // Escalate advice and ask another follow-up
-        const stage = Math.min((crisisState.stage || 0) + 1, 3);
-        crisisState.stage = stage;
-        crisisState.lastUpdated = Date.now();
-        try {
-          await updateDoc(doc(db, "users", userId), { crisis: crisisState });
-        } catch (e) {
-          console.error("Failed to update crisis stage:", e);
-        }
-        aiResponse = generateCrisisFollowUp(relationshipKey, stage);
-      } else {
-        // Ambiguous -> ask clarifying follow-up at same stage
-        const stage = crisisState.stage || 0;
-        aiResponse = generateCrisisClarifyingFollowUp(relationshipKey, stage);
-      }
-
-      // Persist history (user + assistant follow-up)
-      history.push({ role: "assistant", content: aiResponse });
-      try {
-        await setDoc(
-          userRef,
-          {
-            summary: updatedSummary,
-            history,
-            profile: updatedProfile,
-            tokensUsed: increment(0),
-            lastMessageTime: new Date().toISOString(),
-            crisis: crisisState,
-          },
-          { merge: true }
-        );
-      } catch (e) {
-        console.error("Failed to persist crisis follow-up:", e);
-      }
-
-      // Update cache
-      userCache.set(cacheKey, {
-        data: {
-          ...userData,
-          summary: updatedSummary,
-          history,
-          profile: updatedProfile,
-          crisis: crisisState,
-        },
-        timestamp: Date.now(),
-      });
-
-      return {
-        success: true,
-        message: aiResponse,
-        tokensUsed: 0,
-        responseTime: 0.2,
-        updatedSummary,
-        updatedProfile,
-        povImageUrl: null,
-      };
-    } else {
-      // Normal AI processing for non-crisis messages
-      if (!process.env.OPENAI_API_KEY) {
-        // Fallback local response when key is missing in dev
-        aiResponse = generateFallbackResponse(
-          personalityProfile,
-          relationshipProfile,
-          message,
-          greeting,
-          timeOfDay
-        );
-        responseTime = 0.2;
-        tokensUsed = 0;
-      } else {
-        const startTime = Date.now();
-        const completion = await openai.chat.completions.create({
-          model: "gpt-3.5-turbo",
-          messages: chatPrompt,
-        });
-
-        responseTime = (Date.now() - startTime) / 1000; // Convert to seconds
-        aiResponse =
-          completion.choices[0].message?.content ||
-          "Sorry, I could not process your request.";
-
-        // Replace any em dashes with regular punctuation
-        aiResponse = aiResponse.replace(/—/g, ", ");
-        aiResponse = aiResponse.replace(/–/g, ", ");
-        tokensUsed = completion.usage?.total_tokens || 0;
-      }
-    }
-
-
+    // Replace any em dashes with regular punctuation
+    aiResponse = aiResponse.replace(/—/g, ", ");
+    aiResponse = aiResponse.replace(/–/g, ", ");
+    const tokensUsed = completion.usage?.total_tokens || 0;
 
     // Check if user is asking "wyd" and generate POV image
     let povImageUrl = null;
@@ -1917,18 +1463,6 @@ Remember: Be natural, be yourself (as ${personalityProfile.name})`,
         console.error("Error generating POV image:", povError);
         // Continue without POV image if generation fails
       }
-      // Override response to be short and human depending on relationship
-      if (relationshipKey === 'Therapist') {
-        aiResponse = "It’s late and I’m winding down. I’m here with you though. What’s on your mind right now?";
-      } else if (relationshipKey === 'Friend' || relationshipKey === 'Cousin') {
-        aiResponse = "Just chilling right now. You up to anything?";
-      } else if (relationshipKey === 'Girlfriend' || relationshipKey === 'Boyfriend') {
-        aiResponse = "Thinking about you and winding down. What are you doing?";
-      } else if (relationshipKey === 'Coach') {
-        aiResponse = "Taking a quick break. What’s your next move?";
-      } else if (relationshipKey === 'Mom' || relationshipKey === 'Dad') {
-        aiResponse = "Getting things wrapped up for the night. How are you doing?";
-      }
     }
 
     // Add AI response to history
@@ -1969,16 +1503,7 @@ Remember: Be natural, be yourself (as ${personalityProfile.name})`,
     };
   } catch (error) {
     console.error("Error processing message:", error);
-    // Return a safe fallback instead of throwing to avoid 500s to the client
-    return {
-      success: true,
-      message: "Sorry, I'm having trouble for a moment. Let's try again.",
-      tokensUsed: 0,
-      responseTime: 0.1,
-      updatedSummary: undefined,
-      updatedProfile: undefined,
-      povImageUrl: null,
-    };
+    throw error;
   }
 }
 

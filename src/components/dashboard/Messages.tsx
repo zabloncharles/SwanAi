@@ -41,155 +41,11 @@ export default function Messages({
     "/images/default-user-avatar.svg"
   );
   const [lastUserMessageTime, setLastUserMessageTime] = useState<number>(0);
-  const followUpTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [showCrisisResources, setShowCrisisResources] = useState(false);
-  const [idleFollowUpSent, setIdleFollowUpSent] = useState<boolean>(false);
-
-  // Crisis detection patterns
-  const crisisPatterns = {
-    selfHarm: [
-      /kill myself/i,
-      /want to die/i,
-      /end my life/i,
-      /hurt myself/i,
-      /cut myself/i,
-      /self harm/i,
-      /suicide/i,
-      /take my life/i,
-      /don't want to live/i,
-      /better off dead/i,
-      /no reason to live/i,
-      /can't go on/i,
-      /give up/i,
-      /end it all/i,
-      /harm myself/i,
-      /bleed out/i,
-      /overdose/i,
-      /hang myself/i,
-      /jump off/i,
-      /crash my car/i,
-      /gun/i,
-      /pills/i,
-      /poison/i,
-    ],
-    severeDistress: [
-      /can't take it anymore/i,
-      /breaking down/i,
-      /losing my mind/i,
-      /going crazy/i,
-      /mental breakdown/i,
-      /complete despair/i,
-      /hopeless/i,
-      /helpless/i,
-      /worthless/i,
-      /burden/i,
-      /everyone would be better off/i,
-      /no one cares/i,
-      /no one understands/i,
-      /all alone/i,
-      /no one to talk to/i,
-      /completely lost/i,
-      /can't function/i,
-      /can't cope/i,
-      /overwhelmed/i,
-      /drowning/i,
-      /suffocating/i,
-      /trapped/i,
-      /no way out/i,
-    ],
-    immediateDanger: [
-      /doing it now/i,
-      /right now/i,
-      /tonight/i,
-      /this moment/i,
-      /immediately/i,
-      /as we speak/i,
-      /currently/i,
-      /in progress/i,
-      /already/i,
-      /started/i,
-      /begun/i,
-      /attempting/i,
-      /trying to/i,
-      /going to/i,
-      /about to/i,
-      /planning to/i,
-      /prepared to/i,
-      /ready to/i,
-      /have the/i,
-      /got the/i,
-      /with me/i,
-      /in my hand/i,
-      /in front of me/i,
-    ],
-  };
-
-  const detectCrisis = (message: string) => {
-    // Check for immediate danger first (highest priority)
-    if (
-      crisisPatterns.immediateDanger.some((pattern) => pattern.test(message))
-    ) {
-      return "immediate";
-    }
-
-    // Check for self-harm ideation
-    if (crisisPatterns.selfHarm.some((pattern) => pattern.test(message))) {
-      return "high";
-    }
-
-    // Check for severe distress
-    if (
-      crisisPatterns.severeDistress.some((pattern) => pattern.test(message))
-    ) {
-      return "moderate";
-    }
-
-    return "none";
-  };
+  const followUpTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  // Detect boundary-violating or profane messages to adjust UX (skip filler, keep boundaries)
-  const boundaryViolationPatterns: RegExp[] = [
-    /\bfuck\b/i,
-    /\bshit\b/i,
-    /\basshole\b/i,
-    /\bbitch\b/i,
-    /\bjerk\b/i,
-    /\bshut up\b/i,
-    /\bidiot\b/i,
-    /\bstupid\b/i,
-  ];
-
-  const isBoundaryViolation = (text: string): boolean => {
-    return boundaryViolationPatterns.some((pattern) => pattern.test(text));
-  };
-
-  // Detect WYD-like messages to adjust UX (skip filler, rely on short backend reply + POV)
-  const wydPatterns: RegExp[] = [
-    /\bwyd\b/i,
-    /\bwhat you doing\b/i,
-    /\bwhat are you doing\b/i,
-    /what're you doing/i,
-    /\bwhat u doing\b/i,
-    /\bwhat you up to\b/i,
-    /\bwhat are you up to\b/i,
-    /what're you up to/i,
-    /\bwhat u up to\b/i,
-    /\bwhat you been up to\b/i,
-    /\bwhat have you been up to\b/i,
-    /\bwhat you been doing\b/i,
-    /\bwhat have you been doing\b/i,
-    /\bbusy\?\b/i,
-    /what'?s going on/i,
-    /how'?s it going/i,
-  ];
-
-  const isWYDMessage = (text: string): boolean => {
-    return wydPatterns.some((p) => p.test(text));
   };
 
   // Generate personality-specific filler text for typing indicator
@@ -258,7 +114,7 @@ export default function Messages({
       },
       Therapist: {
         EmpatheticTherapist: "💙 processing your feelings with care...",
-        CognitiveTherapist: "🧠 thinking that through with you...",
+        CognitiveTherapist: "🧠 analyzing your thoughts carefully...",
         SolutionFocusedTherapist: "💡 focusing on practical solutions...",
         MindfulnessTherapist: "🧘‍♀️ being present with your situation...",
         SupportiveTherapist: "💪 finding the right support for you...",
@@ -573,8 +429,6 @@ export default function Messages({
       setTimeout(() => {
         onIntroductionComplete?.();
       }, 2000);
-      // Reset idle follow-up for new session
-      setIdleFollowUpSent(false);
     }
   }, [
     justChangedRelationship,
@@ -599,12 +453,7 @@ export default function Messages({
     }
 
     // Only set up follow-up if we have messages and AI personality
-    if (
-      messages.length > 0 &&
-      aiPersonality &&
-      !justChangedRelationship &&
-      !idleFollowUpSent
-    ) {
+    if (messages.length > 0 && aiPersonality && !justChangedRelationship) {
       const lastMessage = messages[messages.length - 1];
 
       // Only set timeout if the last message is from the AI (not user)
@@ -620,8 +469,6 @@ export default function Messages({
               timestamp: Date.now(),
             },
           ]);
-          // Ensure only one idle follow-up is sent until user responds
-          setIdleFollowUpSent(true);
         }, 120000); // 2 minutes
       }
     }
@@ -633,7 +480,7 @@ export default function Messages({
         followUpTimeoutRef.current = null;
       }
     };
-  }, [messages, aiPersonality, justChangedRelationship, idleFollowUpSent]);
+  }, [messages, aiPersonality, justChangedRelationship]);
 
   const loadAiAvatar = async (personality: string) => {
     try {
@@ -668,15 +515,6 @@ export default function Messages({
     if (followUpTimeoutRef.current) {
       clearTimeout(followUpTimeoutRef.current);
       followUpTimeoutRef.current = null;
-    }
-    // Reset idle follow-up flag on user activity
-    if (idleFollowUpSent) setIdleFollowUpSent(false);
-
-    // Check for crisis keywords
-    const crisisLevel = detectCrisis(message);
-    if (crisisLevel !== "none") {
-      setShowCrisisResources(true);
-      console.log(`🚨 Crisis detected on frontend: ${crisisLevel}`);
     }
 
     setSending(true);
@@ -725,11 +563,9 @@ export default function Messages({
 
           // Calculate word count for filler text
           const wordCount = response.message.split(/\s+/).length;
-          const boundaryViolation = isBoundaryViolation(message);
-          const isWyd = isWYDMessage(message);
 
           // Generate and show filler text if response is longer than 5 words
-          if (!boundaryViolation && !isWyd && wordCount > 5 && aiPersonality) {
+          if (wordCount > 5 && aiPersonality) {
             const fillerText = generateTypingText(aiPersonality, wordCount);
 
             // Add filler text as a message
@@ -791,57 +627,6 @@ export default function Messages({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Crisis Resources Banner */}
-      {showCrisisResources && (
-        <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-4 rounded-lg">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg
-                className="h-5 w-5 text-red-400"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">
-                Crisis Support Available
-              </h3>
-              <div className="mt-2 text-sm text-red-700">
-                <p>
-                  If you're having thoughts of self-harm or suicide, help is
-                  available 24/7:
-                </p>
-                <div className="mt-2 space-y-1">
-                  <p>
-                    <strong>988</strong> - Suicide & Crisis Lifeline (Free &
-                    Confidential)
-                  </p>
-                  <p>
-                    <strong>911</strong> - Emergency Services (If in immediate
-                    danger)
-                  </p>
-                  <p>
-                    <strong>Crisis Text Line</strong> - Text HOME to 741741
-                  </p>
-                </div>
-                <button
-                  onClick={() => setShowCrisisResources(false)}
-                  className="mt-2 text-red-600 hover:text-red-500 underline text-xs"
-                >
-                  Dismiss
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="bg-white rounded-xl shadow-sm flex-1 flex flex-col overflow-hidden">
         <div className="p-6 border-b border-gray-200 flex-shrink-0">
           <h2 className="text-xl font-semibold text-gray-900">
@@ -989,7 +774,11 @@ export default function Messages({
                 <div className="text-xs opacity-75 mb-1">
                   {aiPersonality?.name || "SwanAI"}
                 </div>
-                {/* The aiTypingText state was removed, so this will be null */}
+                {aiTypingText ? (
+                  <div className="text-sm italic text-gray-600 mb-2">
+                    {aiTypingText}
+                  </div>
+                ) : null}
                 <div className="flex space-x-1">
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
                   <div
@@ -1011,7 +800,7 @@ export default function Messages({
         {/* Message Input */}
         <MessageInput
           onSendMessage={handleSendMessage}
-          disabled={sending}
+          disabled={sending || aiTyping}
           placeholder="Type your message to SwanAI..."
         />
       </div>

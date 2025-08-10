@@ -85,29 +85,7 @@ const handler = async (event) => {
     console.log(`Processing web message for user ${userId}: "${message}"`);
 
     // Process the message using the shared core logic
-    let result;
-    try {
-      result = await processUserMessage(userId, message);
-    } catch (err) {
-      console.error("Core processor threw:", err);
-      // Return graceful fallback instead of 500 to keep client UX flowing
-      return {
-        statusCode: 200,
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          success: true,
-          message: "Sorry, I'm having a moment. Let's try that again.",
-          tokensUsed: 0,
-          responseTime: 0.1,
-          updatedSummary: undefined,
-          updatedProfile: undefined,
-          povImageUrl: null,
-        }),
-      };
-    }
+    const result = await processUserMessage(userId, message);
 
     console.log(`Web message processed successfully for user ${userId}`);
 
