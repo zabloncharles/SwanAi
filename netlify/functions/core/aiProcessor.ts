@@ -1045,9 +1045,13 @@ Remember: Be natural, be yourself (as ${personalityProfile.name})`,
     });
 
     const responseTime = (Date.now() - startTime) / 1000; // Convert to seconds
-    const aiResponse =
+    let aiResponse =
       completion.choices[0].message?.content ||
       "Sorry, I could not process your request.";
+    
+    // Replace any em dashes with regular punctuation
+    aiResponse = aiResponse.replace(/—/g, ', ');
+    aiResponse = aiResponse.replace(/–/g, ', ');
     const tokensUsed = completion.usage?.total_tokens || 0;
 
     // Add AI response to history
