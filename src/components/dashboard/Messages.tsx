@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../config/firebase";
 import { sendWebMessage } from "../../services/messageApi";
+import { getAvatarUrl } from "../../services/avatarApi";
 import MessageInput from "./MessageInput";
 
 interface Message {
@@ -32,6 +33,8 @@ export default function Messages({
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [aiTyping, setAiTyping] = useState(false);
+  const [aiAvatarUrl, setAiAvatarUrl] = useState<string>("/images/default-avatar.svg");
+  const [userAvatarUrl, setUserAvatarUrl] = useState<string>("/images/default-user-avatar.svg");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -228,6 +231,23 @@ export default function Messages({
     onIntroductionComplete,
   ]);
 
+  // Load AI avatar when personality changes
+  useEffect(() => {
+    if (aiPersonality?.personality) {
+      loadAiAvatar(aiPersonality.personality);
+    }
+  }, [aiPersonality?.personality]);
+
+  const loadAiAvatar = async (personality: string) => {
+    try {
+      const avatarUrl = await getAvatarUrl(personality);
+      setAiAvatarUrl(avatarUrl);
+    } catch (error) {
+      console.error('Error loading AI avatar:', error);
+      setAiAvatarUrl("/images/default-avatar.svg");
+    }
+  };
+
   // Calculate realistic response time based on message length and conversation context
   const calculateResponseTime = (
     message: string,
@@ -367,10 +387,25 @@ export default function Messages({
             messages.map((message, index) => (
               <div
                 key={index}
-                className={`flex ${
+                className={`flex items-end space-x-2 ${
                   message.role === "user" ? "justify-end" : "justify-start"
                 }`}
               >
+                {/* AI Avatar */}
+                {message.role === "assistant" && (
+                  <div className="flex-shrink-0">
+                    <img
+                      src={aiAvatarUrl}
+                      alt={aiPersonality?.name || "AI"}
+                      className="w-8 h-8 rounded-full object-cover border-2 border-gray-200"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = "/images/default-avatar.svg";
+                      }}
+                    />
+                  </div>
+                )}
+
                 <div
                   className={`max-w-md lg:max-w-lg px-4 py-2 rounded-lg ${
                     message.role === "user"
@@ -422,7 +457,20 @@ export default function Messages({
 
           {/* AI Typing indicator */}
           {aiTyping && (
-            <div className="flex justify-start">
+            <div className="flex items-end space-x-2 justify-start">
+              {/* AI Avatar */}
+              <div className="flex-shrink-0">
+                <img
+                  src={aiAvatarUrl}
+                  alt={aiPersonality?.name || "AI"}
+                  className="w-8 h-8 rounded-full object-cover border-2 border-gray-200"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = "/images/default-avatar.svg";
+                  }}
+                />
+              </div>
+              
               <div className="bg-gray-100 text-gray-800 px-4 py-2 rounded-lg">
                 <div className="text-xs opacity-75 mb-1">
                   {aiPersonality?.name || "SwanAI"}
