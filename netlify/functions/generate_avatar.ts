@@ -6,39 +6,37 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const handler: Handler = async (event) => {
   // Handle CORS
   if (event.httpMethod === "OPTIONS") {
-    return {
-      statusCode: 200,
+    return new Response(null, {
+      status: 200,
       headers: {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Headers": "Content-Type",
         "Access-Control-Allow-Methods": "POST, OPTIONS",
       },
-    };
+    });
   }
 
   if (event.httpMethod !== "POST") {
-    return {
-      statusCode: 405,
-      body: JSON.stringify({ error: "Method not allowed" }),
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
       headers: {
         "Access-Control-Allow-Origin": "*",
         "Content-Type": "application/json",
       },
-    };
+    });
   }
 
   try {
     const { prompt, personality } = JSON.parse(event.body || "{}");
 
     if (!prompt) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: "Prompt is required" }),
+      return new Response(JSON.stringify({ error: "Prompt is required" }), {
+        status: 400,
         headers: {
           "Access-Control-Allow-Origin": "*",
           "Content-Type": "application/json",
         },
-      };
+      });
     }
 
     console.log(`Generating avatar for personality: ${personality}`);
@@ -62,32 +60,30 @@ const handler: Handler = async (event) => {
 
     console.log(`Avatar generated successfully for ${personality}`);
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
-        imageUrl,
-        personality,
-        success: true,
-      }),
+    return new Response(JSON.stringify({
+      imageUrl,
+      personality,
+      success: true,
+    }), {
+      status: 200,
       headers: {
         "Access-Control-Allow-Origin": "*",
         "Content-Type": "application/json",
       },
-    };
+    });
   } catch (error) {
     console.error("Error generating avatar:", error);
-    
-    return {
-      statusCode: 500,
-      body: JSON.stringify({
-        error: "Failed to generate avatar",
-        details: error instanceof Error ? error.message : "Unknown error",
-      }),
+
+    return new Response(JSON.stringify({
+      error: "Failed to generate avatar",
+      details: error instanceof Error ? error.message : "Unknown error",
+    }), {
+      status: 500,
       headers: {
         "Access-Control-Allow-Origin": "*",
         "Content-Type": "application/json",
       },
-    };
+    });
   }
 };
 
