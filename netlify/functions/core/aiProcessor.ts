@@ -1969,7 +1969,16 @@ Remember: Be natural, be yourself (as ${personalityProfile.name})`,
     };
   } catch (error) {
     console.error("Error processing message:", error);
-    throw error;
+    // Return a safe fallback instead of throwing to avoid 500s to the client
+    return {
+      success: true,
+      message: "Sorry, I'm having trouble for a moment. Let's try again.",
+      tokensUsed: 0,
+      responseTime: 0.1,
+      updatedSummary: undefined,
+      updatedProfile: undefined,
+      povImageUrl: null,
+    };
   }
 }
 
