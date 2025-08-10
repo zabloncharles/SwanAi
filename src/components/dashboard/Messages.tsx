@@ -168,6 +168,30 @@ export default function Messages({
     return boundaryViolationPatterns.some((pattern) => pattern.test(text));
   };
 
+  // Detect WYD-like messages to adjust UX (skip filler, rely on short backend reply + POV)
+  const wydPatterns: RegExp[] = [
+    /\bwyd\b/i,
+    /\bwhat you doing\b/i,
+    /\bwhat are you doing\b/i,
+    /what're you doing/i,
+    /\bwhat u doing\b/i,
+    /\bwhat you up to\b/i,
+    /\bwhat are you up to\b/i,
+    /what're you up to/i,
+    /\bwhat u up to\b/i,
+    /\bwhat you been up to\b/i,
+    /\bwhat have you been up to\b/i,
+    /\bwhat you been doing\b/i,
+    /\bwhat have you been doing\b/i,
+    /\bbusy\?\b/i,
+    /what'?s going on/i,
+    /how'?s it going/i,
+  ];
+
+  const isWYDMessage = (text: string): boolean => {
+    return wydPatterns.some((p) => p.test(text));
+  };
+
   // Generate personality-specific filler text for typing indicator
   const generateTypingText = (personality: any, wordCount: number) => {
     if (wordCount <= 5) return ""; // No filler text for short responses
@@ -702,9 +726,10 @@ export default function Messages({
           // Calculate word count for filler text
           const wordCount = response.message.split(/\s+/).length;
           const boundaryViolation = isBoundaryViolation(message);
+          const isWyd = isWYDMessage(message);
 
           // Generate and show filler text if response is longer than 5 words
-          if (!boundaryViolation && wordCount > 5 && aiPersonality) {
+          if (!boundaryViolation && !isWyd && wordCount > 5 && aiPersonality) {
             const fillerText = generateTypingText(aiPersonality, wordCount);
 
             // Add filler text as a message

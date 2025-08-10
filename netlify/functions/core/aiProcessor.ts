@@ -1,4 +1,4 @@
-const { Handler } = require("@netlify/functions");
+export {};
 const OpenAI = require("openai");
 const { initializeApp } = require("firebase/app");
 const {
@@ -1914,6 +1914,18 @@ Remember: Be natural, be yourself (as ${personalityProfile.name})`,
       } catch (povError) {
         console.error("Error generating POV image:", povError);
         // Continue without POV image if generation fails
+      }
+      // Override response to be short and human depending on relationship
+      if (relationshipKey === 'Therapist') {
+        aiResponse = "It’s late and I’m winding down. I’m here with you though. What’s on your mind right now?";
+      } else if (relationshipKey === 'Friend' || relationshipKey === 'Cousin') {
+        aiResponse = "Just chilling right now. You up to anything?";
+      } else if (relationshipKey === 'Girlfriend' || relationshipKey === 'Boyfriend') {
+        aiResponse = "Thinking about you and winding down. What are you doing?";
+      } else if (relationshipKey === 'Coach') {
+        aiResponse = "Taking a quick break. What’s your next move?";
+      } else if (relationshipKey === 'Mom' || relationshipKey === 'Dad') {
+        aiResponse = "Getting things wrapped up for the night. How are you doing?";
       }
     }
 
