@@ -43,6 +43,7 @@ export default function Messages({
   const [lastUserMessageTime, setLastUserMessageTime] = useState<number>(0);
   const followUpTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const followUpSentRef = useRef<boolean>(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -129,122 +130,10 @@ export default function Messages({
     );
   };
 
-  // Generate follow-up message based on AI personality
-  const generateFollowUpMessage = (personality: any) => {
-    const followUpMessages = {
-      Girlfriend: {
-        CaringGirlfriend:
-          "Hey babe... are you okay? 💕 I'm getting a bit worried about you. Everything alright?",
-        FunGirlfriend:
-          "Hello? 👀 Are you ignoring me or did you get kidnapped by aliens? 😄",
-        SupportiveGirlfriend:
-          "Hey love... just checking in. You've been quiet and I want to make sure you're doing okay. 💪",
-        RomanticGirlfriend:
-          "My love... 💖 I miss you. Are you there? I hope everything is okay.",
-        IndependentGirlfriend:
-          "Hey there! 👋 Just wanted to check in. Everything good with you?",
-        AdventurousGirlfriend:
-          "OMG babe! 🚀 Where did you go? Did you run off on another adventure without me? 😂",
-      },
-      Boyfriend: {
-        RomanticBoyfriend:
-          "Beautiful... 💕 I'm getting worried. Are you okay? I miss you.",
-        ProtectiveBoyfriend:
-          "Babe? 🛡️ You've been quiet. Everything safe? I'm here if you need me.",
-        FunBoyfriend:
-          "Yo gorgeous! 😄 Did I say something wrong or are you just busy?",
-        SupportiveBoyfriend:
-          "Hey love... 💪 You've been quiet. Everything okay? I'm here for you.",
-        AmbitiousBoyfriend:
-          "Babe? 💼 Just checking in. Hope your day is going well.",
-        ChillBoyfriend:
-          "Yo! 😎 What's good? You've been quiet. Everything cool?",
-      },
-      Friend: {
-        MumFriend:
-          "Hey there! 👋 Just checking in on you. Everything okay? I'm here if you need anything.",
-        ChaoticFriend:
-          "OMG where did you go? 🌟 Did you get lost in another dimension? 😂",
-        Jokester:
-          "Hey! 😄 Did my last joke scare you away? Come back, I have more terrible ones!",
-        Bookworm:
-          "Hello? 📚 Did you get lost in a good book? I miss our conversations.",
-        LateFriend:
-          "Hey! 😅 I know I'm usually the late one, but where are you?",
-        FashionableFriend:
-          "Hey gorgeous! 👗 Did you find the perfect outfit and forget about me? 😂",
-        EmotionalFriend:
-          "Hey love! 💕 You've been quiet. Everything okay? I'm here for you.",
-        LaidbackFriend: "Yo! 😎 What's up? You've been quiet. Everything good?",
-        BoJackHorseman:
-          "Hey... so I did something stupid again. But that's not why I'm texting. You okay?",
-      },
-      Mom: {
-        NurturingMom:
-          "Mi amor? 💕 I'm getting worried about you. Are you okay?",
-        PracticalMom:
-          "Sweetheart? 👋 Just checking in. Do you need help with anything?",
-        FunMom:
-          "Hey kiddo! 🎉 Where did you go? Did you find something more fun than talking to your mom? 😂",
-        WiseMom:
-          "My dear? 💭 I hope everything is okay. I'm here if you need me.",
-        ProtectiveMom: "Honey? 🛡️ I'm getting worried. Are you safe?",
-        EncouragingMom:
-          "My amazing child! 💪 I hope you're doing okay. I'm so proud of you.",
-      },
-      Dad: {
-        WiseDad: "Son? 💭 Everything okay? I'm here if you need advice.",
-        SteadyDad: "Kiddo? 👋 Just checking in. What's on your mind?",
-        HandyDad:
-          "Hey there! 🔧 Everything working okay? Need help with anything?",
-        FunDad:
-          "Yo champ! 😄 Where did you go? Did you find something more fun?",
-        ProtectiveDad: "Son? 🛡️ Everything safe? Making good choices?",
-        SupportiveDad: "Hey there! 💪 Everything going okay? I'm proud of you.",
-      },
-      Coach: {
-        MotivationalCoach:
-          "Hey! 💪 Where's that motivation? Let's get back to work!",
-        StrategicCoach: "Hello? 📋 We have goals to achieve. What's the plan?",
-        ToughLoveCoach: "Hey. What's really going on? We need to talk.",
-        EncouragingCoach:
-          "Hello! 🌟 I believe in you! What's holding you back?",
-        AccountabilityCoach:
-          "Hey. We need to check in on your progress. What's happening?",
-        LifeCoach: "Hello? 🎯 We have work to do. What area needs attention?",
-      },
-      Cousin: {
-        FunCousin:
-          "Hey cuz! 🎉 Where did you go? Did you find better adventures?",
-        CloseCousin:
-          "Hey! 👋 What's really going on? I know you better than anyone.",
-        AdventurousCousin: "Yo cuz! 🚀 Did you run off on another adventure?",
-        SupportiveCousin: "Hey there! 💕 Everything okay? I'm here for you.",
-        WiseCousin: "Hey cuz? 💭 Need some advice? I'm here.",
-        PartnerInCrimeCousin: "Hey partner! 😈 What trouble did you get into?",
-      },
-      Therapist: {
-        EmpatheticTherapist:
-          "Hello? 💙 I'm here if you need to talk. How are you feeling?",
-        CognitiveTherapist:
-          "Hello? 🧠 I'm here to support you. What would you like to discuss?",
-        SolutionFocusedTherapist:
-          "Hello? 💡 Let's focus on solutions. What would you like to work on?",
-        MindfulnessTherapist:
-          "Hello? 🧘‍♀️ Let's practice being present. How are you feeling?",
-        SupportiveTherapist:
-          "Hello? 💪 I'm here to support you. How can I help?",
-        InsightfulTherapist:
-          "Hello? 💭 Let's gain deeper understanding. What's on your mind?",
-      },
-    };
-
-    const relationshipMessages =
-      followUpMessages[personality.relationship] || {};
-    return (
-      relationshipMessages[personality.personality] ||
-      "Hey! 👋 Just checking in. Everything okay?"
-    );
+  // Generate simple follow-up message (generic)
+  const generateFollowUpMessage = () => {
+    const options = ["hello?", "are you there?", "where did you go?"];
+    return options[Math.floor(Math.random() * options.length)];
   };
 
   // Generate introduction message based on AI personality
@@ -453,14 +342,22 @@ export default function Messages({
     }
 
     // Only set up follow-up if we have messages and AI personality
-    if (messages.length > 0 && aiPersonality && !justChangedRelationship) {
+    if (
+      messages.length > 0 &&
+      aiPersonality &&
+      !justChangedRelationship &&
+      !followUpSentRef.current
+    ) {
       const lastMessage = messages[messages.length - 1];
 
       // Only set timeout if the last message is from the AI (not user)
       if (lastMessage.role === "assistant") {
         // Set timeout for 2 minutes (120000ms) of inactivity
         followUpTimeoutRef.current = setTimeout(() => {
-          const followUpMessage = generateFollowUpMessage(aiPersonality);
+          // Ensure we only send one follow-up until the user replies
+          if (followUpSentRef.current) return;
+          followUpSentRef.current = true;
+          const followUpMessage = generateFollowUpMessage();
           setMessages((prev) => [
             ...prev,
             {
@@ -516,6 +413,8 @@ export default function Messages({
       clearTimeout(followUpTimeoutRef.current);
       followUpTimeoutRef.current = null;
     }
+    // User responded, allow a new follow-up in the future
+    followUpSentRef.current = false;
 
     setSending(true);
 
