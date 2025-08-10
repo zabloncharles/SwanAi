@@ -41,7 +41,9 @@ export default function Messages({
     "/images/default-user-avatar.svg"
   );
   const [lastUserMessageTime, setLastUserMessageTime] = useState<number>(0);
-  const [followUpTimeout, setFollowUpTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [followUpTimeout, setFollowUpTimeout] = useState<NodeJS.Timeout | null>(
+    null
+  );
   const [showCrisisResources, setShowCrisisResources] = useState(false);
 
   // Crisis detection patterns
@@ -120,26 +122,30 @@ export default function Messages({
       /with me/i,
       /in my hand/i,
       /in front of me/i,
-    ]
+    ],
   };
 
   const detectCrisis = (message: string) => {
     // Check for immediate danger first (highest priority)
-    if (crisisPatterns.immediateDanger.some(pattern => pattern.test(message))) {
-      return 'immediate';
+    if (
+      crisisPatterns.immediateDanger.some((pattern) => pattern.test(message))
+    ) {
+      return "immediate";
     }
-    
+
     // Check for self-harm ideation
-    if (crisisPatterns.selfHarm.some(pattern => pattern.test(message))) {
-      return 'high';
+    if (crisisPatterns.selfHarm.some((pattern) => pattern.test(message))) {
+      return "high";
     }
-    
+
     // Check for severe distress
-    if (crisisPatterns.severeDistress.some(pattern => pattern.test(message))) {
-      return 'moderate';
+    if (
+      crisisPatterns.severeDistress.some((pattern) => pattern.test(message))
+    ) {
+      return "moderate";
     }
-    
-    return 'none';
+
+    return "none";
   };
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -618,7 +624,7 @@ export default function Messages({
 
     // Check for crisis keywords
     const crisisLevel = detectCrisis(message);
-    if (crisisLevel !== 'none') {
+    if (crisisLevel !== "none") {
       setShowCrisisResources(true);
       console.log(`🚨 Crisis detected on frontend: ${crisisLevel}`);
     }
@@ -667,13 +673,13 @@ export default function Messages({
         try {
           const response = await sendWebMessage(userId, message);
 
-                    // Calculate word count for filler text
+          // Calculate word count for filler text
           const wordCount = response.message.split(/\s+/).length;
-          
+
           // Generate and show filler text if response is longer than 5 words
           if (wordCount > 5 && aiPersonality) {
             const fillerText = generateTypingText(aiPersonality, wordCount);
-            
+
             // Add filler text as a message
             const fillerMessage: Message = {
               role: "assistant",
@@ -681,10 +687,10 @@ export default function Messages({
               timestamp: Date.now(),
             };
             setMessages((prev) => [...prev, fillerMessage]);
-            
+
             // Show filler text for a realistic amount of time before showing the actual response
             const fillerTime = Math.min(wordCount * 100, 3000); // 100ms per word, max 3 seconds
-            
+
             setTimeout(() => {
               // Add AI response after filler text
               const aiMessage: Message = {
@@ -738,8 +744,16 @@ export default function Messages({
         <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-4 rounded-lg">
           <div className="flex">
             <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              <svg
+                className="h-5 w-5 text-red-400"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
               </svg>
             </div>
             <div className="ml-3">
@@ -747,11 +761,22 @@ export default function Messages({
                 Crisis Support Available
               </h3>
               <div className="mt-2 text-sm text-red-700">
-                <p>If you're having thoughts of self-harm or suicide, help is available 24/7:</p>
+                <p>
+                  If you're having thoughts of self-harm or suicide, help is
+                  available 24/7:
+                </p>
                 <div className="mt-2 space-y-1">
-                  <p><strong>988</strong> - Suicide & Crisis Lifeline (Free & Confidential)</p>
-                  <p><strong>911</strong> - Emergency Services (If in immediate danger)</p>
-                  <p><strong>Crisis Text Line</strong> - Text HOME to 741741</p>
+                  <p>
+                    <strong>988</strong> - Suicide & Crisis Lifeline (Free &
+                    Confidential)
+                  </p>
+                  <p>
+                    <strong>911</strong> - Emergency Services (If in immediate
+                    danger)
+                  </p>
+                  <p>
+                    <strong>Crisis Text Line</strong> - Text HOME to 741741
+                  </p>
                 </div>
                 <button
                   onClick={() => setShowCrisisResources(false)}
@@ -934,7 +959,7 @@ export default function Messages({
         {/* Message Input */}
         <MessageInput
           onSendMessage={handleSendMessage}
-          disabled={sending || aiTyping}
+          disabled={sending}
           placeholder="Type your message to SwanAI..."
         />
       </div>

@@ -13,6 +13,7 @@ const {
   addDoc,
   increment,
   limit,
+  updateDoc,
 } = require("firebase/firestore");
 
 // Initialize Firebase from environment variables
@@ -985,6 +986,122 @@ function generateCrisisResponse(crisisLevel, relationship) {
   return crisisResponses[crisisLevel]?.[relationship] || crisisResponses[crisisLevel]?.default || crisisResponses.moderate.default;
 }
 
+// Evaluate if user's reply indicates safety
+function evaluateUserSafety(message) {
+  const safePatterns = [
+    /i'm safe/i,
+    /im safe/i,
+    /i am safe/i,
+    /i'm okay/i,
+    /i am okay/i,
+    /i'm fine/i,
+    /i am fine/i,
+    /i won't/i,
+    /i will not/i,
+    /i promise/i,
+    /not going to/i,
+    /i'm not going to/i,
+    /i'm with someone/i,
+    /with a friend/i,
+    /with family/i,
+  ];
+  const unsafePatterns = [
+    /i'm going to/i,
+    /i will/i,
+    /i might/i,
+    /i don't care/i,
+    /i can't do this/i,
+    /goodbye/i,
+    /this is the end/i,
+  ];
+  if (safePatterns.some((p) => p.test(message))) return 'safe';
+  if (unsafePatterns.some((p) => p.test(message))) return 'unsafe';
+  return 'unknown';
+}
+
+// Relationship-specific follow-up prompts that continue checking safety
+function generateCrisisFollowUp(relationship, stage = 0) {
+  const base = {
+    0: "Are you alone right now, or is there someone with you? Can you tell me where you are?",
+    1: "Can you put a trusted person on the phone or text them to come to you? Would you be willing to call 988 with me here?",
+    2: "Your safety is the most important thing. Can you move to a safer place, put away anything you could use to hurt yourself, and breathe with me for a moment?",
+    3: "I'm staying with you. Please call 988 now or text HOME to 741741. Tell me when you've connected. I'm here while you do it.",
+  };
+  const toneByRelationship = {
+    Girlfriend: [
+      "Babe, I need to know you're safe.",
+      "Can you stay on with me while you call 988?",
+      "Please let me know who nearby you can reach out to.",
+    ],
+    Boyfriend: [
+      "I need you safe, okay?",
+      "Stay with me and call 988 now.",
+      "Who can come to you right now?",
+    ],
+    Therapist: [
+      "Your safety is the priority.",
+      "Would you be willing to contact 988 while I remain here?",
+      "Is there a crisis plan we can follow right now?",
+    ],
+    Friend: [
+      "I care about you.",
+      "Can you call 988 and keep me posted?",
+      "Who's close by that you trust?",
+    ],
+    Mom: [
+      "Honey, I need to know you're safe.",
+      "Please call 988 and tell me when you've connected.",
+      "Who can be with you right now?",
+    ],
+    Dad: [
+      "Son, your safety comes first.",
+      "Call 988 now and let me know.",
+      "Who can get to you right away?",
+    ],
+    Coach: [
+      "Your life matters the most.",
+      "Action step: call 988 right now.",
+      "Who can be your support on-site?",
+    ],
+    Cousin: [
+      "Cuz, I need you safe.",
+      "Call 988 now and keep me updated.",
+      "Who's nearby who can be with you?",
+    ],
+  };
+  const tones = toneByRelationship[relationship] || [];
+  const tone = tones[Math.min(stage, tones.length - 1)] || "";
+  return `${tone} ${base[Math.min(stage, 3)]}`.trim();
+}
+
+function generateCrisisClarifyingFollowUp(relationship, stage = 0) {
+  const clarifiers = {
+    Girlfriend: "Are you safe right now? Where are you and is someone with you?",
+    Boyfriend: "Are you safe? Can you tell me where you are and if someone is with you?",
+    Therapist: "Are you currently safe? Are you alone or with someone?",
+    Friend: "Are you safe right now? Are you by yourself or with someone you trust?",
+    Mom: "Honey, are you safe right now? Is anyone with you?",
+    Dad: "Are you safe right now? Is there someone with you?",
+    Coach: "Are you safe right now? Who can be with you in person?",
+    Cousin: "Cuz, are you safe right now? Is anyone with you?",
+  };
+  return clarifiers[relationship] || clarifiers.Friend;
+}
+
+function generateCrisisResolutionMessage(relationship) {
+  const messages = {
+    Girlfriend: "Thank you for telling me. I'm relieved you're safe. I'm here, and I'll keep checking in. If things get hard again, call 988 anytime.",
+    Boyfriend: "I'm glad you're safe. I'm here with you. If you feel worse, call 988 right away.",
+    Therapist: "I'm relieved to hear you're safe. Let's keep prioritizing safety, and remember 988 is available 24/7 if you need immediate support.",
+    Friend: "Okay, I'm glad you're safe. I'm here for you. If it gets heavy again, 988 is there to help.",
+    Mom: "Thank God you're safe. I'm here with you. If you need immediate help, call 988, okay?",
+    Dad: "Good to hear you're safe. I'm here. If you need help fast, call 988.",
+    Coach: "Glad you're safe. We'll take it step by step. If it spikes again, call 988 immediately.",
+    Cousin: "Okay, you're safe. I'm here for you. If it gets scary again, call 988 right away.",
+  };
+  return messages[relationship] || messages.Friend;
+}
+
 // Main AI processing function
 async function processUserMessage(userId, message) {
   console.log(`Processing message for user ${userId}: "${message}"`);
@@ -1034,6 +1151,7 @@ async function processUserMessage(userId, message) {
     let summary = userData.summary || "";
     let history = userData.history || [];
     let profile = userData.profile || {};
+    let crisisState = userData.crisis || { active: false, stage: 0, resolved: false };
 
     // Add new user message to history
     history.push({ role: "user", content: message });
@@ -1531,16 +1649,84 @@ Remember: Be natural, be yourself (as ${personalityProfile.name})`,
       console.log(`- Self-harm: ${crisisDetection.selfHarm}`);
       console.log(`- Severe distress: ${crisisDetection.severeDistress}`);
       console.log(`- Immediate danger: ${crisisDetection.immediateDanger}`);
-      
-      // Generate crisis response immediately
-      aiResponse = generateCrisisResponse(crisisDetection.crisisLevel, relationshipKey);
+
+      // Persist crisis state
+      crisisState = {
+        active: true,
+        level: crisisDetection.crisisLevel,
+        stage: 0,
+        resolved: false,
+        lastUpdated: Date.now(),
+      };
+      try {
+        await updateDoc(doc(db, "users", userId), { crisis: crisisState });
+      } catch (e) {
+        console.error("Failed to save crisis state:", e);
+      }
+
+      // Generate crisis response immediately with an initial safety check-in
+      const base = generateCrisisResponse(crisisDetection.crisisLevel, relationshipKey);
+      const initialFollowUp = generateCrisisFollowUp(relationshipKey, 0);
+      aiResponse = `${base}\n\n${initialFollowUp}`;
       responseTime = 0.1; // Minimal response time for crisis
       
-      // Log crisis intervention
-      console.log("🚨 CRISIS INTERVENTION ACTIVATED");
-      console.log(`Relationship: ${relationshipKey}`);
-      console.log(`Crisis Level: ${crisisDetection.crisisLevel}`);
-      console.log("Response:", aiResponse);
+      // Return early for crisis
+      return {
+        statusCode: 200,
+        headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+        body: JSON.stringify({
+          success: true,
+          message: aiResponse,
+          tokensUsed,
+          responseTime,
+          updatedSummary,
+          updatedProfile,
+          povImageUrl: null,
+        }),
+      };
+    } else if (crisisState?.active && !crisisState?.resolved) {
+      // Ongoing safety check flow
+      const safetyEvaluation = evaluateUserSafety(message);
+      if (safetyEvaluation === 'safe') {
+        crisisState.resolved = true;
+        crisisState.active = false;
+        crisisState.lastUpdated = Date.now();
+        try {
+          await updateDoc(doc(db, "users", userId), { crisis: crisisState });
+        } catch (e) {
+          console.error("Failed to update crisis resolution:", e);
+        }
+        aiResponse = generateCrisisResolutionMessage(relationshipKey);
+      } else if (safetyEvaluation === 'unsafe') {
+        // Escalate advice and ask another follow-up
+        const stage = Math.min((crisisState.stage || 0) + 1, 3);
+        crisisState.stage = stage;
+        crisisState.lastUpdated = Date.now();
+        try {
+          await updateDoc(doc(db, "users", userId), { crisis: crisisState });
+        } catch (e) {
+          console.error("Failed to update crisis stage:", e);
+        }
+        aiResponse = generateCrisisFollowUp(relationshipKey, stage);
+      } else {
+        // Ambiguous -> ask clarifying follow-up at same stage
+        const stage = crisisState.stage || 0;
+        aiResponse = generateCrisisClarifyingFollowUp(relationshipKey, stage);
+      }
+
+      return {
+        statusCode: 200,
+        headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+        body: JSON.stringify({
+          success: true,
+          message: aiResponse,
+          tokensUsed: 0,
+          responseTime: 0.2,
+          updatedSummary,
+          updatedProfile,
+          povImageUrl: null,
+        }),
+      };
     } else {
       // Normal AI processing for non-crisis messages
       const startTime = Date.now();
