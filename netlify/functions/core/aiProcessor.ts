@@ -104,7 +104,7 @@ function cleanCache() {
 }
 
 // Main AI processing function
-async function processUserMessage(userId: string, message: string) {
+async function processUserMessage(userId, message) {
   console.log(`Processing message for user ${userId}: "${message}"`);
 
   // Clean cache if needed
@@ -270,9 +270,9 @@ Analyze the conversation deeply and extract as much meaningful information as po
 
     // Get user's location and calculate current time
     const userLocation = userData.location || {};
-    const userCity = (userLocation as any).city || "Unknown";
-    const userState = (userLocation as any).state || "";
-    const userCountry = (userLocation as any).country || "Unknown";
+    const userCity = userLocation.city || "Unknown";
+    const userState = userLocation.state || "";
+    const userCountry = userLocation.country || "Unknown";
 
     // Calculate current time in user's timezone (default to US Eastern if not specified)
     let currentTime = new Date().toLocaleString();
@@ -280,7 +280,7 @@ Analyze the conversation deeply and extract as much meaningful information as po
     let greeting = "Hey";
 
     try {
-      const timezone = (userLocation as any).timezone || "America/New_York";
+      const timezone = userLocation.timezone || "America/New_York";
       currentTime = new Date().toLocaleString("en-US", { timeZone: timezone });
       const userDate = new Date();
       const userHour = userDate.toLocaleString("en-US", {

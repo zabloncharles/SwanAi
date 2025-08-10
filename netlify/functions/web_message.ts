@@ -106,7 +106,7 @@ const handler = async (event) => {
     };
   } catch (error) {
     console.error("Error processing web message:", error);
-    
+
     return {
       statusCode: 500,
       headers: {
