@@ -1670,19 +1670,15 @@ Remember: Be natural, be yourself (as ${personalityProfile.name})`,
       aiResponse = `${base}\n\n${initialFollowUp}`;
       responseTime = 0.1; // Minimal response time for crisis
       
-      // Return early for crisis
+      // Return early for crisis (plain result object expected by callers)
       return {
-        statusCode: 200,
-        headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
-        body: JSON.stringify({
-          success: true,
-          message: aiResponse,
-          tokensUsed,
-          responseTime,
-          updatedSummary,
-          updatedProfile,
-          povImageUrl: null,
-        }),
+        success: true,
+        message: aiResponse,
+        tokensUsed,
+        responseTime,
+        updatedSummary,
+        updatedProfile,
+        povImageUrl: null,
       };
     } else if (crisisState?.active && !crisisState?.resolved) {
       // Ongoing safety check flow
@@ -1715,17 +1711,13 @@ Remember: Be natural, be yourself (as ${personalityProfile.name})`,
       }
 
       return {
-        statusCode: 200,
-        headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
-        body: JSON.stringify({
-          success: true,
-          message: aiResponse,
-          tokensUsed: 0,
-          responseTime: 0.2,
-          updatedSummary,
-          updatedProfile,
-          povImageUrl: null,
-        }),
+        success: true,
+        message: aiResponse,
+        tokensUsed: 0,
+        responseTime: 0.2,
+        updatedSummary,
+        updatedProfile,
+        povImageUrl: null,
       };
     } else {
       // Normal AI processing for non-crisis messages
