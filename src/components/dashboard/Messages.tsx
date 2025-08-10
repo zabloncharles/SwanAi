@@ -41,9 +41,7 @@ export default function Messages({
     "/images/default-user-avatar.svg"
   );
   const [lastUserMessageTime, setLastUserMessageTime] = useState<number>(0);
-  const [followUpTimeout, setFollowUpTimeout] = useState<NodeJS.Timeout | null>(
-    null
-  );
+  const followUpTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showCrisisResources, setShowCrisisResources] = useState(false);
   const [idleFollowUpSent, setIdleFollowUpSent] = useState<boolean>(false);
 
@@ -154,6 +152,22 @@ export default function Messages({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Detect boundary-violating or profane messages to adjust UX (skip filler, keep boundaries)
+  const boundaryViolationPatterns: RegExp[] = [
+    /\bfuck\b/i,
+    /\bshit\b/i,
+    /\basshole\b/i,
+    /\bbitch\b/i,
+    /\bjerk\b/i,
+    /\bshut up\b/i,
+    /\bidiot\b/i,
+    /\bstupid\b/i,
+  ];
+
+  const isBoundaryViolation = (text: string): boolean => {
+    return boundaryViolationPatterns.some((pattern) => pattern.test(text));
+  };
+
   // Generate personality-specific filler text for typing indicator
   const generateTypingText = (personality: any, wordCount: number) => {
     if (wordCount <= 5) return ""; // No filler text for short responses
@@ -220,7 +234,7 @@ export default function Messages({
       },
       Therapist: {
         EmpatheticTherapist: "💙 processing your feelings with care...",
-        CognitiveTherapist: "🧠 analyzing your thoughts carefully...",
+        CognitiveTherapist: "🧠 thinking that through with you...",
         SolutionFocusedTherapist: "💡 focusing on practical solutions...",
         MindfulnessTherapist: "🧘‍♀️ being present with your situation...",
         SupportiveTherapist: "💪 finding the right support for you...",
@@ -555,8 +569,9 @@ export default function Messages({
   // Follow-up message timeout mechanism
   useEffect(() => {
     // Clear existing timeout
-    if (followUpTimeout) {
-      clearTimeout(followUpTimeout);
+    if (followUpTimeoutRef.current) {
+      clearTimeout(followUpTimeoutRef.current);
+      followUpTimeoutRef.current = null;
     }
 
     // Only set up follow-up if we have messages and AI personality
@@ -571,7 +586,7 @@ export default function Messages({
       // Only set timeout if the last message is from the AI (not user)
       if (lastMessage.role === "assistant") {
         // Set timeout for 2 minutes (120000ms) of inactivity
-        const timeout = setTimeout(() => {
+        followUpTimeoutRef.current = setTimeout(() => {
           const followUpMessage = generateFollowUpMessage(aiPersonality);
           setMessages((prev) => [
             ...prev,
@@ -584,18 +599,17 @@ export default function Messages({
           // Ensure only one idle follow-up is sent until user responds
           setIdleFollowUpSent(true);
         }, 120000); // 2 minutes
-
-        setFollowUpTimeout(timeout);
       }
     }
 
     // Cleanup function
     return () => {
-      if (followUpTimeout) {
-        clearTimeout(followUpTimeout);
+      if (followUpTimeoutRef.current) {
+        clearTimeout(followUpTimeoutRef.current);
+        followUpTimeoutRef.current = null;
       }
     };
-  }, [messages, aiPersonality, justChangedRelationship, followUpTimeout, idleFollowUpSent]);
+  }, [messages, aiPersonality, justChangedRelationship, idleFollowUpSent]);
 
   const loadAiAvatar = async (personality: string) => {
     try {
@@ -627,9 +641,9 @@ export default function Messages({
     if (!message.trim() || sending) return;
 
     // Clear any existing follow-up timeout when user sends a message
-    if (followUpTimeout) {
-      clearTimeout(followUpTimeout);
-      setFollowUpTimeout(null);
+    if (followUpTimeoutRef.current) {
+      clearTimeout(followUpTimeoutRef.current);
+      followUpTimeoutRef.current = null;
     }
     // Reset idle follow-up flag on user activity
     if (idleFollowUpSent) setIdleFollowUpSent(false);
@@ -687,9 +701,10 @@ export default function Messages({
 
           // Calculate word count for filler text
           const wordCount = response.message.split(/\s+/).length;
+          const boundaryViolation = isBoundaryViolation(message);
 
           // Generate and show filler text if response is longer than 5 words
-          if (wordCount > 5 && aiPersonality) {
+          if (!boundaryViolation && wordCount > 5 && aiPersonality) {
             const fillerText = generateTypingText(aiPersonality, wordCount);
 
             // Add filler text as a message
