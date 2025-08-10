@@ -444,6 +444,13 @@ export default function Dashboard() {
                           name: userData.profile?.personality === "Professional" ? "Alex Thompson" :
                                 userData.profile?.personality === "Friendly" ? "Sam Rodriguez" :
                                 userData.profile?.personality === "CognitiveTherapist" ? "Dr. Sarah Chen" :
+                                userData.profile?.personality === "MumFriend" ? "Emma Rodriguez" :
+                                userData.profile?.personality === "ChaoticFriend" ? "Zoe Thompson" :
+                                userData.profile?.personality === "Jokester" ? "Mike Chen" :
+                                userData.profile?.personality === "Bookworm" ? "Aria Patel" :
+                                userData.profile?.personality === "NurturingMom" ? "Maria Garcia" :
+                                userData.profile?.personality === "WiseDad" ? "James Wilson" :
+                                userData.profile?.personality === "CBTTherapist" ? "Dr. Sarah Chen" :
                                 "SwanAI",
                           personality: userData.profile?.personality || "Friendly",
                           relationship: userData.profile?.relationship || "Friend"
