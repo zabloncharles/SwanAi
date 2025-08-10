@@ -395,7 +395,9 @@ export default function Dashboard() {
                   )}
                   {/* Messages tab content */}
                   {activeTab === "Messages" && userData.uid && (
-                    <Messages userId={userData.uid} />
+                    <div className="h-[calc(100vh-200px)]">
+                      <Messages userId={userData.uid} />
+                    </div>
                   )}
                   {/* Settings tab content */}
                   {activeTab === "Settings" && (
