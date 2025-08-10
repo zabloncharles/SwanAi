@@ -151,14 +151,6 @@ export const generateAvatar = async (personality: string): Promise<string> => {
     });
 
     if (!response.ok) {
-      // Try to read server error details for better diagnostics
-      let serverError = "";
-      try {
-        serverError = await response.text();
-      } catch (_) {
-        // ignore
-      }
-      console.error("Avatar function error:", response.status, response.statusText, serverError);
       throw new Error("Failed to generate avatar");
     }
 
