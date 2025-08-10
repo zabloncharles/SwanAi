@@ -45,6 +45,7 @@ export default function Messages({
     null
   );
   const [showCrisisResources, setShowCrisisResources] = useState(false);
+  const [idleFollowUpSent, setIdleFollowUpSent] = useState<boolean>(false);
 
   // Crisis detection patterns
   const crisisPatterns = {
@@ -534,6 +535,8 @@ export default function Messages({
       setTimeout(() => {
         onIntroductionComplete?.();
       }, 2000);
+      // Reset idle follow-up for new session
+      setIdleFollowUpSent(false);
     }
   }, [
     justChangedRelationship,
@@ -557,7 +560,12 @@ export default function Messages({
     }
 
     // Only set up follow-up if we have messages and AI personality
-    if (messages.length > 0 && aiPersonality && !justChangedRelationship) {
+    if (
+      messages.length > 0 &&
+      aiPersonality &&
+      !justChangedRelationship &&
+      !idleFollowUpSent
+    ) {
       const lastMessage = messages[messages.length - 1];
 
       // Only set timeout if the last message is from the AI (not user)
@@ -573,6 +581,8 @@ export default function Messages({
               timestamp: Date.now(),
             },
           ]);
+          // Ensure only one idle follow-up is sent until user responds
+          setIdleFollowUpSent(true);
         }, 120000); // 2 minutes
 
         setFollowUpTimeout(timeout);
@@ -585,7 +595,7 @@ export default function Messages({
         clearTimeout(followUpTimeout);
       }
     };
-  }, [messages, aiPersonality, justChangedRelationship, followUpTimeout]);
+  }, [messages, aiPersonality, justChangedRelationship, followUpTimeout, idleFollowUpSent]);
 
   const loadAiAvatar = async (personality: string) => {
     try {
@@ -621,6 +631,8 @@ export default function Messages({
       clearTimeout(followUpTimeout);
       setFollowUpTimeout(null);
     }
+    // Reset idle follow-up flag on user activity
+    if (idleFollowUpSent) setIdleFollowUpSent(false);
 
     // Check for crisis keywords
     const crisisLevel = detectCrisis(message);
