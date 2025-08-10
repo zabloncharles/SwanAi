@@ -7,6 +7,8 @@ import MessageInput from "./MessageInput";
 interface Message {
   content: string;
   role: "user" | "assistant";
+  timestamp?: number;
+  seen?: boolean;
 }
 
 interface MessagesProps {
@@ -17,6 +19,7 @@ export default function Messages({ userId }: MessagesProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [aiTyping, setAiTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -36,7 +39,13 @@ export default function Messages({ userId }: MessagesProps) {
         if (userSnapshot.exists()) {
           const userData = userSnapshot.data();
           const history = userData.history || [];
-          setMessages(history);
+          // Add timestamps and seen status to existing messages
+          const messagesWithTimestamps = history.map((msg: any, index: number) => ({
+            ...msg,
+            timestamp: msg.timestamp || Date.now() - (history.length - index) * 60000, // Approximate timestamps
+            seen: msg.role === "user" ? true : undefined // Mark all user messages as seen
+          }));
+          setMessages(messagesWithTimestamps);
         }
       } catch (error) {
         console.error("Error fetching messages:", error);
@@ -48,6 +57,16 @@ export default function Messages({ userId }: MessagesProps) {
     fetchMessages();
   }, [userId]);
 
+  // Calculate realistic response time based on message length and conversation context
+  const calculateResponseTime = (message: string, messageCount: number): number => {
+    const baseTime = 2000; // 2 seconds base
+    const charTime = message.length * 15; // 15ms per character
+    const contextTime = Math.min(messageCount * 500, 3000); // Up to 3 seconds for context
+    const randomVariation = Math.random() * 2000; // 0-2 seconds random variation
+    
+    return Math.max(1500, Math.min(8000, baseTime + charTime + contextTime + randomVariation));
+  };
+
   const handleSendMessage = async (message: string) => {
     if (!message.trim() || sending) return;
 
@@ -55,23 +74,61 @@ export default function Messages({ userId }: MessagesProps) {
 
     try {
       // Add user message immediately for optimistic update
-      const userMessage: Message = { role: "user", content: message };
+      const userMessage: Message = { 
+        role: "user", 
+        content: message, 
+        timestamp: Date.now(),
+        seen: false 
+      };
       setMessages(prev => [...prev, userMessage]);
 
-      // Send message to API
-      const response = await sendWebMessage(userId, message);
+      // Show "seen" indicator after a short delay
+      setTimeout(() => {
+        setMessages(prev => 
+          prev.map((msg, index) => 
+            index === prev.length - 1 && msg.role === "user" 
+              ? { ...msg, seen: true }
+              : msg
+          )
+        );
+      }, 1000);
 
-      // Add AI response
-      const aiMessage: Message = { role: "assistant", content: response.message };
-      setMessages(prev => [...prev, aiMessage]);
+      // Calculate realistic response time
+      const responseTime = calculateResponseTime(message, messages.length);
+      
+      // Show AI typing indicator after "seen" delay
+      setTimeout(() => {
+        setAiTyping(true);
+      }, 1500);
+
+      // Send message to API with delay
+      setTimeout(async () => {
+        try {
+          const response = await sendWebMessage(userId, message);
+          
+          // Add AI response
+          const aiMessage: Message = { 
+            role: "assistant", 
+            content: response.message,
+            timestamp: Date.now()
+          };
+          setMessages(prev => [...prev, aiMessage]);
+        } catch (error) {
+          console.error("Error sending message:", error);
+          // Remove the user message if sending failed
+          setMessages(prev => prev.slice(0, -1));
+          throw error;
+        } finally {
+          setAiTyping(false);
+          setSending(false);
+        }
+      }, responseTime);
 
     } catch (error) {
       console.error("Error sending message:", error);
-      // Remove the user message if sending failed
-      setMessages(prev => prev.slice(0, -1));
-      throw error;
-    } finally {
+      setAiTyping(false);
       setSending(false);
+      throw error;
     }
   };
 
@@ -130,13 +187,34 @@ export default function Messages({ userId }: MessagesProps) {
                     {message.role === "user" ? "You" : "SwanAI"}
                   </div>
                   <p className="whitespace-pre-wrap text-sm">{message.content}</p>
+                  
+                  {/* Seen indicator for user messages */}
+                  {message.role === "user" && message.seen && (
+                    <div className="text-xs opacity-50 mt-1 flex items-center justify-end">
+                      <span>Seen</span>
+                      <svg className="w-3 h-3 ml-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                        <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  )}
+                  
+                  {/* Timestamp for AI messages */}
+                  {message.role === "assistant" && message.timestamp && (
+                    <div className="text-xs opacity-50 mt-1">
+                      {new Date(message.timestamp).toLocaleTimeString([], { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             ))
           )}
           
-          {/* Typing indicator */}
-          {sending && (
+          {/* AI Typing indicator */}
+          {aiTyping && (
             <div className="flex justify-start">
               <div className="bg-gray-100 text-gray-800 px-4 py-2 rounded-lg">
                 <div className="text-xs opacity-75 mb-1">SwanAI</div>
@@ -155,7 +233,7 @@ export default function Messages({ userId }: MessagesProps) {
         {/* Message Input */}
         <MessageInput
           onSendMessage={handleSendMessage}
-          disabled={sending}
+          disabled={sending || aiTyping}
           placeholder="Type your message to SwanAI..."
         />
       </div>
