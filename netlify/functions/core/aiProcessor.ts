@@ -1193,7 +1193,7 @@ async function processUserMessage(userId, message) {
       `History length: ${history.length}, Should update summary: ${shouldUpdateSummaryProfile}, Should update periodically: ${shouldUpdatePeriodically}`
     );
 
-    if (shouldUpdateSummaryProfile || shouldUpdatePeriodically) {
+    if ((shouldUpdateSummaryProfile || shouldUpdatePeriodically) && process.env.OPENAI_API_KEY) {
       console.log(
         `Starting summary/profile update for history length: ${history.length}`
       );
@@ -1379,6 +1379,8 @@ Analyze the conversation deeply and extract as much meaningful information as po
         );
         // Keep old summary/profile if parsing fails
       }
+    } else if (shouldUpdateSummaryProfile || shouldUpdatePeriodically) {
+      console.log("Skipping analysis/profile update: OPENAI_API_KEY not set");
     }
 
     const personalityKey = updatedProfile.personality || "Friendly";
