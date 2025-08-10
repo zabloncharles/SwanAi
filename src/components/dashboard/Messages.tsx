@@ -18,9 +18,11 @@ interface MessagesProps {
     personality: string;
     relationship: string;
   };
+  justChangedRelationship?: boolean;
+  onIntroductionComplete?: () => void;
 }
 
-export default function Messages({ userId, aiPersonality }: MessagesProps) {
+export default function Messages({ userId, aiPersonality, justChangedRelationship, onIntroductionComplete }: MessagesProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -29,6 +31,51 @@ export default function Messages({ userId, aiPersonality }: MessagesProps) {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // Generate introduction message based on AI personality
+  const generateIntroductionMessage = (personality: any) => {
+    const currentTime = new Date();
+    const hour = currentTime.getHours();
+    let greeting = "Hello";
+    
+    if (hour >= 5 && hour < 12) {
+      greeting = "Good morning";
+    } else if (hour >= 12 && hour < 17) {
+      greeting = "Good afternoon";
+    } else if (hour >= 17 && hour < 21) {
+      greeting = "Good evening";
+    } else {
+      greeting = "Hello";
+    }
+
+    const introductions = {
+      "Alex Thompson": `${greeting}! I'm Alex Thompson, your professional assistant. I'm here to help you stay organized, productive, and focused on your goals. Whether you need help with planning, problem-solving, or just want to discuss your career, I'm here to support you. What would you like to work on today?`,
+      
+      "Sam Rodriguez": `Hey there! I'm Sam Rodriguez, your friendly companion. I'm all about keeping things real and having genuine conversations. Whether you want to chat about your day, share some laughs, or just need someone to listen, I'm here for you. What's on your mind?`,
+      
+      "Dr. Sarah Chen": `${greeting}. I'm Dr. Sarah Chen, a licensed clinical psychologist specializing in Cognitive Behavioral Therapy. I'm here to provide a safe, supportive space for you to explore your thoughts and feelings. Together, we can work on developing healthy coping strategies and positive change. What would you like to discuss today?`,
+      
+      "Emma Rodriguez": `${greeting}! I'm Emma Rodriguez, your mum friend. I'm here to take care of you, offer practical advice, and be your biggest cheerleader. Whether you need help organizing your life, want some nurturing support, or just need someone who's got your back, I'm here for you. How can I help you today?`,
+      
+      "Zoe Thompson": `OMG, hi! I'm Zoe Thompson, your chaotic but lovable friend! 🌟 I'm all about adventure, creativity, and living life to the fullest. I just got back from a spontaneous trip to Mexico City and I'm bursting with stories! What's new with you? Let's make today amazing!`,
+      
+      "Mike Chen": `Hey there! I'm Mike Chen, your resident comedian and all-around fun guy! 😄 I'm here to bring the laughs, share some terrible jokes, and make sure you're always smiling. Life's too short to be serious all the time, right? What's got you down? Let me cheer you up!`,
+      
+      "Aria Patel": `${greeting}. I'm Aria Patel, your bookworm friend and fellow lover of stories. I'm here for deep conversations, thoughtful discussions, and sharing the wisdom I've found in books. I just finished reading 50 books this year and I'm always excited to discuss new ideas. What would you like to explore together?`,
+      
+      "Maria Garcia": `¡Hola mi amor! I'm Maria Garcia, your nurturing mom. I'm here to give you warm hugs, gentle advice, and unconditional love. I believe in the power of family, tradition, and taking care of each other. Whether you need comfort, guidance, or just someone to be proud of you, I'm here. How are you feeling today?`,
+      
+      "James Wilson": `${greeting}, son. I'm James Wilson, your wise dad. I'm here to offer you practical advice, life lessons, and the kind of guidance that comes from years of experience. I believe in hard work, family values, and building character. What's on your mind? Let me give you some fatherly wisdom.`,
+      
+      "SwanAI": `${greeting}! I'm your AI companion, here to chat, support, and help you with whatever you need. I'm excited to get to know you better and be part of your journey. What would you like to talk about today?`
+    };
+
+    return {
+      role: "assistant" as const,
+      content: introductions[personality.name as keyof typeof introductions] || introductions["SwanAI"],
+      timestamp: Date.now()
+    };
   };
 
   useEffect(() => {
@@ -61,6 +108,19 @@ export default function Messages({ userId, aiPersonality }: MessagesProps) {
 
     fetchMessages();
   }, [userId]);
+
+  // Show introduction message when relationship has just changed
+  useEffect(() => {
+    if (justChangedRelationship && aiPersonality && messages.length === 0) {
+      const introductionMessage = generateIntroductionMessage(aiPersonality);
+      setMessages([introductionMessage]);
+      
+      // Call the completion callback after a short delay
+      setTimeout(() => {
+        onIntroductionComplete?.();
+      }, 2000);
+    }
+  }, [justChangedRelationship, aiPersonality, messages.length, onIntroductionComplete]);
 
   // Calculate realistic response time based on message length and conversation context
   const calculateResponseTime = (message: string, messageCount: number): number => {

@@ -75,6 +75,7 @@ export default function Dashboard() {
     analytics: true,
   });
   const [activeTab, setActiveTab] = useState("Overview");
+  const [justChangedRelationship, setJustChangedRelationship] = useState(false);
   const [messageStats, setMessageStats] = useState<
     { date: string; count: number }[]
   >([]);
@@ -347,6 +348,7 @@ export default function Dashboard() {
       // Show success message for relationship change
       if (isRelationshipChanging) {
         console.log("Successfully cleared context for new relationship");
+        setJustChangedRelationship(true);
       }
     } catch (error) {
       console.error("Error updating settings:", error);
@@ -455,6 +457,8 @@ export default function Dashboard() {
                           personality: userData.profile?.personality || "Friendly",
                           relationship: userData.profile?.relationship || "Friend"
                         }}
+                        justChangedRelationship={justChangedRelationship}
+                        onIntroductionComplete={() => setJustChangedRelationship(false)}
                       />
                     </div>
                   )}
