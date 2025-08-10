@@ -287,11 +287,48 @@ export default function Dashboard() {
   const handleSettingsUpdate = async (dataToSave: Partial<UserData>) => {
     if (!user) return;
     try {
+      // Check if relationship is changing
+      const isRelationshipChanging = 
+        dataToSave.profile?.relationship && 
+        dataToSave.profile.relationship !== userData.profile?.relationship;
+
+      let finalDataToSave = { ...dataToSave };
+
+      // If relationship is changing, clear all context for fresh start
+      if (isRelationshipChanging) {
+        console.log(`Relationship changing from ${userData.profile?.relationship} to ${dataToSave.profile?.relationship}`);
+        
+        // Clear all learned context and start fresh
+        finalDataToSave = {
+          ...dataToSave,
+          // Clear conversation summary
+          summary: "",
+          // Clear detailed profile while keeping basic settings
+          profile: {
+            personality: dataToSave.profile?.personality || userData.profile?.personality || "Friendly",
+            relationship: dataToSave.profile?.relationship || "Friend"
+          }
+        };
+
+        // Also clear the history field directly in Firebase
+        try {
+          const userRef = doc(db, "users", user.uid);
+          await updateDoc(userRef, {
+            history: []
+          });
+          console.log("Successfully cleared conversation history");
+        } catch (historyError) {
+          console.error("Error clearing history:", historyError);
+        }
+
+        console.log("Relationship change detected - clearing all context for fresh start");
+      }
+
       const userRef = doc(db, "users", user.uid);
-      await updateDoc(userRef, dataToSave);
+      await updateDoc(userRef, finalDataToSave);
 
       // Create a clean version of data for local state by removing sentinels
-      const cleanDataForState = { ...dataToSave };
+      const cleanDataForState = { ...finalDataToSave };
       if ("personality" in cleanDataForState)
         delete (cleanDataForState as any).personality;
       if ("aiRelationship" in cleanDataForState)
@@ -306,6 +343,11 @@ export default function Dashboard() {
           ...(cleanDataForState.profile as object),
         },
       }));
+
+      // Show success message for relationship change
+      if (isRelationshipChanging) {
+        console.log("Successfully cleared context for new relationship");
+      }
     } catch (error) {
       console.error("Error updating settings:", error);
       // Optional: Add logic to revert state on error
