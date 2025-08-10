@@ -1090,12 +1090,30 @@ Analyze the conversation deeply and extract as much meaningful information as po
       }
     }
 
-    const personalityKey = updatedProfile.personality || "Friendly";
     const relationshipKey = updatedProfile.relationship || "Friend";
+    const defaultPersonalityByRelationship = {
+      Mom: "NurturingMom",
+      Dad: "WiseDad",
+      Therapist: "CognitiveTherapist",
+      Coach: "Coach",
+      Friend: "Friendly",
+      Cousin: "Friendly",
+      Girlfriend: "Friendly",
+      Boyfriend: "Friendly",
+    };
+    let personalityKey = updatedProfile.personality;
+    if (!personalityKey || !personalityProfiles[personalityKey]) {
+      personalityKey = defaultPersonalityByRelationship[relationshipKey] || "Friendly";
+    }
     const personalityProfile =
       personalityProfiles[personalityKey] || personalityProfiles["Friendly"];
     const relationshipProfile =
       relationshipProfiles[relationshipKey] || relationshipProfiles["Friend"];
+
+    // Choose a display name that matches the relationship when appropriate
+    let displayName = personalityProfile.name;
+    if (relationshipKey === "Mom") displayName = "Maria Garcia";
+    if (relationshipKey === "Dad") displayName = "James Wilson";
 
     // NEW: Filter user profile based on relationship for knowledge isolation
     const filteredProfile = filterProfileForRelationship(
@@ -1197,12 +1215,10 @@ Analyze the conversation deeply and extract as much meaningful information as po
     const chatPrompt = [
       {
         role: "system",
-        content: `${generationStyleInstruction}\n\n${genderInstruction}\n\nYou are ${
-          personalityProfile.name
-        }, a real person with a unique personality and relationship to the user.
+        content: `${generationStyleInstruction}\n\n${genderInstruction}\n\nYou are ${displayName}, a real person with a unique personality and relationship to the user.
 
 **Your Core Identity:**
-- Name: ${personalityProfile.name}
+- Name: ${displayName}
 - Background: ${personalityProfile.background}
 - How you talk: ${personalityProfile.talkingStyle}
 - How you respond: ${personalityProfile.respondingStyle}
