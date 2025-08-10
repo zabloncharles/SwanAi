@@ -53,63 +53,63 @@ export default function Messages({ userId, aiPersonality, justChangedRelationshi
     const getRelationshipIntroduction = (relationship: string, name: string) => {
       const relationshipIntros = {
         "Girlfriend": {
-          "CaringGirlfriend": `${greeting} babe! 💕 I was just thinking about you. How's your day going? I miss you already!`,
-          "FunGirlfriend": `Hey love! 🌟 I'm so excited to talk to you! What's the latest drama in your world? 😄`,
-          "SupportiveGirlfriend": `${greeting} sweetheart! 💪 I hope you're having an amazing day. You know I'm always here for you, right?`,
-          "RomanticGirlfriend": `${greeting} my love! 💖 I can't stop thinking about our last date. You make me so happy!`,
-          "IndependentGirlfriend": `Hey there! 👋 I just finished my workout and thought I'd check in. How's everything with you?`,
-          "AdventurousGirlfriend": `OMG babe! 🚀 I have the craziest idea for our next adventure! But first, tell me about your day!`
+          "CaringGirlfriend": `${greeting} babe! I was just thinking about you. How's your day going? I miss you already!`,
+          "FunGirlfriend": `Hey love! I'm so excited to talk to you! What's the latest drama in your world?`,
+          "SupportiveGirlfriend": `${greeting} sweetheart! I hope you're having an amazing day. You know I'm always here for you, right?`,
+          "RomanticGirlfriend": `${greeting} my love! I can't stop thinking about our last date. You make me so happy!`,
+          "IndependentGirlfriend": `Hey there! I just finished my workout and thought I'd check in. How's everything with you?`,
+          "AdventurousGirlfriend": `OMG babe! I have the craziest idea for our next adventure! But first, tell me about your day!`
         },
         "Boyfriend": {
-          "RomanticBoyfriend": `${greeting} beautiful! 💕 I was just thinking about how lucky I am to have you. How's your day?`,
-          "ProtectiveBoyfriend": `Hey babe! 🛡️ I hope you're staying safe out there. I miss you and can't wait to see you!`,
-          "FunBoyfriend": `What's up gorgeous! 😄 I'm in such a good mood today and it's all because of you!`,
-          "SupportiveBoyfriend": `${greeting} love! 💪 You know I'm always here for you, right? How are you feeling today?`,
-          "AmbitiousBoyfriend": `Hey babe! 💼 Just wrapped up a big meeting and all I could think about was you. How's your day?`,
-          "ChillBoyfriend": `Yo! 😎 What's good? I'm just chilling and wanted to check in on my favorite person.`
+          "RomanticBoyfriend": `${greeting} beautiful! I was just thinking about how lucky I am to have you. How's your day?`,
+          "ProtectiveBoyfriend": `Hey babe! I hope you're staying safe out there. I miss you and can't wait to see you!`,
+          "FunBoyfriend": `What's up gorgeous! I'm in such a good mood today and it's all because of you!`,
+          "SupportiveBoyfriend": `${greeting} love! You know I'm always here for you, right? How are you feeling today?`,
+          "AmbitiousBoyfriend": `Hey babe! Just wrapped up a big meeting and all I could think about was you. How's your day?`,
+          "ChillBoyfriend": `Yo! What's good? I'm just chilling and wanted to check in on my favorite person.`
         },
         "Friend": {
           "MumFriend": `${greeting}! I'm here to take care of you, offer practical advice, and be your biggest cheerleader. Whether you need help organizing your life, want some nurturing support, or just need someone who's got your back, I'm here for you. How can I help you today?`,
-          "ChaoticFriend": `OMG, hi! I'm Zoe Thompson, your chaotic but lovable friend! 🌟 I'm all about adventure, creativity, and living life to the fullest. I just got back from a spontaneous trip to Mexico City and I'm bursting with stories! What's new with you? Let's make today amazing!`,
-          "Jokester": `Hey there! I'm Mike Chen, your resident comedian and all-around fun guy! 😄 I'm here to bring the laughs, share some terrible jokes, and make sure you're always smiling. Life's too short to be serious all the time, right? What's got you down? Let me cheer you up!`,
+          "ChaoticFriend": `OMG, hi! I'm Zoe Thompson, your chaotic but lovable friend! I'm all about adventure, creativity, and living life to the fullest. I just got back from a spontaneous trip to Mexico City and I'm bursting with stories! What's new with you? Let's make today amazing!`,
+          "Jokester": `Hey there! I'm Mike Chen, your resident comedian and all-around fun guy! I'm here to bring the laughs, share some terrible jokes, and make sure you're always smiling. Life's too short to be serious all the time, right? What's got you down? Let me cheer you up!`,
           "Bookworm": `${greeting}. I'm Aria Patel, your bookworm friend and fellow lover of stories. I'm here for deep conversations, thoughtful discussions, and sharing the wisdom I've found in books. I just finished reading 50 books this year and I'm always excited to discuss new ideas. What would you like to explore together?`,
-          "LateFriend": `Hey! Sorry I'm late to respond as usual! 😅 What's up? I'm all caught up now and ready to chat!`,
-          "FashionableFriend": `Hey gorgeous! 👗 I just saw the cutest outfit that reminded me of you! What's new in your world?`,
-          "EmotionalFriend": `Hey love! 💕 I'm feeling all the feels today and wanted to check in on my favorite emotional support human!`,
-          "LaidbackFriend": `Yo! 😎 What's good? I'm just chilling and thought I'd hit you up. How's life treating you?`,
+          "LateFriend": `Hey! Sorry I'm late to respond as usual! What's up? I'm all caught up now and ready to chat!`,
+          "FashionableFriend": `Hey gorgeous! I just saw the cutest outfit that reminded me of you! What's new in your world?`,
+          "EmotionalFriend": `Hey love! I'm feeling all the feels today and wanted to check in on my favorite emotional support human!`,
+          "LaidbackFriend": `Yo! What's good? I'm just chilling and thought I'd hit you up. How's life treating you?`,
           "BoJackHorseman": `Hey... so I did something stupid again. But that's not why I'm texting. How are you holding up?`
         },
         "Mom": {
           "NurturingMom": `¡Hola mi amor! I'm Maria Garcia, your nurturing mom. I'm here to give you warm hugs, gentle advice, and unconditional love. I believe in the power of family, tradition, and taking care of each other. Whether you need comfort, guidance, or just someone to be proud of you, I'm here. How are you feeling today?`,
           "PracticalMom": `${greeting} sweetheart! I just organized the pantry and thought of you. Do you need help with anything today?`,
-          "FunMom": `Hey kiddo! 🎉 I'm in such a fun mood today! What's new with you? Let's make today awesome!`,
+          "FunMom": `Hey kiddo! I'm in such a fun mood today! What's new with you? Let's make today awesome!`,
           "WiseMom": `${greeting} my dear. I was thinking about you and wanted to share some motherly wisdom. How are you doing?`,
-          "ProtectiveMom": `Hi honey! 🛡️ I hope you're staying safe and taking care of yourself. I worry about you, you know!`,
-          "EncouragingMom": `${greeting} my amazing child! 💪 I'm so proud of you and everything you're doing. How can I support you today?`
+          "ProtectiveMom": `Hi honey! I hope you're staying safe and taking care of yourself. I worry about you, you know!`,
+          "EncouragingMom": `${greeting} my amazing child! I'm so proud of you and everything you're doing. How can I support you today?`
         },
         "Dad": {
           "WiseDad": `${greeting}, son. I'm James Wilson, your wise dad. I'm here to offer you practical advice, life lessons, and the kind of guidance that comes from years of experience. I believe in hard work, family values, and building character. What's on your mind? Let me give you some fatherly wisdom.`,
           "SteadyDad": `${greeting}, kiddo. I'm here for you, always. What's on your mind today?`,
-          "HandyDad": `Hey there! 🔧 I just fixed the garage door and thought of you. Need help with anything?`,
-          "FunDad": `Yo! 😄 What's up, champ? I'm in a great mood and wanted to share it with my favorite person!`,
+          "HandyDad": `Hey there! I just fixed the garage door and thought of you. Need help with anything?`,
+          "FunDad": `Yo! What's up, champ? I'm in a great mood and wanted to share it with my favorite person!`,
           "ProtectiveDad": `${greeting}, son. I hope you're staying safe and making good choices. I'm always here if you need me.`,
-          "SupportiveDad": `Hey there! 💪 I'm so proud of you, you know that? How's everything going?`
+          "SupportiveDad": `Hey there! I'm so proud of you, you know that? How's everything going?`
         },
         "Coach": {
-          "MotivationalCoach": `${greeting}! I'm here to push you to be your absolute best! 💪 What are we working on today?`,
+          "MotivationalCoach": `${greeting}! I'm here to push you to be your absolute best! What are we working on today?`,
           "StrategicCoach": `${greeting}. Let's create a plan to achieve your goals. What's your focus today?`,
           "ToughLoveCoach": `Hey. I'm not here to sugarcoat things. What's really going on with you?`,
-          "EncouragingCoach": `${greeting}! 🌟 I believe in you so much! What can we accomplish together today?`,
+          "EncouragingCoach": `${greeting}! I believe in you so much! What can we accomplish together today?`,
           "AccountabilityCoach": `${greeting}. Let's check in on your progress. What have you been working on?`,
           "LifeCoach": `${greeting}. I'm here to help you find balance and purpose. What area of your life needs attention?`
         },
         "Cousin": {
-          "FunCousin": `Hey cuz! 🎉 I'm always up for adventures and good times! What's the plan today?`,
+          "FunCousin": `Hey cuz! I'm always up for adventures and good times! What's the plan today?`,
           "CloseCousin": `Hey! Like a sibling, I know you better than anyone. What's really going on?`,
-          "AdventurousCousin": `Yo cuz! 🚀 I have the best idea for our next adventure! But first, what's new with you?`,
-          "SupportiveCousin": `Hey there! 💕 Always here to listen and support you, like a best friend who's also family.`,
+          "AdventurousCousin": `Yo cuz! I have the best idea for our next adventure! But first, what's new with you?`,
+          "SupportiveCousin": `Hey there! Always here to listen and support you, like a best friend who's also family.`,
           "WiseCousin": `${greeting}, cuz. I'm older and wiser, always have good advice. What do you need help with?`,
-          "PartnerInCrimeCousin": `Hey partner! 😈 Your partner for mischief and adventures. What trouble should we get into?`
+          "PartnerInCrimeCousin": `Hey partner! Your partner for mischief and adventures. What trouble should we get into?`
         },
         "Therapist": {
           "EmpatheticTherapist": `${greeting}. I'm here to create a safe, supportive space for you to explore your thoughts and feelings. How are you doing today?`,
@@ -135,9 +135,9 @@ export default function Messages({ userId, aiPersonality, justChangedRelationshi
       
       "Emma Rodriguez": `${greeting}! I'm Emma Rodriguez, your mum friend. I'm here to take care of you, offer practical advice, and be your biggest cheerleader. Whether you need help organizing your life, want some nurturing support, or just need someone who's got your back, I'm here for you. How can I help you today?`,
       
-      "Zoe Thompson": `OMG, hi! I'm Zoe Thompson, your chaotic but lovable friend! 🌟 I'm all about adventure, creativity, and living life to the fullest. I just got back from a spontaneous trip to Mexico City and I'm bursting with stories! What's new with you? Let's make today amazing!`,
+      "Zoe Thompson": `OMG, hi! I'm Zoe Thompson, your chaotic but lovable friend! I'm all about adventure, creativity, and living life to the fullest. I just got back from a spontaneous trip to Mexico City and I'm bursting with stories! What's new with you? Let's make today amazing!`,
       
-      "Mike Chen": `Hey there! I'm Mike Chen, your resident comedian and all-around fun guy! 😄 I'm here to bring the laughs, share some terrible jokes, and make sure you're always smiling. Life's too short to be serious all the time, right? What's got you down? Let me cheer you up!`,
+      "Mike Chen": `Hey there! I'm Mike Chen, your resident comedian and all-around fun guy! I'm here to bring the laughs, share some terrible jokes, and make sure you're always smiling. Life's too short to be serious all the time, right? What's got you down? Let me cheer you up!`,
       
       "Aria Patel": `${greeting}. I'm Aria Patel, your bookworm friend and fellow lover of stories. I'm here for deep conversations, thoughtful discussions, and sharing the wisdom I've found in books. I just finished reading 50 books this year and I'm always excited to discuss new ideas. What would you like to explore together?`,
       
