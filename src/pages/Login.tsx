@@ -175,31 +175,43 @@ export default function Login() {
         );
         const user = userCredential.user;
 
-        // Get existing user data first
-        const userRef = doc(db, "users", user.uid);
-        const userSnap = await getDoc(userRef);
-        const existingData = userSnap.exists() ? userSnap.data() : {};
+        console.log("Sign in successful for user:", user.uid);
 
-        // Update last login time while preserving other data
-        await setDoc(
-          userRef,
-          {
-            ...existingData,
-            lastLogin: serverTimestamp(),
-            email: user.email || existingData.email || "",
-            firstName: existingData.firstName || "",
-            lastName: existingData.lastName || "",
-            phoneNumber: existingData.phoneNumber || "",
-            personality: existingData.personality || "",
-            aiRelationship: existingData.aiRelationship || "",
-            notificationsEnabled: existingData.notificationsEnabled || false,
-            tokensUsed: existingData.tokensUsed || 0,
-          },
-          { merge: true }
-        );
+        try {
+          // Get existing user data first
+          const userRef = doc(db, "users", user.uid);
+          const userSnap = await getDoc(userRef);
+          const existingData = userSnap.exists() ? userSnap.data() : {};
 
-        // Navigate to dashboard after successful sign in
-        navigate("/dashboard");
+          console.log("Existing user data:", existingData);
+
+          // Update last login time while preserving other data
+          await setDoc(
+            userRef,
+            {
+              ...existingData,
+              lastLogin: serverTimestamp(),
+              email: user.email || existingData.email || "",
+              firstName: existingData.firstName || "",
+              lastName: existingData.lastName || "",
+              phoneNumber: existingData.phoneNumber || "",
+              personality: existingData.personality || "",
+              aiRelationship: existingData.aiRelationship || "",
+              notificationsEnabled: existingData.notificationsEnabled || false,
+              tokensUsed: existingData.tokensUsed || 0,
+            },
+            { merge: true }
+          );
+
+          console.log("User document updated successfully");
+
+          // Navigate to dashboard after successful sign in
+          navigate("/dashboard");
+        } catch (firestoreError) {
+          console.error("Error updating user document:", firestoreError);
+          // Still navigate to dashboard even if Firestore update fails
+          navigate("/dashboard");
+        }
       }
     } catch (err: any) {
       console.error("Auth error:", err);
