@@ -160,8 +160,14 @@ export default function Dashboard() {
   // --- Fetch analytics data for the current user ---
   useEffect(() => {
     const fetchAnalytics = async () => {
-      if (!user) return;
+      if (!user || !user.uid) {
+        console.log("No authenticated user for analytics");
+        setLoading((prev) => ({ ...prev, analytics: false }));
+        return;
+      }
+      
       try {
+        console.log("Fetching analytics for user:", user.uid);
         const messagesRef = collection(db, "messages");
         const q = query(messagesRef, where("userId", "==", user.uid));
         const querySnapshot = await getDocs(q);
@@ -198,9 +204,15 @@ export default function Dashboard() {
         setResponseTimeStats(responseTimeStatsArray);
         setTotalMessages(total);
         setAverageResponseTime(total ? totalResponseTime / total : 0);
+        console.log("Analytics fetched successfully");
         setLoading((prev) => ({ ...prev, analytics: false }));
       } catch (error) {
         console.error("Error fetching analytics:", error);
+        // Don't fail completely, just set empty stats
+        setMessageStats([]);
+        setResponseTimeStats([]);
+        setTotalMessages(0);
+        setAverageResponseTime(0);
         setLoading((prev) => ({ ...prev, analytics: false }));
       }
     };

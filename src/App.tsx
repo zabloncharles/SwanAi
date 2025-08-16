@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -24,6 +24,15 @@ function AppContent() {
   const [user, loading] = useAuthState(auth);
   const location = useLocation();
   const isLoginPage = location.pathname === "/login";
+
+  // Debug authentication state
+  useEffect(() => {
+    console.log('Auth state changed:', { 
+      user: user ? { uid: user.uid, email: user.email } : null, 
+      loading, 
+      isLoginPage 
+    });
+  }, [user, loading, isLoginPage]);
 
   if (loading) {
     return (

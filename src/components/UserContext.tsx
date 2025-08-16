@@ -12,27 +12,51 @@ interface UserContextType {
 const UserContext = createContext<UserContextType>({ userData: null, loading: true });
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user] = useAuthState(auth);
+  const [user, userLoading] = useAuthState(auth);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchUserData = async () => {
-      if (user) {
-        const userRef = doc(db, 'users', user.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          setUserData({ uid: user.uid, ...userSnap.data() } as UserData);
-        } else {
+      // Don't try to fetch data if auth is still loading or user is not authenticated
+      if (userLoading) {
+        return;
+      }
+
+      if (user && user.uid) {
+        try {
+          console.log('Fetching user data for:', user.uid);
+          const userRef = doc(db, 'users', user.uid);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            setUserData({ uid: user.uid, ...userSnap.data() } as UserData);
+            console.log('User data fetched successfully');
+          } else {
+            console.log('User document does not exist');
+            setUserData(null);
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
           setUserData(null);
         }
       } else {
+        console.log('No authenticated user');
         setUserData(null);
       }
       setLoading(false);
     };
+
     fetchUserData();
-  }, [user]);
+  }, [user, userLoading]);
+
+  // Show loading while auth is being determined
+  if (userLoading) {
+    return (
+      <UserContext.Provider value={{ userData: null, loading: true }}>
+        {children}
+      </UserContext.Provider>
+    );
+  }
 
   return (
     <UserContext.Provider value={{ userData, loading }}>
