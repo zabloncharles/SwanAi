@@ -188,15 +188,6 @@ export const storeAvatar = async (
 
 // Get avatar URL (check cache first, then generate if needed)
 export const getAvatarUrl = async (personality: string): Promise<string> => {
-  // Temporarily disable Firebase Storage to prevent CORS errors
-  // TODO: Re-enable once Firebase Storage is properly set up
-  console.log(`Getting avatar for ${personality} (Storage disabled)`);
-  
-  // For now, just return a default avatar
-  return "/images/default-avatar.svg";
-  
-  // Original code (commented out until Storage is set up):
-  /*
   // For local development, skip Firebase Storage to avoid CORS issues
   const isLocalhost =
     window.location.hostname === "localhost" ||
@@ -244,5 +235,4 @@ export const getAvatarUrl = async (personality: string): Promise<string> => {
       return "/images/default-avatar.svg";
     }
   }
-  */
 };
