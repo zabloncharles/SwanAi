@@ -1,12 +1,28 @@
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage } from "../config/firebase";
-import { 
-  getAvatarFromRegistry, 
-  storeAvatarInRegistry, 
-  isAvatarInRegistry 
-} from "./avatarRegistry";
+const { Handler } = require("@netlify/functions");
+const OpenAI = require("openai");
+const { initializeApp } = require("firebase/app");
+const {
+  getFirestore,
+  collection,
+  doc,
+  setDoc,
+  serverTimestamp,
+} = require("firebase/firestore");
 
-// Avatar generation prompts for different personalities (optimized for DeepAI)
+// Initialize Firebase from environment variables
+const firebaseConfig = {
+  apiKey: process.env.FIREBASE_API_KEY,
+  authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.FIREBASE_PROJECT_ID,
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.FIREBASE_MESSAGING_ID,
+  appId: process.env.FIREBASE_APP_ID,
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// Avatar generation prompts for different personalities
 const avatarPrompts = {
   // Professional personalities
   Professional:
@@ -105,103 +121,140 @@ const avatarPrompts = {
     "Focused portrait of Coach Alex, a determined 39-year-old man with goal-oriented expression, professional style, high quality, realistic",
 };
 
-// Generate avatar using DALL-E API
-export const generateAvatar = async (personality: string): Promise<string> => {
-  try {
-    const prompt =
-      avatarPrompts[personality as keyof typeof avatarPrompts] ||
-      avatarPrompts.Friendly;
+// Generate avatar using DeepAI
+async function generateAvatarWithDeepAI(personality: string, prompt: string): Promise<string> {
+  const deepaiApiKey = process.env.DEEPAI_API_KEY;
+  if (!deepaiApiKey) {
+    throw new Error("DeepAI API key not configured");
+  }
 
-    const response = await fetch("/.netlify/functions/generate_avatar", {
-      method: "POST",
+  const formData = new FormData();
+  formData.append("text", prompt);
+
+  const response = await fetch("https://api.deepai.org/api/text2img", {
+    method: "POST",
+    headers: {
+      "api-key": deepaiApiKey,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(`DeepAI API error: ${response.status} ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data.output_url;
+}
+
+const handler: Handler = async (event) => {
+  console.log("=== Pre-generate Avatars Function Triggered ===");
+
+  // Handle CORS
+  if (event.httpMethod === "OPTIONS") {
+    return {
+      statusCode: 200,
       headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+      },
+    };
+  }
+
+  if (event.httpMethod !== "POST") {
+    return {
+      statusCode: 405,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ error: "Method not allowed" }),
+    };
+  }
+
+  try {
+    const { adminKey } = JSON.parse(event.body || "{}");
+    
+    // Simple admin key check (you should use a more secure method in production)
+    if (adminKey !== process.env.ADMIN_KEY) {
+      return {
+        statusCode: 401,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ error: "Unauthorized" }),
+      };
+    }
+
+    const results = [];
+    const personalities = Object.keys(avatarPrompts);
+
+    console.log(`Starting to pre-generate ${personalities.length} avatars...`);
+
+    for (const personality of personalities) {
+      try {
+        console.log(`Generating avatar for ${personality}...`);
+        
+        const prompt = avatarPrompts[personality];
+        const imageUrl = await generateAvatarWithDeepAI(personality, prompt);
+
+        // Store in Firestore registry
+        const avatarDoc = doc(db, "personality_avatars", personality);
+        await setDoc(avatarDoc, {
+          personality,
+          avatarUrl: imageUrl,
+          prompt,
+          generatedAt: serverTimestamp(),
+          lastUpdated: serverTimestamp(),
+        });
+
+        results.push({
+          personality,
+          status: "success",
+          avatarUrl: imageUrl,
+        });
+
+        console.log(`Successfully generated avatar for ${personality}`);
+        
+        // Add a small delay to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+      } catch (error) {
+        console.error(`Error generating avatar for ${personality}:`, error);
+        results.push({
+          personality,
+          status: "error",
+          error: error.message,
+        });
+      }
+    }
+
+    console.log(`Completed pre-generation. Results:`, results);
+
+    return {
+      statusCode: 200,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        prompt,
-        personality,
+        message: `Pre-generated ${results.length} avatars`,
+        results,
       }),
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to generate avatar");
-    }
-
-    const data = await response.json();
-    return data.imageUrl;
+    };
   } catch (error) {
-    console.error("Error generating avatar:", error);
-    // Return a default avatar or placeholder
-    return "/images/default-avatar.svg";
+    console.error("Error in pre-generate avatars function:", error);
+    return {
+      statusCode: 500,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ error: "Internal server error" }),
+    };
   }
 };
 
-// Store avatar in Firebase Storage
-export const storeAvatar = async (
-  personality: string,
-  imageUrl: string
-): Promise<string> => {
-  try {
-    // Download the image from the generated URL
-    const response = await fetch(imageUrl);
-    const blob = await response.blob();
-
-    // Upload to Firebase Storage
-    const storageRef = ref(storage, `avatars/${personality}.jpg`);
-    await uploadBytes(storageRef, blob);
-
-    // Get the download URL
-    const downloadURL = await getDownloadURL(storageRef);
-    return downloadURL;
-  } catch (error) {
-    console.error("Error storing avatar:", error);
-    return imageUrl; // Return original URL if storage fails
-  }
-};
-
-// Get avatar URL (optimized with registry)
-export const getAvatarUrl = async (personality: string): Promise<string> => {
-  console.log(`Getting avatar for ${personality} (optimized with registry)`);
-  
-  // For local development, skip registry to avoid CORS issues
-  const isLocalhost =
-    window.location.hostname === "localhost" ||
-    window.location.hostname === "127.0.0.1";
-
-  if (isLocalhost) {
-    console.log(`Local development detected, using default avatar for ${personality}`);
-    return "/images/default-avatar.svg";
-  }
-
-  // Production: Check registry first
-  try {
-    // Check if avatar exists in registry
-    const registryUrl = await getAvatarFromRegistry(personality);
-    if (registryUrl) {
-      console.log(`Avatar found in registry for ${personality}`);
-      return registryUrl;
-    }
-
-    // If not in registry, generate new avatar
-    console.log(`Avatar not found in registry for ${personality}, generating new one...`);
-    const generatedUrl = await generateAvatar(personality);
-    
-    if (generatedUrl && generatedUrl !== "/images/default-avatar.svg") {
-      // Store in registry for future use
-      try {
-        const prompt = avatarPrompts[personality as keyof typeof avatarPrompts] || avatarPrompts.Friendly;
-        await storeAvatarInRegistry(personality, generatedUrl, prompt);
-        console.log(`Avatar stored in registry for ${personality}`);
-        return generatedUrl;
-      } catch (registryError) {
-        console.log("Registry storage failed, using direct URL:", registryError);
-        return generatedUrl; // Use direct URL if registry fails
-      }
-    } else {
-      return "/images/default-avatar.svg";
-    }
-  } catch (error) {
-    console.error(`Error getting avatar for ${personality}:`, error);
-    return "/images/default-avatar.svg";
-  }
-};
+module.exports = { handler };

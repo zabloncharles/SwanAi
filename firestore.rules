@@ -12,6 +12,12 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
     
+    // Allow authenticated users to access personality avatars (read-only)
+    match /personality_avatars/{personality} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null; // Allow writes for avatar generation
+    }
+    
     // Allow authenticated users to access their own messages
     match /messages/{messageId} {
       allow read, write: if request.auth != null && 
