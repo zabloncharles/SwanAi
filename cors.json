@@ -1,0 +1,17 @@
+[
+  {
+    "origin": [
+      "https://swanai.netlify.app",
+      "http://localhost:8889",
+      "http://localhost:5173"
+    ],
+    "method": ["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"],
+    "maxAgeSeconds": 3600,
+    "responseHeader": [
+      "Content-Type",
+      "Access-Control-Allow-Origin",
+      "Access-Control-Allow-Methods",
+      "Access-Control-Allow-Headers"
+    ]
+  }
+]

@@ -13,18 +13,6 @@ const firebaseConfig = {
   appId: (import.meta as any).env?.VITE_FIREBASE_APP_ID,
 };
 
-// Debug: Log the Firebase configuration being used
-console.log("Firebase config being used:", {
-  apiKey: firebaseConfig.apiKey
-    ? firebaseConfig.apiKey.substring(0, 10) + "..."
-    : "undefined",
-  authDomain: firebaseConfig.authDomain,
-  projectId: firebaseConfig.projectId,
-  storageBucket: firebaseConfig.storageBucket,
-  messagingSenderId: firebaseConfig.messagingSenderId,
-  appId: firebaseConfig.appId,
-});
-
 // Validate required config
 if (!firebaseConfig.apiKey) {
   throw new Error("VITE_FIREBASE_API_KEY environment variable is required");

@@ -25,15 +25,6 @@ function AppContent() {
   const location = useLocation();
   const isLoginPage = location.pathname === "/login";
 
-  // Debug authentication state
-  useEffect(() => {
-    console.log('Auth state changed:', { 
-      user: user ? { uid: user.uid, email: user.email } : null, 
-      loading, 
-      isLoginPage 
-    });
-  }, [user, loading, isLoginPage]);
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
