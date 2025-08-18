@@ -5,12 +5,14 @@ interface MessageInputProps {
   onSendMessage: (message: string) => Promise<void>;
   disabled?: boolean;
   placeholder?: string;
+  autoFocus?: boolean;
 }
 
 export default function MessageInput({
   onSendMessage,
   disabled = false,
   placeholder = "Type your message...",
+  autoFocus = false,
 }: MessageInputProps) {
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -27,6 +29,13 @@ export default function MessageInput({
       )}px`;
     }
   }, [message]);
+
+  // Auto-focus when autoFocus prop changes to true
+  useEffect(() => {
+    if (autoFocus && textareaRef.current && !disabled && !isSending) {
+      textareaRef.current.focus();
+    }
+  }, [autoFocus, disabled, isSending]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

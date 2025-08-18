@@ -44,6 +44,7 @@ export default function Messages({
   const [lastUserMessageTime, setLastUserMessageTime] = useState<number>(0);
   const followUpTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [followUpSent, setFollowUpSent] = useState<boolean>(false);
+  const [shouldFocusInput, setShouldFocusInput] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -415,6 +416,17 @@ export default function Messages({
     };
   }, [messages, aiPersonality, justChangedRelationship, followUpSent]);
 
+  // Reset focus flag after it's been used
+  useEffect(() => {
+    if (shouldFocusInput) {
+      // Reset the flag after a short delay to allow the focus to take effect
+      const timer = setTimeout(() => {
+        setShouldFocusInput(false);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [shouldFocusInput]);
+
   const loadAiAvatar = async (personality: string) => {
     try {
       const avatarUrl = await getAvatarUrl(personality);
@@ -513,6 +525,7 @@ export default function Messages({
         } finally {
           setAiTyping(false);
           setSending(false);
+          setShouldFocusInput(true);
         }
       }, responseTime);
     } catch (error) {
@@ -704,6 +717,7 @@ export default function Messages({
           onSendMessage={handleSendMessage}
           disabled={sending || aiTyping}
           placeholder="Type your message to SwanAI..."
+          autoFocus={shouldFocusInput}
         />
       </div>
     </div>
