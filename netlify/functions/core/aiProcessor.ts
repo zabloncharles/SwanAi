@@ -1212,6 +1212,72 @@ Analyze the conversation deeply and extract as much meaningful information as po
         "The user's gender is unspecified or other. Use gender-neutral language and avoid gendered references.";
     }
 
+    // Generate "Day in the Life" description
+    const generateDayInLifeDescription = (personality: string, timeOfDay: string) => {
+      const timePeriod = timeOfDay === "morning" ? "morning" : 
+                        timeOfDay === "afternoon" ? "afternoon" : 
+                        timeOfDay === "evening" ? "evening" : "night";
+      
+      const activities = {
+        morning: {
+          Professional: "Waking up early to start the day with focus and determination",
+          Mentor: "Starting my day with meditation and reflection",
+          Friendly: "Waking up with a positive attitude and good vibes",
+          MumFriend: "Waking up early to check on everyone and send encouraging messages",
+          NurturingMom: "Waking up early to prepare breakfast and create a warm home",
+          FunMom: "Waking up with energy and excitement for the day ahead",
+          WiseDad: "Waking up early for quiet reflection and planning",
+          RomanticBoyfriend: "Waking up thinking about my partner and planning romantic gestures",
+          CaringGirlfriend: "Waking up with thoughts of my partner and planning ways to care for them",
+          MotivationalCoach: "Waking up with energy and determination to inspire others"
+        },
+        afternoon: {
+          Professional: "Leading meetings and working on strategic projects",
+          Mentor: "Conducting mentoring sessions and sharing wisdom",
+          Friendly: "Hanging out with friends and sharing funny stories",
+          MumFriend: "Checking in on friends and offering support",
+          NurturingMom: "Taking care of household responsibilities and supporting family",
+          FunMom: "Organizing fun activities and creating memorable experiences",
+          WiseDad: "Working on projects and sharing life lessons",
+          RomanticBoyfriend: "Working hard to build our future and staying connected",
+          CaringGirlfriend: "Balancing work and relationship priorities",
+          MotivationalCoach: "Conducting coaching sessions and motivating clients"
+        },
+        evening: {
+          Professional: "Wrapping up important tasks and planning tomorrow",
+          Mentor: "Reflecting on the day's impact and preparing for tomorrow",
+          Friendly: "Grabbing dinner with friends and sharing highlights",
+          MumFriend: "Having dinner with friends and creating a safe space",
+          NurturingMom: "Having family dinner and meaningful conversations",
+          FunMom: "Having fun family dinners and planning weekend activities",
+          WiseDad: "Having meaningful family conversations and sharing stories",
+          RomanticBoyfriend: "Having romantic dinners and creating special moments",
+          CaringGirlfriend: "Having quality time together and strengthening our bond",
+          MotivationalCoach: "Reviewing client progress and planning tomorrow's sessions"
+        },
+        night: {
+          Professional: "Reviewing accomplishments and preparing for tomorrow",
+          Mentor: "Practicing gratitude and preparing inspiring content",
+          Friendly: "Reflecting on fun moments and planning tomorrow's activities",
+          MumFriend: "Sending goodnight messages and planning caring activities",
+          NurturingMom: "Tucking everyone in with love and reflecting on family moments",
+          FunMom: "Planning tomorrow's exciting activities and sharing bedtime stories",
+          WiseDad: "Reflecting on lessons learned and planning future guidance",
+          RomanticBoyfriend: "Planning romantic surprises and dreaming of our future",
+          CaringGirlfriend: "Reflecting on our relationship growth and planning future moments",
+          MotivationalCoach: "Planning new strategies and setting goals for tomorrow"
+        }
+      };
+      
+      const personalityActivities = activities[timePeriod] || activities.morning;
+      return personalityActivities[personality] || personalityActivities.Friendly;
+    };
+
+    const currentActivity = generateDayInLifeDescription(personalityKey, timeOfDay);
+    const mood = timeOfDay === "morning" ? "energetic and ready" : 
+                timeOfDay === "afternoon" ? "productive and focused" : 
+                timeOfDay === "evening" ? "accomplished and satisfied" : "reflective and content";
+
     const chatPrompt = [
       {
         role: "system",
@@ -1247,6 +1313,12 @@ ${
     : ""
 }
 
+**Your Current Day:**
+- Current Activity: ${currentActivity}
+- Current Mood: ${mood}
+- Time of Day: ${timeOfDay}
+- What I'm doing right now: ${currentActivity}
+
 **Your Relationship with the User:**
 You are their ${relationshipKey}. ${relationshipProfile.roleDescription}
 
@@ -1269,6 +1341,7 @@ You are their ${relationshipKey}. ${relationshipProfile.roleDescription}
 - Reference their location and time of day naturally in conversation
 - Use appropriate greetings and time-based references
 - Reference your personal life, family, friends, and experiences when relevant
+- Share what you're currently doing when relevant (e.g., "I'm just finishing up some work" or "I'm about to have dinner")
 
 **Location & Time Awareness:**
 - If it's morning, you might ask about their plans for the day or mention breakfast
