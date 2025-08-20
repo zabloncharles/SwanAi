@@ -4,6 +4,7 @@ import { db } from "../../config/firebase";
 import { sendWebMessage } from "../../services/messageApi";
 import { getAvatarUrl } from "../../services/avatarApi";
 import { generateDayInLifeDescription } from "../../services/dayInLifeService";
+import { getOrGenerateLifeResume } from "../../services/lifeResumeApi";
 import MessageInput from "./MessageInput";
 
 interface Message {
@@ -172,7 +173,7 @@ export default function Messages({
   };
 
   // Generate introduction message based on AI personality
-  const generateIntroductionMessage = (personality: any) => {
+  const generateIntroductionMessage = async (personality: any) => {
     const currentTime = new Date();
     const hour = currentTime.getHours();
     let greeting = "Hello";
@@ -185,6 +186,18 @@ export default function Messages({
       greeting = "Good evening";
     } else {
       greeting = "Hello";
+    }
+
+    // Generate or retrieve AI life resume
+    let lifeResume: any = null;
+    try {
+      lifeResume = await getOrGenerateLifeResume(
+        personality.personality,
+        personality.relationship,
+        userId
+      );
+    } catch (error) {
+      console.error("Error generating life resume:", error);
     }
 
     // Generate "Day in the Life" description
@@ -348,15 +361,33 @@ export default function Messages({
 
   // Show introduction message when relationship has just changed
   useEffect(() => {
-    if (justChangedRelationship && aiPersonality && messages.length === 0) {
-      const introductionMessage = generateIntroductionMessage(aiPersonality);
-      setMessages([introductionMessage]);
+    const generateAndSetIntroduction = async () => {
+      if (justChangedRelationship && aiPersonality && messages.length === 0) {
+        try {
+          const introductionMessage = await generateIntroductionMessage(
+            aiPersonality
+          );
+          setMessages([introductionMessage]);
 
-      // Call the completion callback after a short delay
-      setTimeout(() => {
-        onIntroductionComplete?.();
-      }, 2000);
-    }
+          // Call the completion callback after a short delay
+          setTimeout(() => {
+            onIntroductionComplete?.();
+          }, 2000);
+        } catch (error) {
+          console.error("Error generating introduction message:", error);
+          // Fallback to a simple introduction
+          setMessages([
+            {
+              role: "assistant",
+              content: `Hello! I'm here to chat, support, and help you with whatever you need.`,
+              timestamp: Date.now(),
+            },
+          ]);
+        }
+      }
+    };
+
+    generateAndSetIntroduction();
   }, [
     justChangedRelationship,
     aiPersonality,

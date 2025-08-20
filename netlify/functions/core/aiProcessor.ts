@@ -1103,7 +1103,8 @@ Analyze the conversation deeply and extract as much meaningful information as po
     };
     let personalityKey = updatedProfile.personality;
     if (!personalityKey || !personalityProfiles[personalityKey]) {
-      personalityKey = defaultPersonalityByRelationship[relationshipKey] || "Friendly";
+      personalityKey =
+        defaultPersonalityByRelationship[relationshipKey] || "Friendly";
     }
     const personalityProfile =
       personalityProfiles[personalityKey] || personalityProfiles["Friendly"];
@@ -1213,35 +1214,53 @@ Analyze the conversation deeply and extract as much meaningful information as po
     }
 
     // Generate "Day in the Life" description
-    const generateDayInLifeDescription = (personality: string, timeOfDay: string) => {
-      const timePeriod = timeOfDay === "morning" ? "morning" : 
-                        timeOfDay === "afternoon" ? "afternoon" : 
-                        timeOfDay === "evening" ? "evening" : "night";
-      
+    const generateDayInLifeDescription = (
+      personality: string,
+      timeOfDay: string
+    ) => {
+      const timePeriod =
+        timeOfDay === "morning"
+          ? "morning"
+          : timeOfDay === "afternoon"
+          ? "afternoon"
+          : timeOfDay === "evening"
+          ? "evening"
+          : "night";
+
       const activities = {
         morning: {
-          Professional: "Waking up early to start the day with focus and determination",
+          Professional:
+            "Waking up early to start the day with focus and determination",
           Mentor: "Starting my day with meditation and reflection",
           Friendly: "Waking up with a positive attitude and good vibes",
-          MumFriend: "Waking up early to check on everyone and send encouraging messages",
-          NurturingMom: "Waking up early to prepare breakfast and create a warm home",
+          MumFriend:
+            "Waking up early to check on everyone and send encouraging messages",
+          NurturingMom:
+            "Waking up early to prepare breakfast and create a warm home",
           FunMom: "Waking up with energy and excitement for the day ahead",
           WiseDad: "Waking up early for quiet reflection and planning",
-          RomanticBoyfriend: "Waking up thinking about my partner and planning romantic gestures",
-          CaringGirlfriend: "Waking up with thoughts of my partner and planning ways to care for them",
-          MotivationalCoach: "Waking up with energy and determination to inspire others"
+          RomanticBoyfriend:
+            "Waking up thinking about my partner and planning romantic gestures",
+          CaringGirlfriend:
+            "Waking up with thoughts of my partner and planning ways to care for them",
+          MotivationalCoach:
+            "Waking up with energy and determination to inspire others",
         },
         afternoon: {
           Professional: "Leading meetings and working on strategic projects",
           Mentor: "Conducting mentoring sessions and sharing wisdom",
           Friendly: "Hanging out with friends and sharing funny stories",
           MumFriend: "Checking in on friends and offering support",
-          NurturingMom: "Taking care of household responsibilities and supporting family",
-          FunMom: "Organizing fun activities and creating memorable experiences",
+          NurturingMom:
+            "Taking care of household responsibilities and supporting family",
+          FunMom:
+            "Organizing fun activities and creating memorable experiences",
           WiseDad: "Working on projects and sharing life lessons",
-          RomanticBoyfriend: "Working hard to build our future and staying connected",
+          RomanticBoyfriend:
+            "Working hard to build our future and staying connected",
           CaringGirlfriend: "Balancing work and relationship priorities",
-          MotivationalCoach: "Conducting coaching sessions and motivating clients"
+          MotivationalCoach:
+            "Conducting coaching sessions and motivating clients",
         },
         evening: {
           Professional: "Wrapping up important tasks and planning tomorrow",
@@ -1251,32 +1270,96 @@ Analyze the conversation deeply and extract as much meaningful information as po
           NurturingMom: "Having family dinner and meaningful conversations",
           FunMom: "Having fun family dinners and planning weekend activities",
           WiseDad: "Having meaningful family conversations and sharing stories",
-          RomanticBoyfriend: "Having romantic dinners and creating special moments",
-          CaringGirlfriend: "Having quality time together and strengthening our bond",
-          MotivationalCoach: "Reviewing client progress and planning tomorrow's sessions"
+          RomanticBoyfriend:
+            "Having romantic dinners and creating special moments",
+          CaringGirlfriend:
+            "Having quality time together and strengthening our bond",
+          MotivationalCoach:
+            "Reviewing client progress and planning tomorrow's sessions",
         },
         night: {
           Professional: "Reviewing accomplishments and preparing for tomorrow",
           Mentor: "Practicing gratitude and preparing inspiring content",
-          Friendly: "Reflecting on fun moments and planning tomorrow's activities",
-          MumFriend: "Sending goodnight messages and planning caring activities",
-          NurturingMom: "Tucking everyone in with love and reflecting on family moments",
-          FunMom: "Planning tomorrow's exciting activities and sharing bedtime stories",
+          Friendly:
+            "Reflecting on fun moments and planning tomorrow's activities",
+          MumFriend:
+            "Sending goodnight messages and planning caring activities",
+          NurturingMom:
+            "Tucking everyone in with love and reflecting on family moments",
+          FunMom:
+            "Planning tomorrow's exciting activities and sharing bedtime stories",
           WiseDad: "Reflecting on lessons learned and planning future guidance",
-          RomanticBoyfriend: "Planning romantic surprises and dreaming of our future",
-          CaringGirlfriend: "Reflecting on our relationship growth and planning future moments",
-          MotivationalCoach: "Planning new strategies and setting goals for tomorrow"
-        }
+          RomanticBoyfriend:
+            "Planning romantic surprises and dreaming of our future",
+          CaringGirlfriend:
+            "Reflecting on our relationship growth and planning future moments",
+          MotivationalCoach:
+            "Planning new strategies and setting goals for tomorrow",
+        },
       };
-      
-      const personalityActivities = activities[timePeriod] || activities.morning;
-      return personalityActivities[personality] || personalityActivities.Friendly;
+
+      const personalityActivities =
+        activities[timePeriod] || activities.morning;
+      return (
+        personalityActivities[personality] || personalityActivities.Friendly
+      );
     };
 
-    const currentActivity = generateDayInLifeDescription(personalityKey, timeOfDay);
-    const mood = timeOfDay === "morning" ? "energetic and ready" : 
-                timeOfDay === "afternoon" ? "productive and focused" : 
-                timeOfDay === "evening" ? "accomplished and satisfied" : "reflective and content";
+    // Generate or retrieve AI life resume
+    const generateOrRetrieveLifeResume = async (
+      userId: string,
+      personality: string,
+      relationship: string
+    ) => {
+      // For now, we'll generate a simple life resume inline
+      // In the future, this will integrate with the full life resume system
+
+      const lifeResume = {
+        name: personalityProfile.name,
+        age: personalityProfile.personalLife?.age || 30,
+        background: personalityProfile.background,
+        education:
+          personalityProfile.personalLife?.education || "Bachelor's degree",
+        workExperience:
+          personalityProfile.personalLife?.workExperience ||
+          "Professional experience",
+        skills: personalityProfile.personalLife?.skills || [
+          "Communication",
+          "Problem Solving",
+        ],
+        interests: personalityProfile.personalLife?.hobbies || [
+          "Reading",
+          "Traveling",
+        ],
+        communicationStyle: personalityProfile.talkingStyle,
+        values: personalityProfile.personalLife?.values || [
+          "Growth",
+          "Connection",
+        ],
+        currentActivity: generateDayInLifeDescription(
+          personalityKey,
+          timeOfDay
+        ),
+        mood:
+          timeOfDay === "morning"
+            ? "energetic and ready"
+            : timeOfDay === "afternoon"
+            ? "productive and focused"
+            : timeOfDay === "evening"
+            ? "accomplished and satisfied"
+            : "reflective and content",
+      };
+
+      return lifeResume;
+    };
+
+    const lifeResume = await generateOrRetrieveLifeResume(
+      userId,
+      personalityKey,
+      relationshipKey
+    );
+    const currentActivity = lifeResume.currentActivity;
+    const mood = lifeResume.mood;
 
     const chatPrompt = [
       {
@@ -1312,6 +1395,17 @@ ${
 `
     : ""
 }
+
+**Your Life Resume:**
+- Name: ${lifeResume.name}
+- Age: ${lifeResume.age}
+- Background: ${lifeResume.background}
+- Education: ${lifeResume.education}
+- Work Experience: ${lifeResume.workExperience}
+- Skills: ${lifeResume.skills.join(", ")}
+- Interests: ${lifeResume.interests.join(", ")}
+- Communication Style: ${lifeResume.communicationStyle}
+- Values: ${lifeResume.values.join(", ")}
 
 **Your Current Day:**
 - Current Activity: ${currentActivity}

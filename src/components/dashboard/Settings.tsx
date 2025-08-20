@@ -5,6 +5,11 @@ import { UserData } from "../../types/user";
 import PricingSection from "./PricingSection";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth } from "../../config/firebase";
+import {
+  clearAllUserLifeResumeCaches,
+  getOrGenerateLifeResume,
+} from "../../services/lifeResumeApi";
+import { AILifeResume } from "../../types/aiLifeResume";
 
 const personalityOptions = [
   {
@@ -427,6 +432,9 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
     text: string;
   } | null>(null);
   const [openCard, setOpenCard] = useState<string | null>("personal");
+  const [currentLifeResume, setCurrentLifeResume] =
+    useState<AILifeResume | null>(null);
+  const [loadingLifeResume, setLoadingLifeResume] = useState(false);
   const saveButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -505,6 +513,40 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
     }
   }, [editingSection]);
 
+  // Load life resume when AI personality changes
+  useEffect(() => {
+    const loadLifeResume = async () => {
+      if (
+        editedData?.profile?.personality &&
+        editedData?.profile?.relationship &&
+        userData?.uid
+      ) {
+        setLoadingLifeResume(true);
+        try {
+          const resume = await getOrGenerateLifeResume(
+            editedData.profile.personality,
+            editedData.profile.relationship,
+            userData.uid
+          );
+          setCurrentLifeResume(resume);
+        } catch (error) {
+          console.error("Error loading life resume:", error);
+          setCurrentLifeResume(null);
+        } finally {
+          setLoadingLifeResume(false);
+        }
+      } else {
+        setCurrentLifeResume(null);
+      }
+    };
+
+    loadLifeResume();
+  }, [
+    editedData?.profile?.personality,
+    editedData?.profile?.relationship,
+    userData?.uid,
+  ]);
+
   const handlePersonalInfoSave = async () => {
     if (!editedData) return;
 
@@ -573,6 +615,12 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
           summary: "",
           history: [],
         };
+
+        // Clear life resume caches for the old relationship
+        if (userData.profile?.relationship && userData.profile?.personality) {
+          clearAllUserLifeResumeCaches(userData.uid);
+          console.log("Cleared life resume caches for relationship change");
+        }
 
         console.log(
           "Relationship change detected - implementing selective memory management"
@@ -1216,6 +1264,319 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* AI Life Resume Display */}
+      {currentLifeResume && (
+        <div className="bg-white rounded-2xl shadow border border-gray-100 p-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">AI Life Resume</h2>
+            <div className="flex items-center space-x-2">
+              {loadingLifeResume && (
+                <div className="flex items-center text-sm text-gray-500">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                  Loading...
+                </div>
+              )}
+              <span className="text-sm text-gray-500">
+                Generated on{" "}
+                {new Date(currentLifeResume.generatedAt).toLocaleDateString()}
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Basic Information */}
+            <div className="space-y-4">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+                <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center">
+                  <span className="text-2xl mr-2">👤</span>
+                  {currentLifeResume.name}
+                </h3>
+                <div className="space-y-2 text-sm text-blue-800">
+                  <div>
+                    <strong>Age:</strong>{" "}
+                    {(currentLifeResume as any).age || "Not specified"} years
+                    old
+                  </div>
+                  <div>
+                    <strong>Background:</strong>{" "}
+                    {(currentLifeResume as any).background || "Not specified"}
+                  </div>
+                  <div>
+                    <strong>Education:</strong>{" "}
+                    {(currentLifeResume as any).education || "Not specified"}
+                  </div>
+                  <div>
+                    <strong>Work Experience:</strong>{" "}
+                    {(currentLifeResume as any).workExperience ||
+                      "Not specified"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Intelligence Profile */}
+              <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-200">
+                <h3 className="text-lg font-semibold text-purple-900 mb-3 flex items-center">
+                  <span className="text-2xl mr-2">🧠</span>
+                  Intelligence Profile
+                </h3>
+                <div className="space-y-2 text-sm text-purple-800">
+                  <div>
+                    <strong>IQ Range:</strong>{" "}
+                    {(currentLifeResume as any).intelligence?.iqRange ||
+                      "Not specified"}
+                  </div>
+                  <div>
+                    <strong>Learning Style:</strong>{" "}
+                    {(currentLifeResume as any).intelligence?.learningStyle ||
+                      "Not specified"}
+                  </div>
+                  <div>
+                    <strong>Problem Solving:</strong>{" "}
+                    {(currentLifeResume as any).intelligence
+                      ?.problemSolvingApproach || "Not specified"}
+                  </div>
+                  <div>
+                    <strong>Expertise:</strong>{" "}
+                    {(
+                      currentLifeResume as any
+                    ).intelligence?.expertiseAreas?.join(", ") ||
+                      "Not specified"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Communication Style */}
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg border border-green-200">
+                <h3 className="text-lg font-semibold text-green-900 mb-3 flex items-center">
+                  <span className="text-2xl mr-2">💬</span>
+                  Communication Style
+                </h3>
+                <div className="space-y-2 text-sm text-green-800">
+                  <div>
+                    <strong>Style:</strong>{" "}
+                    {(currentLifeResume as any).communicationStyle ||
+                      "Not specified"}
+                  </div>
+                  <div>
+                    <strong>Skills:</strong>{" "}
+                    {(currentLifeResume as any).skills?.join(", ") ||
+                      "Not specified"}
+                  </div>
+                  <div>
+                    <strong>Interests:</strong>{" "}
+                    {(currentLifeResume as any).interests?.join(", ") ||
+                      "Not specified"}
+                  </div>
+                  <div>
+                    <strong>Values:</strong>{" "}
+                    {(currentLifeResume as any).values?.join(", ") ||
+                      "Not specified"}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Professional & Personal */}
+            <div className="space-y-4">
+              {/* Education */}
+              <div className="bg-gradient-to-r from-yellow-50 to-orange-50 p-4 rounded-lg border border-yellow-200">
+                <h3 className="text-lg font-semibold text-yellow-900 mb-3 flex items-center">
+                  <span className="text-2xl mr-2">🎓</span>
+                  Education
+                </h3>
+                <div className="space-y-2 text-sm text-yellow-800">
+                  <div>
+                    <strong>Education:</strong>{" "}
+                    {(currentLifeResume as any).education || "Not specified"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Work Experience */}
+              <div className="bg-gradient-to-r from-red-50 to-pink-50 p-4 rounded-lg border border-red-200">
+                <h3 className="text-lg font-semibold text-red-900 mb-3 flex items-center">
+                  <span className="text-2xl mr-2">💼</span>
+                  Work Experience
+                </h3>
+                <div className="space-y-2 text-sm text-red-800">
+                  <div>
+                    <strong>Work Experience:</strong>{" "}
+                    {(currentLifeResume as any).workExperience ||
+                      "Not specified"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Skills & Interests */}
+              <div className="bg-gradient-to-r from-indigo-50 to-blue-50 p-4 rounded-lg border border-indigo-200">
+                <h3 className="text-lg font-semibold text-indigo-900 mb-3 flex items-center">
+                  <span className="text-2xl mr-2">⭐</span>
+                  Skills & Interests
+                </h3>
+                <div className="space-y-2 text-sm text-indigo-800">
+                  <div>
+                    <strong>Skills:</strong>{" "}
+                    {(currentLifeResume as any).skills?.join(", ") ||
+                      "Not specified"}
+                  </div>
+                  <div>
+                    <strong>Interests:</strong>{" "}
+                    {(currentLifeResume as any).interests?.join(", ") ||
+                      "Not specified"}
+                  </div>
+                  <div>
+                    <strong>Values:</strong>{" "}
+                    {(currentLifeResume as any).values?.join(", ") ||
+                      "Not specified"}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Worldview & Values */}
+          <div className="mt-6 bg-gradient-to-r from-teal-50 to-cyan-50 p-4 rounded-lg border border-teal-200">
+            <h3 className="text-lg font-semibold text-teal-900 mb-3 flex items-center">
+              <span className="text-2xl mr-2">🌍</span>
+              Worldview & Values
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-teal-800">
+              <div>
+                <div>
+                  <strong>Life Philosophy:</strong>{" "}
+                  {(currentLifeResume as any).worldview?.lifePhilosophy ||
+                    "Not specified"}
+                </div>
+                <div>
+                  <strong>What Matters Most:</strong>{" "}
+                  {(currentLifeResume as any).worldview?.whatMattersMost ||
+                    "Not specified"}
+                </div>
+                <div>
+                  <strong>Values:</strong>{" "}
+                  {(currentLifeResume as any).values?.join(", ") ||
+                    "Not specified"}
+                </div>
+              </div>
+              <div>
+                <div>
+                  <strong>Goals:</strong>{" "}
+                  {(currentLifeResume as any).worldview?.goals?.join(", ") ||
+                    "Not specified"}
+                </div>
+                <div>
+                  <strong>Dreams:</strong>{" "}
+                  {(currentLifeResume as any).worldview?.dreams?.join(", ") ||
+                    "Not specified"}
+                </div>
+                <div>
+                  <strong>Political Views:</strong>{" "}
+                  {(currentLifeResume as any).worldview?.politicalViews ||
+                    "Not specified"}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Relationship Context */}
+          <div className="mt-6 bg-gradient-to-r from-rose-50 to-pink-50 p-4 rounded-lg border border-rose-200">
+            <h3 className="text-lg font-semibold text-rose-900 mb-3 flex items-center">
+              <span className="text-2xl mr-2">💕</span>
+              Relationship Context
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-rose-800">
+              <div>
+                <div>
+                  <strong>How We Met:</strong>{" "}
+                  {(currentLifeResume as any).relationshipContext?.howTheyMet ||
+                    "Not specified"}
+                </div>
+                <div>
+                  <strong>Relationship Duration:</strong>{" "}
+                  {(currentLifeResume as any).relationshipContext
+                    ?.relationshipDuration || "Not specified"}
+                </div>
+                <div>
+                  <strong>Dynamics:</strong>{" "}
+                  {(currentLifeResume as any).relationshipContext
+                    ?.relationshipDynamics || "Not specified"}
+                </div>
+              </div>
+              <div>
+                <div>
+                  <strong>Shared Experiences:</strong>{" "}
+                  {(
+                    currentLifeResume as any
+                  ).relationshipContext?.sharedExperiences?.join(", ") ||
+                    "Not specified"}
+                </div>
+                <div>
+                  <strong>Inside Jokes:</strong>{" "}
+                  {(
+                    currentLifeResume as any
+                  ).relationshipContext?.insideJokes?.join(", ") ||
+                    "Not specified"}
+                </div>
+                <div>
+                  <strong>Future Plans:</strong>{" "}
+                  {(
+                    currentLifeResume as any
+                  ).relationshipContext?.futurePlans?.join(", ") ||
+                    "Not specified"}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Availability */}
+          <div className="mt-6 bg-gradient-to-r from-slate-50 to-gray-50 p-4 rounded-lg border border-slate-200">
+            <h3 className="text-lg font-semibold text-slate-900 mb-3 flex items-center">
+              <span className="text-2xl mr-2">⏰</span>
+              Availability & Lifestyle
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-800">
+              <div>
+                <div>
+                  <strong>Schedule:</strong>{" "}
+                  {(currentLifeResume as any).availability?.typicalSchedule ||
+                    "Not specified"}
+                </div>
+                <div>
+                  <strong>Response Time:</strong>{" "}
+                  {(currentLifeResume as any).availability?.responseTime ||
+                    "Not specified"}
+                </div>
+                <div>
+                  <strong>Timezone:</strong>{" "}
+                  {(currentLifeResume as any).availability?.timezone ||
+                    "Not specified"}
+                </div>
+              </div>
+              <div>
+                <div>
+                  <strong>Work-Life Balance:</strong>{" "}
+                  {(currentLifeResume as any).availability?.workLifeBalance ||
+                    "Not specified"}
+                </div>
+                <div>
+                  <strong>Availability Pattern:</strong>{" "}
+                  {(
+                    currentLifeResume as any
+                  ).availability?.availabilityPatterns?.join(", ") ||
+                    "Not specified"}
+                </div>
+                <div>
+                  <strong>Busy Times:</strong>{" "}
+                  {(currentLifeResume as any).availability?.busyTimes?.join(
+                    ", "
+                  ) || "Not specified"}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
