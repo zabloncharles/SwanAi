@@ -82,17 +82,17 @@ export default function Home() {
             <div className="flex items-center mb-2">
               <span className="inline-block w-3 h-3 bg-green-500 rounded-full mr-2"></span>
               <span className="text-xs font-semibold text-green-700">
-                Compliant
+                Active
               </span>
               <span className="ml-auto text-xs text-gray-400">3/3</span>
             </div>
             <div className="text-sm text-gray-800 font-semibold mb-2">
-              SMS Compliance
+              AI Companion Features
             </div>
             <ul className="text-xs text-gray-600 space-y-1">
-              <li>Opt-in Confirmed</li>
-              <li>Privacy Policy Sent</li>
-              <li>Unsubscribe Option</li>
+              <li>24/7 Availability</li>
+              <li>Emotional Support</li>
+              <li>Personalized Conversations</li>
             </ul>
           </div>
           {/* AI Message Card */}
@@ -104,7 +104,7 @@ export default function Home() {
               </span>
             </div>
             <div className="text-sm text-gray-800 font-semibold mb-2">
-              "How can I help you today?"
+              "Hey babe, how was your day?"
             </div>
             <div className="flex space-x-2 mt-2">
               <span className="px-2 py-1 bg-indigo-50 text-indigo-600 rounded text-xs font-medium">
@@ -127,8 +127,7 @@ export default function Home() {
               {/* Left message (floating, frosted glass) */}
               <div className="absolute -left-32 top-8 flex items-end z-20">
                 <div className="bg-white/60 backdrop-blur-md rounded-2xl px-4 py-3 text-gray-900 text-sm shadow-xl max-w-[16rem] border border-white/30">
-                  Hi Mr.Smith, how would you rate our services? We'd love to
-                  hear your feedback!
+                  Hey babe, how was your day? I've been thinking about you! 💕
                   <span className="block text-xs text-gray-400 text-right mt-1">
                     11:20 AM
                   </span>
@@ -137,8 +136,8 @@ export default function Home() {
               {/* Right message (floating, frosted glass) */}
               <div className="absolute -right-32 top-28 flex items-end justify-end z-20">
                 <div className="bg-indigo-400/60 backdrop-blur-md rounded-2xl px-4 py-3 text-white text-sm shadow-xl max-w-[16rem] relative border border-white/20">
-                  Your services were excellent! Highly professional and exceeded
-                  my expectations. I'll definitely recommend you to others!
+                  It was amazing! You always know how to make me feel better.
+                  Thank you for being so supportive! 😊
                   <span className="block text-xs text-indigo-100 text-right mt-1">
                     11:22 AM
                   </span>
