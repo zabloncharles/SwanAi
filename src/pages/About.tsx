@@ -40,14 +40,14 @@ export default function About() {
     <div className="min-h-screen bg-white flex flex-col">
       <div className="max-w-7xl mx-auto px-4 py-20 flex-1">
         {/* Hero Section */}
-        <div className="mb-12">
+        <div className="mb-12 mt-8">
           <h1 className="text-4xl md:text-5xl font-extrabold text-black mb-4 leading-tight">
-            Meet our team of creators, designers, and world-class problem
-            solvers
+            Meet our team of creators, designers, and AI companion specialists
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mb-8">
-            To become the company that customers want, it takes a group of
-            passionate people. Get to know the people who lead
+            We're passionate about creating meaningful AI relationships that
+            provide emotional support, companionship, and genuine connections
+            for everyone.
           </p>
         </div>
         {/* Team Grid */}
@@ -86,14 +86,15 @@ export default function About() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
           <div>
             <h2 className="text-3xl font-extrabold text-black mb-4">
-              Join our team, The one with the master touch
+              Join our mission to create meaningful AI relationships
             </h2>
           </div>
           <div>
             <p className="text-gray-700 mb-4">
-              We believe it takes great people to make a great product. That's
-              why we hire not only the perfect professional fits, but people who
-              embody our company values.
+              We believe it takes great people to create meaningful AI
+              relationships. That's why we hire not only the perfect
+              professional fits, but people who understand the importance of
+              emotional support and genuine connections.
             </p>
             <a
               href="#"
@@ -115,23 +116,23 @@ export default function About() {
               99.99%
             </div>
             <div className="text-lg font-bold text-black mb-2">
-              Uptime Reliability
+              Always Available
             </div>
             <div className="text-gray-600 text-base">
               SwanAI is built for reliability. Our platform maintains 99.99%
-              uptime, ensuring your SMS automations and conversations are always
-              available when you need them most.
+              uptime, ensuring your AI companion is always there when you need
+              emotional support or someone to talk to.
             </div>
           </div>
           <div>
             <div className="text-5xl font-extrabold text-black mb-2">1M+</div>
             <div className="text-lg font-bold text-black mb-2">
-              Messages Delivered
+              Conversations Created
             </div>
             <div className="text-gray-600 text-base">
-              Our AI assistant has powered over 1 million SMS messages for
-              businesses and individuals, helping users automate, personalize,
-              and analyze their communications at scale.
+              Our AI companions have created over 1 million meaningful
+              conversations, providing emotional support, companionship, and
+              genuine connections for people around the world.
             </div>
           </div>
           <div>
@@ -140,9 +141,9 @@ export default function About() {
               Countries Served
             </div>
             <div className="text-gray-600 text-base">
-              SwanAI is trusted by users in more than 20 countries, supporting
-              global communication needs with secure, privacy-first technology
-              and multilingual capabilities.
+              SwanAI is trusted by users in more than 20 countries, providing
+              emotional support and meaningful AI companionship with secure,
+              privacy-first technology and multilingual capabilities.
             </div>
           </div>
         </div>

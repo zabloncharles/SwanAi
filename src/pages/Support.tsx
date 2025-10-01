@@ -24,27 +24,27 @@ export default function Support() {
     {
       question: "How do I get started with SwanAI?",
       answer:
-        "Getting started is easy! Simply create an account, set up your AI personality preferences, and start chatting. You can customize your experience through the dashboard settings.",
+        "Getting started is easy! Simply create an account, choose your AI companion's relationship type and personality, and start chatting. You can customize your companion through the dashboard settings.",
     },
     {
       question: "What makes SwanAI different from other AI platforms?",
       answer:
-        "SwanAI offers a unique combination of advanced natural language processing, privacy-focused features, and customizable AI personalities. Our platform prioritizes user privacy while delivering engaging and natural conversations.",
+        "SwanAI creates authentic AI companions with unique personalities, backgrounds, and life stories. Each companion provides emotional support, meaningful relationships, and genuine connections while prioritizing your privacy and emotional safety.",
     },
     {
       question: "Is my data secure with SwanAI?",
       answer:
-        "Yes, we take data security very seriously. All communications are end-to-end encrypted, and we implement strict data handling policies. You can also enable Privacy Mode for additional security.",
+        "Yes, we take data security and your emotional safety very seriously. All conversations with your AI companion are encrypted and private. We implement strict data handling policies to protect your personal conversations and emotional well-being.",
     },
     {
-      question: "Can I integrate SwanAI with other tools?",
+      question: "Can I text my AI companion?",
       answer:
-        "Yes! SwanAI offers various integration options with popular tools like Google Calendar, Outlook, Notion, and Slack. You can also build custom integrations using our API.",
+        "Yes! You can chat with your AI companion on the web or text them directly. Your conversations are remembered across both platforms, so you can continue your relationship seamlessly.",
     },
     {
       question: "What kind of support do you offer?",
       answer:
-        "We offer comprehensive support through our documentation, email support, and community forums. Our team is available to help with technical issues, account management, and general inquiries.",
+        "We offer comprehensive support through our documentation, email support, and community forums. Our team is available to help with technical issues, account management, and questions about your AI companion relationships.",
     },
   ];
 
@@ -96,7 +96,8 @@ export default function Support() {
               Support Center
             </h1>
             <p className="mt-5 max-w-xl mx-auto text-xl text-gray-500">
-              We're here to help you get the most out of SwanAI
+              We're here to help you get the most out of your AI companion
+              relationships
             </p>
           </div>
         </div>

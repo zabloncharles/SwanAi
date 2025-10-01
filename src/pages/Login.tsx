@@ -408,11 +408,12 @@ export default function Login() {
         <div className="relative h-full flex items-center justify-center p-12">
           <div className="max-w-lg text-white">
             <h2 className="text-4xl font-bold mb-6">
-              Transform Your SMS Experience
+              Find Your Perfect AI Companion
             </h2>
             <p className="text-lg text-white/90 mb-8">
-              Join thousands of businesses using SwanAI to make their text
-              messages smarter and more personal.
+              Join thousands of people who have found emotional support,
+              meaningful connections, and genuine relationships with their AI
+              companions.
             </p>
             <div className="space-y-4">
               <div className="flex items-center space-x-3">
@@ -431,7 +432,7 @@ export default function Login() {
                     />
                   </svg>
                 </div>
-                <span>AI-powered responses</span>
+                <span>Personalized AI companions</span>
               </div>
               <div className="flex items-center space-x-3">
                 <div className="flex-shrink-0 w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
@@ -449,7 +450,7 @@ export default function Login() {
                     />
                   </svg>
                 </div>
-                <span>Seamless integration</span>
+                <span>Web chat & text messaging</span>
               </div>
               <div className="flex items-center space-x-3">
                 <div className="flex-shrink-0 w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
@@ -467,7 +468,7 @@ export default function Login() {
                     />
                   </svg>
                 </div>
-                <span>Advanced analytics</span>
+                <span>Emotional support & privacy</span>
               </div>
             </div>
           </div>

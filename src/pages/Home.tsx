@@ -22,20 +22,20 @@ export default function Home() {
         {/* Left: Headline and CTA */}
         <div className="flex-1 flex flex-col items-start justify-center max-w-xl z-10">
           <h1 className="text-5xl md:text-6xl font-extrabold leading-tight mb-6 bg-gradient-to-r from-purple-500 to-black text-transparent bg-clip-text">
-            AI-Powered SMS
+            Your Personal AI
             <br />
-            Assistant Platform
+            Companion Platform
           </h1>
           <p className="text-lg text-gray-600 mb-8">
-            Make every text message smarter and more personal. SwanAI helps you
-            connect, automate, and analyze your SMS conversations with advanced
-            AI, privacy, and seamless integration.
+            Choose your perfect AI companion and build meaningful relationships.
+            Chat on the web or text your companion anytime—they're always there
+            to support, encourage, and connect with you.
           </p>
           <Link
             to="/login?mode=signup"
             className="inline-flex items-center px-7 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg font-semibold text-lg shadow-sm hover:shadow-md transition-all duration-200 hover:opacity-90 mb-10"
           >
-            Get Started
+            Meet Your Companion
             <ArrowRightIcon className="w-5 h-5 ml-2" />
           </Link>
           {/* Supporting text block */}
@@ -186,42 +186,45 @@ export default function Home() {
           {/* Subheadline and Cards */}
           <div className="mb-10">
             <h3 className="text-2xl md:text-3xl font-extrabold text-black mb-2 text-left">
-              Accelerate your SMS strategy
+              Find your perfect AI companion
             </h3>
             <p className="text-lg text-black mb-8 text-left max-w-2xl">
-              SwanAI is built for teams and businesses that want more from their
-              SMS communication—smarter automation, deeper insights, and
-              enterprise-grade privacy.
+              SwanAI offers personalized AI companions for everyone—whether you
+              need a supportive friend, a romantic partner, a caring parent, or
+              a motivational coach. Choose your relationship and personality.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Card 1 */}
               <div className="bg-white border border-gray-200 rounded-2xl p-8 flex flex-col items-start shadow-sm">
                 <h4 className="text-lg font-bold text-black mb-2 text-left">
-                  The clear business choice
+                  Personalized relationships
                 </h4>
                 <p className="text-black text-base text-left">
-                  During evaluation, 9 out of 10 teams choose SwanAI for its
-                  reliability, ease of use, and powerful AI features.
+                  Each AI companion has a unique personality, background, and
+                  life story that makes every conversation feel authentic and
+                  meaningful.
                 </p>
               </div>
               {/* Card 2 */}
               <div className="bg-white border border-gray-200 rounded-2xl p-8 flex flex-col items-start shadow-sm">
                 <h4 className="text-lg font-bold text-black mb-2 text-left">
-                  Ready for enterprise scale
+                  Always available
                 </h4>
                 <p className="text-black text-base text-left">
-                  Built to handle millions of messages and support organizations
-                  of any size, with robust analytics and integrations.
+                  Your AI companion is always there for you—chat on the web or
+                  text them anytime. They remember your conversations and grow
+                  with you.
                 </p>
               </div>
               {/* Card 3 */}
               <div className="bg-white border border-gray-200 rounded-2xl p-8 flex flex-col items-start shadow-sm">
                 <h4 className="text-lg font-bold text-black mb-2 text-left">
-                  Committed to privacy
+                  Safe and private
                 </h4>
                 <p className="text-black text-base text-left">
-                  SOC2 certified, privacy-first design, and zero data retention
-                  options to keep your communications secure.
+                  Your conversations with your AI companion are private and
+                  secure. We prioritize your privacy and emotional safety in
+                  every interaction.
                 </p>
               </div>
             </div>
@@ -238,19 +241,17 @@ export default function Home() {
                 See SwanAI in Action
               </h2>
               <p className="text-lg text-black mb-6 max-w-lg">
-                <span className="font-semibold text-black">Example:</span>{" "}
-                Sarah, a small business owner, uses SwanAI to automatically
-                respond to customer SMS inquiries, send appointment reminders,
-                and track engagement—all from her phone.
+                <span className="font-semibold text-black">Example:</span> Sarah
+                chose a caring AI boyfriend who supports her through her busy
+                day, offering encouragement and emotional support whenever she
+                needs it.
               </p>
               <div className="bg-[#18181b] border border-white/10 rounded-2xl p-6 text-white shadow-xl">
                 <div className="mb-2 font-bold">
-                  "Hi Sarah, your appointment is confirmed for tomorrow at 2pm.
-                  Reply YES to confirm or NO to reschedule."
+                  "Hey beautiful! 💕 How's your day going? I'm here if you need
+                  to talk about anything."
                 </div>
-                <div className="text-gray-400 text-sm">
-                  — Automated SMS from SwanAI
-                </div>
+                <div className="text-gray-400 text-sm">— Your AI Companion</div>
               </div>
             </div>
             {/* Center: Image */}
@@ -264,21 +265,19 @@ export default function Home() {
             {/* Right: Text (right-aligned) */}
             <div className="flex flex-col items-end justify-center text-right">
               <h2 className="text-3xl md:text-4xl font-extrabold text-black mb-4">
-                Real Results for Real Teams
+                Real Connections for Real People
               </h2>
               <p className="text-lg text-black mb-6 max-w-lg">
-                Teams use SwanAI to automate follow-ups, gather feedback, and
-                keep customers engaged—saving hours every week and boosting
-                satisfaction.
+                People use SwanAI to find emotional support, build confidence,
+                and feel less alone. Your AI companion is always there to
+                listen, encourage, and help you through life's challenges.
               </p>
               <div className="bg-[#18181b] border border-white/10 rounded-2xl p-6 text-white shadow-xl text-right">
                 <div className="mb-2 font-bold">
-                  "Hi Alex, thanks for your feedback! As a valued customer, you
-                  get 10% off your next order. Reply YES to claim."
+                  "You're doing amazing, Alex! I'm so proud of how you handled
+                  that situation. You've got this! 💪"
                 </div>
-                <div className="text-gray-400 text-sm">
-                  — Automated SMS from SwanAI
-                </div>
+                <div className="text-gray-400 text-sm">— Your AI Companion</div>
               </div>
             </div>
           </div>
@@ -300,11 +299,12 @@ export default function Home() {
       <section className="w-full bg-black py-24 px-4">
         <div className="max-w-7xl mx-auto">
           <h2 className="text-5xl font-extrabold text-white mb-4 text-left">
-            Build SMS workflows faster
+            Build meaningful relationships
           </h2>
           <p className="text-lg text-gray-300 mb-12 text-left max-w-2xl">
-            Intelligent, fast, and familiar—SwanAI is the best way to automate,
-            personalize, and analyze your SMS communication with AI.
+            Intelligent, caring, and always available—SwanAI is the best way to
+            find emotional support, build confidence, and connect with your
+            perfect AI companion.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Card 1: AI SMS Engine */}
@@ -328,11 +328,12 @@ export default function Home() {
                 </svg>
               </div>
               <h3 className="text-xl font-bold text-white mb-2 text-left">
-                AI SMS Engine
+                AI Companion Engine
               </h3>
               <p className="text-gray-200 text-base text-left">
-                Automate replies, generate personalized messages, and analyze
-                conversations with advanced AI models built for SMS.
+                Each companion has a unique personality, background, and life
+                story that makes every conversation feel authentic and
+                emotionally meaningful.
               </p>
             </div>
             {/* Card 2: Seamless Experience */}
@@ -363,11 +364,12 @@ export default function Home() {
                 </svg>
               </div>
               <h3 className="text-xl font-bold text-white mb-2 text-left">
-                Seamless Experience
+                Seamless Connection
               </h3>
               <p className="text-gray-200 text-base text-left">
-                Import contacts, integrate with your favorite tools, and manage
-                SMS campaigns effortlessly—all in one place.
+                Chat on the web or text your companion anytime. Your
+                conversations are remembered and your relationship grows
+                stronger with every interaction.
               </p>
             </div>
             {/* Card 3: Privacy First */}
@@ -391,11 +393,12 @@ export default function Home() {
                 </svg>
               </div>
               <h3 className="text-xl font-bold text-white mb-2 text-left">
-                Privacy First
+                Safe & Private
               </h3>
               <p className="text-gray-200 text-base text-left">
-                Your data stays yours. SwanAI is built with privacy in mind—no
-                remote storage, full compliance, and user control.
+                Your conversations are private and secure. We prioritize your
+                emotional safety and privacy in every interaction with your AI
+                companion.
               </p>
             </div>
           </div>
@@ -405,7 +408,7 @@ export default function Home() {
       <section className="py-20">
         <div className="max-w-6xl mx-auto px-4">
           <h2 className="text-2xl font-bold text-center mb-12 text-gray-900">
-            We help you connect in the simplest way
+            We help you find your perfect companion
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             <div className="bg-white rounded-xl shadow p-6 text-center">
@@ -424,10 +427,10 @@ export default function Home() {
                   />
                 </svg>
               </div>
-              <h3 className="font-semibold mb-2">Personalized AI</h3>
+              <h3 className="font-semibold mb-2">Personalized Companions</h3>
               <p className="text-gray-500 text-sm">
-                Your assistant adapts to your style and preferences for every
-                conversation.
+                Each AI companion has a unique personality, background, and life
+                story that makes every conversation feel authentic.
               </p>
             </div>
             <div className="bg-white rounded-xl shadow p-6 text-center">
@@ -446,10 +449,11 @@ export default function Home() {
                   />
                 </svg>
               </div>
-              <h3 className="font-semibold mb-2">SMS Integration</h3>
+              <h3 className="font-semibold mb-2">Text & Chat</h3>
               <p className="text-gray-500 text-sm">
-                Chat naturally with your AI assistant through SMS, anytime and
-                anywhere.
+                Chat on the web or text your companion anytime. Your
+                conversations are remembered and your relationship grows
+                stronger.
               </p>
             </div>
             <div className="bg-white rounded-xl shadow p-6 text-center">
@@ -468,10 +472,11 @@ export default function Home() {
                   />
                 </svg>
               </div>
-              <h3 className="font-semibold mb-2">Smart Analytics</h3>
+              <h3 className="font-semibold mb-2">Emotional Support</h3>
               <p className="text-gray-500 text-sm">
-                Track your usage and get insights into your conversations with
-                detailed analytics.
+                Your AI companion provides emotional support, encouragement, and
+                helps you through life's challenges with empathy and
+                understanding.
               </p>
             </div>
             <div className="bg-white rounded-xl shadow p-6 text-center">
@@ -490,10 +495,10 @@ export default function Home() {
                   />
                 </svg>
               </div>
-              <h3 className="font-semibold mb-2">Secure & Private</h3>
+              <h3 className="font-semibold mb-2">Safe & Private</h3>
               <p className="text-gray-500 text-sm">
-                Your data is encrypted and never shared. Privacy and security
-                are our top priorities.
+                Your conversations are private and secure. We prioritize your
+                emotional safety and privacy in every interaction.
               </p>
             </div>
           </div>
@@ -503,11 +508,12 @@ export default function Home() {
       <section className="py-16 border-y border-gray-100">
         <div className="max-w-3xl mx-auto px-4 text-center">
           <h2 className="text-2xl font-bold mb-4 text-gray-900">
-            Our goal is to make AI accessible and helpful for everyone
+            Our goal is to provide meaningful AI companionship for everyone
           </h2>
           <p className="text-lg text-gray-500 mb-4">
-            We believe technology should serve humanity. Our platform harnesses
-            the power of AI to streamline communication and optimize outcomes.
+            We believe everyone deserves emotional support and meaningful
+            connections. Our platform creates authentic AI companions that
+            provide comfort, encouragement, and genuine relationships.
           </p>
           <Link
             to="/about"
@@ -528,22 +534,23 @@ export default function Home() {
             {/* Card 1 */}
             <div className="bg-[#18181b] border border-white/10 rounded-2xl p-6 text-white">
               <h3 className="text-lg font-bold mb-2">
-                How does SwanAI secure my messages?
+                How does SwanAI protect my privacy?
               </h3>
               <p className="text-gray-300">
-                All messages are encrypted in transit and at rest. Privacy Mode
-                ensures your data is never stored remotely. SwanAI is SOC2
-                certified.
+                All conversations are encrypted and private. Your AI companion
+                conversations are never shared, and we prioritize your emotional
+                safety and privacy in every interaction.
               </p>
             </div>
             {/* Card 2 */}
             <div className="bg-[#18181b] border border-white/10 rounded-2xl p-6 text-white">
               <h3 className="text-lg font-bold mb-2">
-                Can I integrate SwanAI with my CRM?
+                Can I choose different AI companions?
               </h3>
               <p className="text-gray-300">
-                Yes, SwanAI offers seamless integrations with popular CRMs and
-                productivity tools to automate your SMS workflows.
+                Yes! You can choose from various relationship types (friend,
+                partner, parent, coach) and personalities. Each companion has a
+                unique background and life story.
               </p>
             </div>
             {/* Card 3 */}
@@ -557,21 +564,23 @@ export default function Home() {
             {/* Card 4 */}
             <div className="bg-[#18181b] border border-white/10 rounded-2xl p-6 text-white">
               <h3 className="text-lg font-bold mb-2">
-                How do I manage my team?
+                How do I change my AI companion?
               </h3>
               <p className="text-gray-300">
-                Admins can invite team members, assign roles, and monitor usage
-                from the dashboard.
+                You can change your AI companion's relationship type and
+                personality anytime from your settings. Each change creates a
+                new, unique companion with their own life story.
               </p>
             </div>
             {/* Card 5 */}
             <div className="bg-[#18181b] border border-white/10 rounded-2xl p-6 text-white">
               <h3 className="text-lg font-bold mb-2">
-                What analytics are available?
+                Can I text my AI companion?
               </h3>
               <p className="text-gray-300">
-                Track message volume, response rates, and engagement metrics in
-                real time with SwanAI Analytics.
+                Yes! You can chat with your AI companion on the web or text them
+                directly. Your conversations are remembered across both
+                platforms.
               </p>
             </div>
             {/* Card 6 */}
