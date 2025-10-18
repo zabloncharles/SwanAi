@@ -39,7 +39,7 @@ export default function MessageInput({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!message.trim() || isSending || disabled) {
       return;
     }
@@ -77,7 +77,7 @@ export default function MessageInput({
           <p className="text-red-600 text-sm">{error}</p>
         </div>
       )}
-      
+
       <form onSubmit={handleSubmit} className="flex items-end space-x-3">
         <div className="flex-1 relative">
           <textarea
@@ -98,7 +98,7 @@ export default function MessageInput({
             }`}
             style={{ minHeight: "44px", maxHeight: "120px" }}
           />
-          
+
           {/* Character count */}
           <div className="absolute bottom-2 right-2">
             <span
@@ -110,15 +110,10 @@ export default function MessageInput({
             </span>
           </div>
         </div>
-        
+
         <button
           type="submit"
-          disabled={
-            !message.trim() ||
-            isSending ||
-            disabled ||
-            isOverLimit
-          }
+          disabled={!message.trim() || isSending || disabled || isOverLimit}
           className={`flex-shrink-0 p-3 rounded-lg transition-all duration-200 ${
             !message.trim() || isSending || disabled || isOverLimit
               ? "bg-gray-100 text-gray-400 cursor-not-allowed"
@@ -132,7 +127,7 @@ export default function MessageInput({
           )}
         </button>
       </form>
-      
+
       {/* Help text */}
       <div className="mt-2 text-xs text-gray-500">
         Press Enter to send, Shift+Enter for new line

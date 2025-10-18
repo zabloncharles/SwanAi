@@ -4,7 +4,8 @@ import { db } from "../../config/firebase";
 import { sendWebMessage } from "../../services/messageApi";
 import { getAvatarUrl } from "../../services/avatarApi";
 import { generateDayInLifeDescription } from "../../services/dayInLifeService";
-import { getOrGenerateLifeResume } from "../../services/lifeResumeApi";
+import { getExistingLifeResume } from "../../services/lifeResumeApi";
+import LifeResumeGenerator from "./LifeResumeGenerator";
 import MessageInput from "./MessageInput";
 
 interface Message {
@@ -18,7 +19,7 @@ interface Message {
 interface MessagesProps {
   userId: string;
   aiPersonality?: {
-    name: string;
+    name?: string;
     personality: string;
     relationship: string;
   };
@@ -46,10 +47,32 @@ export default function Messages({
   const followUpTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [followUpSent, setFollowUpSent] = useState<boolean>(false);
   const [shouldFocusInput, setShouldFocusInput] = useState<boolean>(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [currentLifeResume, setCurrentLifeResume] = useState<any>(null);
+  const [showLifeResumeGenerator, setShowLifeResumeGenerator] = useState(false);
+  const [userData, setUserData] = useState<any>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  // Auto-scroll functionality disabled as requested
+
+  const handleResumeGenerated = (resume: any) => {
+    setCurrentLifeResume(resume);
+    setShowLifeResumeGenerator(false);
+    // Optionally send a welcome message
+    if (messages.length === 0) {
+      const welcomeMessage: Message = {
+        role: "assistant",
+        content: `Hey there! I'm ${
+          resume.name
+        }, your new ${aiPersonality?.relationship.toLowerCase()}. I'm excited to get to know you! What's on your mind today?`,
+        timestamp: Date.now(),
+      };
+      setMessages([welcomeMessage]);
+    }
+  };
+
+  const handleResumeError = (error: string) => {
+    console.error("Life resume generation error:", error);
+    // You could show a toast notification here
   };
 
   // Filler text removed
@@ -188,16 +211,33 @@ export default function Messages({
       greeting = "Hello";
     }
 
-    // Generate or retrieve AI life resume
+    // Load user data for location
+    try {
+      const userDoc = await getDoc(doc(db, "users", userId));
+      if (userDoc.exists()) {
+        setUserData(userDoc.data());
+      }
+    } catch (error) {
+      console.error("Error loading user data:", error);
+    }
+
+    // Check for existing AI life resume
     let lifeResume: any = null;
     try {
-      lifeResume = await getOrGenerateLifeResume(
+      lifeResume = await getExistingLifeResume(
         personality.personality,
         personality.relationship,
         userId
       );
+      if (lifeResume) {
+        setCurrentLifeResume(lifeResume);
+        setShowLifeResumeGenerator(false);
+      } else {
+        setShowLifeResumeGenerator(true);
+      }
     } catch (error) {
-      console.error("Error generating life resume:", error);
+      console.error("Error checking for life resume:", error);
+      setShowLifeResumeGenerator(true);
     }
 
     // Generate "Day in the Life" description
@@ -328,9 +368,33 @@ export default function Messages({
     };
   };
 
+  // Auto-scroll disabled as requested by user
+
+  // Load life resume when component mounts or AI personality changes
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, aiTyping]);
+    const loadLifeResume = async () => {
+      if (aiPersonality?.personality && aiPersonality?.relationship && userId) {
+        try {
+          const lifeResume = await getExistingLifeResume(
+            aiPersonality.personality,
+            aiPersonality.relationship,
+            userId
+          );
+          if (lifeResume) {
+            setCurrentLifeResume(lifeResume);
+            setShowLifeResumeGenerator(false);
+          } else {
+            setShowLifeResumeGenerator(true);
+          }
+        } catch (error) {
+          console.error("Error loading life resume:", error);
+          setShowLifeResumeGenerator(true);
+        }
+      }
+    };
+
+    loadLifeResume();
+  }, [aiPersonality?.personality, aiPersonality?.relationship, userId]);
 
   useEffect(() => {
     const fetchMessages = async () => {
@@ -471,6 +535,63 @@ export default function Messages({
     }
   };
 
+  // Function to calculate realistic typing delay for a message
+  const calculateTypingDelay = (message: string): number => {
+    // Base typing speed: 200-300 WPM (words per minute) for humans
+    // That's about 3.3-5 words per second
+    const baseTypingSpeed = 4; // words per second (240 WPM)
+
+    // Count words in the message
+    const wordCount = message
+      .trim()
+      .split(/\s+/)
+      .filter((word) => word.length > 0).length;
+
+    // Calculate base time needed to type the message
+    const baseTime = (wordCount / baseTypingSpeed) * 1000; // convert to milliseconds
+
+    // Add random variation to make it feel more human (50% faster to 50% slower)
+    const variation = 0.5 + Math.random(); // 0.5 to 1.5 multiplier
+
+    // Add thinking time (humans pause to think)
+    const thinkingTime = Math.random() * 2000; // 0-2 seconds of thinking
+
+    // Minimum delay of 1 second, maximum of 8 seconds
+    return Math.max(1000, Math.min(8000, baseTime * variation + thinkingTime));
+  };
+
+  // Function to split long messages into multiple bubbles for more human-like texting
+  const splitMessageIntoBubbles = (message: string): string[] => {
+    // Split by sentences (periods, exclamation marks, question marks)
+    const sentences = message.split(/([.!?]+)/).filter((s) => s.trim());
+
+    // Rejoin sentences with their punctuation
+    const completeSentences: string[] = [];
+    for (let i = 0; i < sentences.length; i += 2) {
+      if (sentences[i] && sentences[i + 1]) {
+        completeSentences.push((sentences[i] + sentences[i + 1]).trim());
+      } else if (sentences[i]) {
+        completeSentences.push(sentences[i].trim());
+      }
+    }
+
+    // If only 1-2 sentences, return as single message
+    if (completeSentences.length <= 2) {
+      return [message];
+    }
+
+    // Group sentences into multiple bubbles (2-3 sentences per bubble)
+    const bubbles: string[] = [];
+    for (let i = 0; i < completeSentences.length; i += 2) {
+      const bubble = completeSentences.slice(i, i + 2).join(" ");
+      if (bubble.trim()) {
+        bubbles.push(bubble.trim());
+      }
+    }
+
+    return bubbles.length > 1 ? bubbles : [message];
+  };
+
   // Calculate realistic response time based on message length and conversation context
   const calculateResponseTime = (
     message: string,
@@ -521,10 +642,7 @@ export default function Messages({
               : msg
           )
         );
-        // Scroll to show "seen" indicator
-        setTimeout(() => {
-          scrollToBottom();
-        }, 100);
+        // Scroll to show "seen" indicator disabled
       }, 1000);
 
       // Calculate realistic response time
@@ -533,28 +651,96 @@ export default function Messages({
       // Show AI typing indicator after "seen" delay
       setTimeout(() => {
         setAiTyping(true);
-        // Scroll to show typing indicator
-        setTimeout(() => {
-          scrollToBottom();
-        }, 100);
+        // Scroll to show typing indicator disabled
       }, 1500);
 
       // Send message to API with delay
       setTimeout(async () => {
         try {
           const response = await sendWebMessage(userId, message);
-          // Always add AI response immediately (filler removed)
-          const aiMessage: Message = {
-            role: "assistant",
-            content: response.message,
-            timestamp: Date.now(),
-            povImageUrl: response.povImageUrl,
-          };
-          setMessages((prev) => [...prev, aiMessage]);
+
+          // Check if response message is empty or invalid
+          if (!response.message || response.message.trim().length === 0) {
+            console.error("Received empty response from API:", response);
+            throw new Error("Received empty response from AI");
+          }
+
+          // Split long AI responses into multiple bubbles for more human-like texting
+          const messageBubbles = splitMessageIntoBubbles(response.message);
+          console.log("🎯 MESSAGES: Message split into bubbles:", messageBubbles.length, "bubbles");
+          messageBubbles.forEach((bubble, index) => {
+            const wordCount = bubble.trim().split(/\s+/).filter(word => word.length > 0).length;
+            console.log(`🎯 MESSAGES: Bubble ${index + 1}: "${bubble}" (${wordCount} words)`);
+          });
+
+          // Add first bubble with realistic typing delay
+          const firstTypingDelay = calculateTypingDelay(messageBubbles[0]);
+          const firstWordCount = messageBubbles[0].trim().split(/\s+/).filter(word => word.length > 0).length;
+          console.log(`🎯 MESSAGES: First bubble delay: ${firstTypingDelay}ms for ${firstWordCount} words`);
+          
+          setTimeout(() => {
+            console.log("🎯 MESSAGES: First bubble appearing now");
+            const firstBubble: Message = {
+              role: "assistant",
+              content: messageBubbles[0],
+              timestamp: Date.now(),
+              povImageUrl: response.povImageUrl,
+            };
+
+            setMessages((prev) => [...prev, firstBubble]);
+
+            // If there are more bubbles, keep typing indicator visible
+            if (messageBubbles.length === 1) {
+              console.log("🎯 MESSAGES: Single bubble response - hiding typing indicator");
+              setAiTyping(false); // Only hide typing indicator if this is the last bubble
+            } else {
+              console.log("🎯 MESSAGES: Multiple bubbles - keeping typing indicator visible");
+            }
+          }, firstTypingDelay);
+
+          // Add remaining bubbles with realistic typing delays
+          if (messageBubbles.length > 1) {
+            let cumulativeDelay = firstTypingDelay; // Start from the first bubble's delay
+            for (let i = 1; i < messageBubbles.length; i++) {
+              const typingDelay = calculateTypingDelay(messageBubbles[i]);
+              const wordCount = messageBubbles[i].trim().split(/\s+/).filter(word => word.length > 0).length;
+              cumulativeDelay += typingDelay;
+              
+              console.log(`🎯 MESSAGES: Bubble ${i + 1} scheduled for ${cumulativeDelay}ms (${typingDelay}ms delay for ${wordCount} words)`);
+
+              setTimeout(() => {
+                console.log(`🎯 MESSAGES: Bubble ${i + 1} appearing now`);
+                const nextBubble: Message = {
+                  role: "assistant",
+                  content: messageBubbles[i],
+                  timestamp: Date.now(),
+                };
+                setMessages((prev) => [...prev, nextBubble]);
+                
+                // Hide typing indicator only if this is the last bubble
+                if (i === messageBubbles.length - 1) {
+                  console.log("🎯 MESSAGES: Last bubble appeared - hiding typing indicator");
+                  setAiTyping(false);
+                } else {
+                  console.log(`🎯 MESSAGES: Bubble ${i + 1} appeared - keeping typing indicator visible for next bubble`);
+                }
+              }, cumulativeDelay);
+            }
+          }
         } catch (error) {
           console.error("Error sending message:", error);
           // Remove the user message if sending failed
           setMessages((prev) => prev.slice(0, -1));
+
+          // Add an error message to show the user what happened
+          const errorMessage: Message = {
+            role: "assistant",
+            content:
+              "Sorry, I'm having trouble responding right now. Please try again in a moment.",
+            timestamp: Date.now(),
+          };
+          setMessages((prev) => [...prev, errorMessage]);
+
           throw error;
         } finally {
           setAiTyping(false);
@@ -578,28 +764,172 @@ export default function Messages({
     );
   }
 
-  return (
-    <div className="flex flex-col h-full">
-      <div className="bg-white rounded-xl shadow-sm flex-1 flex flex-col overflow-hidden">
-        <div className="p-6 border-b border-gray-200 flex-shrink-0">
-          <h2 className="text-xl font-semibold text-gray-900">
-            Chat with SwanAI
-          </h2>
-          <p className="text-sm text-gray-500 mt-1">
-            Send messages and get personalized responses from your AI assistant
-          </p>
+  // Show life resume generator if no resume exists
+  if (showLifeResumeGenerator && aiPersonality) {
+    return (
+      <div className="flex h-full bg-white">
+        <div className="w-1/3 border-r border-gray-200 flex flex-col">
+          {/* Messages Header */}
+          <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+            <h2 className="text-xl font-bold text-gray-900">Messages</h2>
+          </div>
+          <div className="flex-1 flex items-center justify-center p-4">
+            <div className="text-center text-gray-500">
+              <p>Create your AI companion to start chatting</p>
+            </div>
+          </div>
         </div>
 
-        {/* Messages Container */}
+        {/* Right Column - Life Resume Generator */}
+        <div className="flex-1 flex items-center justify-center p-8">
+          <div className="max-w-md w-full">
+            <LifeResumeGenerator
+              userId={userId}
+              personality={aiPersonality.personality}
+              relationship={aiPersonality.relationship}
+              userLocation={userData?.location}
+              onResumeGenerated={handleResumeGenerated}
+              onError={handleResumeError}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-full bg-white">
+      {/* Left Column - Messages List */}
+      <div className="w-1/3 border-r border-gray-200 flex flex-col">
+        {/* Messages Header */}
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-gray-900">Messages</h2>
+          <div className="flex items-center space-x-2">
+            <button className="p-2 hover:bg-gray-100 rounded-full">
+              <svg
+                className="w-5 h-5 text-gray-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                />
+              </svg>
+            </button>
+            <button className="p-2 hover:bg-gray-100 rounded-full">
+              <svg
+                className="w-5 h-5 text-gray-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Conversation List */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-2">
+            <div className="flex items-center p-3 hover:bg-gray-50 rounded-lg cursor-pointer bg-gray-50">
+              <div className="relative">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                  <span className="text-white font-semibold text-lg">
+                    {(currentLifeResume?.name || "A")[0]}
+                  </span>
+                </div>
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
+              </div>
+              <div className="ml-3 flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-gray-900 truncate">
+                    {currentLifeResume?.name || "Your Companion"}
+                  </p>
+                  <p className="text-xs text-green-600">3/8/24</p>
+                </div>
+                <p className="text-sm text-gray-500 truncate">
+                  {messages.length > 0 && messages[messages.length - 1]?.content
+                    ? messages[messages.length - 1].content.substring(0, 30) +
+                      "..."
+                    : "Start a conversation"}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Column - Chat Window */}
+      <div className="flex-1 flex flex-col">
+        {/* Chat Header */}
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+          <div className="flex items-center">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+              <span className="text-white font-semibold">
+                {(currentLifeResume?.name || "A")[0]}
+              </span>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-semibold text-gray-900">
+                {currentLifeResume?.name || "Your Companion"}
+              </h3>
+              <p className="text-xs text-gray-500">Last seen hour ago</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <button className="p-2 hover:bg-gray-100 rounded-full">
+              <svg
+                className="w-5 h-5 text-gray-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                />
+              </svg>
+            </button>
+            <button className="p-2 hover:bg-gray-100 rounded-full">
+              <svg
+                className="w-5 h-5 text-gray-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Chat Messages */}
         <div
-          className="flex-1 overflow-y-auto p-6 space-y-4"
-          style={{ maxHeight: "calc(100vh - 300px)" }}
+          ref={messagesContainerRef}
+          className="flex-1 overflow-y-auto p-4 space-y-4"
         >
           {messages.length === 0 ? (
             <div className="text-center py-8">
-              <div className="w-16 h-16 mx-auto mb-4 bg-indigo-100 rounded-full flex items-center justify-center">
+              <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
                 <svg
-                  className="w-8 h-8 text-indigo-600"
+                  className="w-8 h-8 text-gray-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -614,145 +944,224 @@ export default function Messages({
               </div>
               <p className="text-gray-500 mb-2">No messages yet</p>
               <p className="text-sm text-gray-400">
-                Start chatting with SwanAI to see your conversation history
+                Start chatting with{" "}
+                {currentLifeResume?.name || "your companion"} to see your
+                conversation history
               </p>
             </div>
           ) : (
-            messages.map((message, index) => (
-              <div
-                key={index}
-                className={`flex items-end space-x-2 ${
-                  message.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
-                {/* AI Avatar */}
-                {message.role === "assistant" && (
-                  <div className="flex-shrink-0">
-                    <img
-                      src={aiAvatarUrl}
-                      alt={aiPersonality?.name || "AI"}
-                      className="w-8 h-8 rounded-full object-cover border-2 border-gray-200"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = "/images/default-avatar.svg";
-                      }}
-                    />
-                  </div>
-                )}
+            <>
+              {/* Date Separator */}
+              <div className="flex items-center justify-center">
+                <div className="flex-1 border-t border-gray-200"></div>
+                <span className="px-3 text-xs text-gray-500 bg-white">
+                  {new Date().toLocaleDateString("en-US", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </span>
+                <div className="flex-1 border-t border-gray-200"></div>
+              </div>
 
+              {messages.map((message, index) => (
                 <div
-                  className={`max-w-md lg:max-w-lg px-4 py-2 rounded-lg ${
-                    message.role === "user"
-                      ? "bg-indigo-600 text-white"
-                      : "bg-gray-100 text-gray-800"
+                  key={index}
+                  className={`flex ${
+                    message.role === "user" ? "justify-end" : "justify-start"
                   }`}
                 >
-                  <div className="text-xs opacity-75 mb-1">
-                    {message.role === "user"
-                      ? "You"
-                      : aiPersonality?.name || "SwanAI"}
-                  </div>
-                  <p className="whitespace-pre-wrap text-sm">
-                    {message.content}
-                  </p>
-
-                  {/* POV Image for "wyd" responses */}
-                  {message.role === "assistant" && message.povImageUrl && (
-                    <div className="mt-3">
-                      <img
-                        src={message.povImageUrl}
-                        alt="What I'm doing right now"
-                        className="w-full max-w-xs rounded-lg shadow-md border border-gray-200"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = "none";
-                        }}
-                      />
-                      <p className="text-xs text-gray-500 mt-1 italic">
-                        👓 This is what I'm seeing right now!
+                  <div
+                    className={`max-w-xs lg:max-w-md ${
+                      message.role === "user" ? "order-2" : "order-1"
+                    }`}
+                  >
+                    {message.role === "assistant" && (
+                      <div className="flex items-center mb-1">
+                        <span className="text-xs text-gray-500 font-medium">
+                          {currentLifeResume?.name || "Companion"},{" "}
+                          {new Date(
+                            message.timestamp || Date.now()
+                          ).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                    )}
+                    <div
+                      className={`px-4 py-2 rounded-lg ${
+                        message.role === "user"
+                          ? "bg-purple-100 text-gray-900"
+                          : "bg-pink-100 text-gray-900"
+                      }`}
+                    >
+                      <p className="text-sm whitespace-pre-wrap">
+                        {message.content}
                       </p>
-                    </div>
-                  )}
 
-                  {/* Seen indicator for user messages */}
-                  {message.role === "user" && message.seen && (
-                    <div className="text-xs opacity-50 mt-1 flex items-center justify-end">
-                      <span>Seen</span>
-                      <svg
-                        className="w-3 h-3 ml-1"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                        <path
-                          fillRule="evenodd"
-                          d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
+                      {/* POV Image for "wyd" responses */}
+                      {message.role === "assistant" && message.povImageUrl && (
+                        <div className="mt-3">
+                          <img
+                            src={message.povImageUrl}
+                            alt="What I'm doing right now"
+                            className="w-full max-w-xs rounded-lg shadow-md border border-gray-200"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = "none";
+                            }}
+                          />
+                          <p className="text-xs text-gray-500 mt-1 italic">
+                            👓 This is what I'm seeing right now!
+                          </p>
+                        </div>
+                      )}
                     </div>
-                  )}
-
-                  {/* Timestamp for AI messages */}
-                  {message.role === "assistant" && message.timestamp && (
-                    <div className="text-xs opacity-50 mt-1">
-                      {new Date(message.timestamp).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                    {message.role === "user" && (
+                      <div className="flex items-center justify-end mt-1">
+                        <span className="text-xs text-gray-500">
+                          {new Date(
+                            message.timestamp || Date.now()
+                          ).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  {message.role === "user" && (
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center ml-2 order-1">
+                      <span className="text-white text-xs font-semibold">
+                        U
+                      </span>
                     </div>
                   )}
                 </div>
-              </div>
-            ))
+              ))}
+
+              {aiTyping && (
+                <div className="flex justify-start">
+                  <div className="bg-pink-100 text-gray-900 px-4 py-2 rounded-lg">
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                      <div
+                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                        style={{ animationDelay: "0.1s" }}
+                      ></div>
+                      <div
+                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                        style={{ animationDelay: "0.2s" }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
-
-          {/* AI Typing indicator */}
-          {aiTyping && (
-            <div className="flex items-end space-x-2 justify-start">
-              {/* AI Avatar */}
-              <div className="flex-shrink-0">
-                <img
-                  src={aiAvatarUrl}
-                  alt={aiPersonality?.name || "AI"}
-                  className="w-8 h-8 rounded-full object-cover border-2 border-gray-200"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = "/images/default-avatar.svg";
-                  }}
-                />
-              </div>
-
-              <div className="bg-gray-100 text-gray-800 px-4 py-2 rounded-lg">
-                <div className="text-xs opacity-75 mb-1">
-                  {aiPersonality?.name || "SwanAI"}
-                </div>
-                {/* Removed aiTypingText display to avoid undefined reference */}
-                <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                  <div
-                    className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                    style={{ animationDelay: "0.1s" }}
-                  ></div>
-                  <div
-                    className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                    style={{ animationDelay: "0.2s" }}
-                  ></div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div ref={messagesEndRef} />
         </div>
 
         {/* Message Input */}
-        <MessageInput
-          onSendMessage={handleSendMessage}
-          disabled={sending || aiTyping}
-          placeholder="Type your message to SwanAI..."
-          autoFocus={shouldFocusInput}
-        />
+        <div className="p-4 border-t border-gray-200">
+          <div className="flex items-center space-x-2">
+            <button className="p-2 hover:bg-gray-100 rounded-full">
+              <svg
+                className="w-5 h-5 text-gray-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h8m-5-8V6a3 3 0 116 0v1M7 7h10a2 2 0 012 2v8a2 2 0 01-2 2H7a2 2 0 01-2-2V9a2 2 0 012-2z"
+                />
+              </svg>
+            </button>
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                placeholder="Type a message"
+                className="w-full px-4 py-3 pr-12 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                onKeyPress={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    const content = e.currentTarget.value.trim();
+                    if (content && !sending && !aiTyping) {
+                      handleSendMessage(content);
+                      e.currentTarget.value = "";
+                    }
+                  }
+                }}
+                disabled={sending || aiTyping}
+              />
+            </div>
+            <div className="flex items-center space-x-1">
+              <button className="p-2 hover:bg-gray-100 rounded-full">
+                <svg
+                  className="w-5 h-5 text-gray-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                  />
+                </svg>
+              </button>
+              <button className="p-2 hover:bg-gray-100 rounded-full">
+                <svg
+                  className="w-5 h-5 text-gray-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+                  />
+                </svg>
+              </button>
+              <button className="p-2 hover:bg-gray-100 rounded-full">
+                <svg
+                  className="w-5 h-5 text-gray-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                  />
+                </svg>
+              </button>
+              <button className="p-2 hover:bg-gray-100 rounded-full">
+                <svg
+                  className="w-5 h-5 text-gray-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

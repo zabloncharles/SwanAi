@@ -1,4 +1,9 @@
 import { AILifeResume } from "../types/aiLifeResume";
+import {
+  getAILifeResume,
+  storeAILifeResume,
+  deleteAILifeResume,
+} from "./aiLifeResumeStorage";
 
 const API_BASE_URL =
   process.env.NODE_ENV === "production"
@@ -94,25 +99,41 @@ export const getLifeResumeFromCache = (
   }
 };
 
-// Get or generate life resume (with caching)
-export const getOrGenerateLifeResume = async (
+// Get existing life resume (always fetch fresh from Firestore)
+// Returns null if no life resume exists - does NOT generate new ones
+export const getExistingLifeResume = async (
   personality: string,
   relationship: string,
-  userId: string,
-  userLocation?: string
-): Promise<AILifeResume> => {
-  // First, try to get from cache
-  const cachedResume = getLifeResumeFromCache(
+  userId: string
+): Promise<AILifeResume | null> => {
+  // Clear any existing cache to ensure fresh data
+  clearLifeResumeCache(userId, personality, relationship);
+
+  // Always fetch fresh from Firestore - no caching
+  console.log("Checking Firestore for existing life resume...");
+  const firestoreResume = await getAILifeResume(
     userId,
     personality,
     relationship
   );
 
-  if (cachedResume) {
-    return cachedResume;
+  if (firestoreResume) {
+    console.log("Life resume retrieved from Firestore");
+    return firestoreResume;
   }
 
-  // If not in cache, generate new one
+  // No life resume exists
+  console.log("No existing life resume found");
+  return null;
+};
+
+// Generate and store a new life resume (only called when user changes settings)
+export const generateAndStoreLifeResume = async (
+  personality: string,
+  relationship: string,
+  userId: string,
+  userLocation?: string
+): Promise<AILifeResume> => {
   console.log("Generating new life resume...");
   const newResume = await generateLifeResume(
     personality,
@@ -121,10 +142,34 @@ export const getOrGenerateLifeResume = async (
     userLocation
   );
 
-  // Store in cache
-  storeLifeResumeInCache(userId, personality, relationship, newResume);
+  // Store in Firestore (persistent storage only)
+  try {
+    const lifeResumeId = await storeAILifeResume(
+      userId,
+      personality,
+      relationship,
+      newResume
+    );
+    console.log("Life resume stored in Firestore with ID:", lifeResumeId);
+
+    // Add the document ID to the resume object
+    newResume.id = lifeResumeId;
+  } catch (error) {
+    console.error("Failed to store life resume in Firestore:", error);
+    throw error;
+  }
 
   return newResume;
+};
+
+// Legacy function for backward compatibility - now just calls getExistingLifeResume
+export const getOrGenerateLifeResume = async (
+  personality: string,
+  relationship: string,
+  userId: string,
+  userLocation?: string
+): Promise<AILifeResume | null> => {
+  return await getExistingLifeResume(personality, relationship, userId);
 };
 
 // Clear life resume cache for a specific combination
@@ -142,9 +187,12 @@ export const clearLifeResumeCache = (
   }
 };
 
-// Clear all life resume caches for a user
-export const clearAllUserLifeResumeCaches = (userId: string): void => {
+// Clear all life resume caches for a user (both local and Firestore)
+export const clearAllUserLifeResumeCaches = async (
+  userId: string
+): Promise<void> => {
   try {
+    // Clear local storage cache
     const keys = Object.keys(localStorage);
     const userKeys = keys.filter((key) =>
       key.startsWith(`lifeResume_${userId}_`)
@@ -154,7 +202,12 @@ export const clearAllUserLifeResumeCaches = (userId: string): void => {
       localStorage.removeItem(key);
     });
 
-    console.log(`Cleared ${userKeys.length} life resume caches for user`);
+    console.log(`Cleared ${userKeys.length} local life resume caches for user`);
+
+    // Note: We don't automatically delete Firestore data here because
+    // the user might want to keep their life resumes persistent.
+    // If they want to clear Firestore data, they can do it manually
+    // or we can add a separate function for that.
   } catch (error) {
     console.error("Error clearing user life resume caches:", error);
   }

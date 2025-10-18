@@ -8,6 +8,9 @@ import {
   where,
   getDocs,
   serverTimestamp,
+  addDoc,
+  updateDoc,
+  arrayUnion,
 } from "firebase/firestore";
 import { AILifeResume } from "../types/aiLifeResume";
 
@@ -19,45 +22,52 @@ export const storeAILifeResume = async (
   personality: string,
   relationship: string,
   resume: AILifeResume
-): Promise<void> => {
+): Promise<string> => {
   try {
-    const resumeId = `${userId}_${personality}_${relationship}`;
-    const resumeDoc = doc(db, LIFE_RESUME_COLLECTION, resumeId);
-
-    await setDoc(resumeDoc, {
+    const dataToStore = {
       ...resume,
       userId,
       personality,
       relationship,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    });
+    };
 
-    console.log(`AI life resume stored for ${personality} ${relationship}`);
+    console.log("Storing life resume with avatarUrl:", resume.avatarUrl);
+    console.log("Full data being stored:", dataToStore);
+
+    // Use userId as document ID for single resume per user
+    const resumeRef = doc(db, LIFE_RESUME_COLLECTION, userId);
+    await setDoc(resumeRef, dataToStore);
+
+    console.log(
+      `AI life resume stored for ${personality} ${relationship} with ID: ${userId}`
+    );
+
+    return userId;
   } catch (error) {
     console.error("Error storing AI life resume:", error);
     throw error;
   }
 };
 
-// Get AI life resume from Firestore
-export const getAILifeResume = async (
-  userId: string,
-  personality: string,
-  relationship: string
+// Get AI life resume from Firestore by document ID
+export const getAILifeResumeById = async (
+  lifeResumeId: string
 ): Promise<AILifeResume | null> => {
   try {
-    const resumeId = `${userId}_${personality}_${relationship}`;
-    const resumeDoc = doc(db, LIFE_RESUME_COLLECTION, resumeId);
+    const resumeDoc = doc(db, LIFE_RESUME_COLLECTION, lifeResumeId);
     const resumeSnap = await getDoc(resumeDoc);
 
     if (resumeSnap.exists()) {
       const data = resumeSnap.data();
-      console.log(`AI life resume found for ${personality} ${relationship}`);
+      console.log(`AI life resume found with ID: ${lifeResumeId}`);
+      console.log("Retrieved life resume avatarUrl:", data.avatarUrl);
+      console.log("Full retrieved data:", data);
       return data as AILifeResume;
     }
 
-    console.log(`No AI life resume found for ${personality} ${relationship}`);
+    console.log(`No AI life resume found with ID: ${lifeResumeId}`);
     return null;
   } catch (error) {
     console.error("Error getting AI life resume:", error);
@@ -65,25 +75,54 @@ export const getAILifeResume = async (
   }
 };
 
-// Get all AI life resumes for a user
+// Get AI life resume from Firestore by userId (single resume per user)
+export const getAILifeResume = async (
+  userId: string,
+  personality: string,
+  relationship: string
+): Promise<AILifeResume | null> => {
+  try {
+    console.log("=== QUERYING FOR LIFE RESUME ===");
+    console.log("Querying with userId:", userId);
+
+    // Use userId as document ID for single resume per user
+    const resumeDoc = doc(db, LIFE_RESUME_COLLECTION, userId);
+    const resumeSnap = await getDoc(resumeDoc);
+
+    if (resumeSnap.exists()) {
+      const data = resumeSnap.data();
+      console.log(`✅ AI life resume found for user ${userId}`);
+      console.log("Retrieved life resume avatarUrl:", data.avatarUrl);
+      console.log("Full retrieved data:", data);
+      return { ...data, id: userId } as AILifeResume;
+    }
+
+    console.log(`❌ No AI life resume found for user ${userId}`);
+    return null;
+  } catch (error) {
+    console.error("Error getting AI life resume:", error);
+    return null;
+  }
+};
+
+// Get all AI life resumes for a user (returns single resume or empty array)
 export const getAllUserLifeResumes = async (
   userId: string
 ): Promise<AILifeResume[]> => {
   try {
-    const resumesQuery = query(
-      collection(db, LIFE_RESUME_COLLECTION),
-      where("userId", "==", userId)
-    );
-    const resumesSnap = await getDocs(resumesQuery);
+    // Use userId as document ID for single resume per user
+    const resumeDoc = doc(db, LIFE_RESUME_COLLECTION, userId);
+    const resumeSnap = await getDoc(resumeDoc);
 
-    const resumes: AILifeResume[] = [];
-    resumesSnap.forEach((doc) => {
-      const data = doc.data();
-      resumes.push(data as AILifeResume);
-    });
+    if (resumeSnap.exists()) {
+      const data = resumeSnap.data();
+      const resume = { ...data, id: userId } as AILifeResume;
+      console.log(`Retrieved 1 AI life resume for user`);
+      return [resume];
+    }
 
-    console.log(`Retrieved ${resumes.length} AI life resumes for user`);
-    return resumes;
+    console.log(`Retrieved 0 AI life resumes for user`);
+    return [];
   } catch (error) {
     console.error("Error getting user AI life resumes:", error);
     return [];
@@ -114,8 +153,8 @@ export const deleteAILifeResume = async (
   relationship: string
 ): Promise<void> => {
   try {
-    const resumeId = `${userId}_${personality}_${relationship}`;
-    const resumeDoc = doc(db, LIFE_RESUME_COLLECTION, resumeId);
+    // Use userId as document ID for single resume per user
+    const resumeDoc = doc(db, LIFE_RESUME_COLLECTION, userId);
     await setDoc(resumeDoc, { deleted: true, deletedAt: serverTimestamp() });
 
     console.log(`AI life resume deleted for ${personality} ${relationship}`);

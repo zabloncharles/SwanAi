@@ -1,9 +1,9 @@
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../config/firebase";
-import { 
-  getAvatarFromRegistry, 
-  storeAvatarInRegistry, 
-  isAvatarInRegistry 
+import {
+  getAvatarFromRegistry,
+  storeAvatarInRegistry,
+  isAvatarInRegistry,
 } from "./avatarRegistry";
 
 // Avatar generation prompts for different personalities (optimized for DeepAI)
@@ -159,17 +159,43 @@ export const storeAvatar = async (
   }
 };
 
+// Store user-specific avatar for life resume (overwrites previous avatar)
+export const storeUserAvatar = async (
+  userId: string,
+  imageUrl: string
+): Promise<string> => {
+  try {
+    // Download the image from the generated URL
+    const response = await fetch(imageUrl);
+    const blob = await response.blob();
+
+    // Upload to Firebase Storage using userId as filename (overwrites previous avatar)
+    const storageRef = ref(storage, `user-avatars/${userId}.jpg`);
+    await uploadBytes(storageRef, blob);
+
+    // Get the download URL
+    const downloadURL = await getDownloadURL(storageRef);
+    console.log(`User avatar stored for user ${userId}: ${downloadURL}`);
+    return downloadURL;
+  } catch (error) {
+    console.error("Error storing user avatar:", error);
+    return imageUrl; // Return original URL if storage fails
+  }
+};
+
 // Get avatar URL (optimized with registry)
 export const getAvatarUrl = async (personality: string): Promise<string> => {
   console.log(`Getting avatar for ${personality} (optimized with registry)`);
-  
+
   // For local development, skip registry to avoid CORS issues
   const isLocalhost =
     window.location.hostname === "localhost" ||
     window.location.hostname === "127.0.0.1";
 
   if (isLocalhost) {
-    console.log(`Local development detected, using default avatar for ${personality}`);
+    console.log(
+      `Local development detected, using default avatar for ${personality}`
+    );
     return "/images/default-avatar.svg";
   }
 
@@ -183,18 +209,25 @@ export const getAvatarUrl = async (personality: string): Promise<string> => {
     }
 
     // If not in registry, generate new avatar
-    console.log(`Avatar not found in registry for ${personality}, generating new one...`);
+    console.log(
+      `Avatar not found in registry for ${personality}, generating new one...`
+    );
     const generatedUrl = await generateAvatar(personality);
-    
+
     if (generatedUrl && generatedUrl !== "/images/default-avatar.svg") {
       // Store in registry for future use
       try {
-        const prompt = avatarPrompts[personality as keyof typeof avatarPrompts] || avatarPrompts.Friendly;
+        const prompt =
+          avatarPrompts[personality as keyof typeof avatarPrompts] ||
+          avatarPrompts.Friendly;
         await storeAvatarInRegistry(personality, generatedUrl, prompt);
         console.log(`Avatar stored in registry for ${personality}`);
         return generatedUrl;
       } catch (registryError) {
-        console.log("Registry storage failed, using direct URL:", registryError);
+        console.log(
+          "Registry storage failed, using direct URL:",
+          registryError
+        );
         return generatedUrl; // Use direct URL if registry fails
       }
     } else {

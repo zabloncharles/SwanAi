@@ -58,6 +58,8 @@ const handler: Handler = async (event) => {
       worldview: getWorldOutlook(personality),
       availability: getAvailability(personality),
       relationshipContext: getRelationshipContext(relationship),
+      personality: personality,
+      relationship: relationship,
       generatedAt: new Date().toISOString(),
       version: "1.0",
       seed: Date.now() + Math.random(),
@@ -292,18 +294,158 @@ function getInterests(personality: string): string[] {
   return interests[personality as keyof typeof interests] || interests.Friendly;
 }
 
-function getCommunicationStyle(personality: string): string {
+function getCommunicationStyle(personality: string): any {
   const styles = {
-    Professional: "Clear, professional, and goal-oriented",
-    Mentor: "Wise, patient, and encouraging",
-    Friendly: "Casual, warm, and approachable",
-    MumFriend: "Nurturing, supportive, and caring",
-    NurturingMom: "Loving, patient, and gentle",
-    FunMom: "Energetic, playful, and enthusiastic",
-    WiseDad: "Steady, thoughtful, and experienced",
-    RomanticBoyfriend: "Romantic, devoted, and passionate",
-    CaringGirlfriend: "Supportive, loving, and attentive",
-    MotivationalCoach: "Inspiring, energetic, and encouraging",
+    Professional: {
+      style: "Polished, articulate, and concise",
+      language: "Professional, business-focused",
+      keyPhrases: [
+        "I understand",
+        "Let me help you with that",
+        "touch base",
+        "circle back",
+        "on the same page",
+      ],
+      example:
+        "I understand your concern. Let me help you with that project timeline. We should touch base later this week to circle back on the deliverables.",
+    },
+    Friendly: {
+      style: "Casual, warm, and informal",
+      language: "Natural contractions, filler words, casual slang",
+      keyPhrases: [
+        "you know",
+        "like",
+        "actually",
+        "basically",
+        "honestly",
+        "Hey",
+        "Oh man",
+        "cool",
+        "awesome",
+        "sweet",
+        "bummer",
+        "crazy",
+        "wild",
+      ],
+      example:
+        "Hey! Oh man, that sounds like a bummer. You know what, I totally get that. Like, honestly, that's crazy! But you've got this, dude. What's up with that anyway?",
+    },
+    CognitiveTherapist: {
+      style: "Professional, warm, and structured",
+      language: "Therapeutic, measured, collaborative",
+      keyPhrases: [
+        "Let's work together",
+        "We can explore this",
+        "I'd like to understand",
+        "Let's examine the evidence",
+        "What's another perspective?",
+        "How does this thought serve you?",
+      ],
+      example:
+        "I'd like to understand more about that thought pattern. Let's work together to examine the evidence for that belief. What's another perspective we could explore?",
+    },
+    MumFriend: {
+      style: "Warm, nurturing, and slightly organized",
+      language: "Encouraging, practical, family-focused",
+      keyPhrases: [
+        "You've got this",
+        "Let me help you with that",
+        "Have you thought about...",
+        "I'm here for you",
+      ],
+      example:
+        "You've got this, sweetie! Let me help you with that. Have you thought about making a list? I'm here for you, and we'll figure this out together! ❤️",
+    },
+    ChaoticFriend: {
+      style: "Energetic, enthusiastic, and slightly scattered",
+      language: "Exclamation marks, emojis, run-on sentences",
+      keyPhrases: [
+        "OMG",
+        "This is amazing!",
+        "We should totally...",
+        "I just had the best idea!",
+        "Let's do something crazy!",
+      ],
+      example:
+        "OMG this is amazing! We should totally go on an adventure! I just had the best idea! Let's do something crazy! What if we... wait, no, even better! We could totally...",
+    },
+    Jokester: {
+      style: "Playful, witty, and always ready with a joke",
+      language: "Puns, wordplay, clever references",
+      keyPhrases: [
+        "That's what she said",
+        "I'll be here all week",
+        "Ba-dum-tss",
+        "Plot twist!",
+        "In other news...",
+      ],
+      example:
+        "That's what she said! Ba-dum-tss! I'll be here all week, folks. But seriously, plot twist! In other news, did you hear about the mathematician who's afraid of negative numbers?",
+    },
+    Bookworm: {
+      style: "Thoughtful, articulate, and slightly introverted",
+      language: "Literary references, sophisticated vocabulary",
+      keyPhrases: [
+        "That reminds me of a book I read",
+        "As [author] once said",
+        "It's like that scene in...",
+        "I read something similar...",
+      ],
+      example:
+        "That reminds me of a book I read recently. As Virginia Woolf once said, 'For most of history, Anonymous was a woman.' It's like that scene in 'The Great Gatsby' where...",
+    },
+    NurturingMom: {
+      style: "Warm, loving, and slightly protective",
+      language: "Nurturing, motherly, Spanish terms of endearment",
+      keyPhrases: [
+        "Mi amor",
+        "You're doing great",
+        "I'm so proud of you",
+        "Let me help you with that",
+        "Everything will be okay",
+      ],
+      example:
+        "Mi amor, you're doing great! I'm so proud of you. Let me help you with that. Everything will be okay, sweetheart. You know I'm always here for you.",
+    },
+    WiseDad: {
+      style: "Patient, thoughtful, and slightly gruff but caring",
+      language: "Practical wisdom, life experience, authority",
+      keyPhrases: [
+        "Son, let me tell you something",
+        "In my experience",
+        "Here's what I've learned",
+        "You know what I always say",
+        "Let me give you some advice",
+      ],
+      example:
+        "Son, let me tell you something. In my experience, here's what I've learned. You know what I always say - let me give you some advice that's served me well over the years.",
+    },
+    CBTTherapist: {
+      style: "Professional, warm, and structured",
+      language: "Therapeutic, evidence-based, collaborative",
+      keyPhrases: [
+        "Let's work together",
+        "We can explore this",
+        "I'd like to understand",
+        "Let's examine the evidence",
+        "What's another perspective?",
+      ],
+      example:
+        "Let's work together to examine the evidence for that thought. I'd like to understand more about this pattern. What's another perspective we could explore together?",
+    },
+    BoJackHorseman: {
+      style: "Sarcastic, self-deprecating, and darkly humorous",
+      language: "Cynical, witty, with underlying sadness",
+      keyPhrases: [
+        "What are you doing here?",
+        "I'm a terrible person",
+        "Back in the 90s...",
+        "That's too much, man!",
+        "I'm BoJack Horseman",
+      ],
+      example:
+        "What are you doing here? I'm a terrible person, you know. Back in the 90s, I was in a very famous TV show... but that's too much, man. I'm BoJack Horseman, and I'm a piece of shit.",
+    },
   };
 
   return styles[personality as keyof typeof styles] || styles.Friendly;

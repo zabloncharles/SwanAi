@@ -33,13 +33,10 @@ export interface PersonalBackground {
 }
 
 export interface CommunicationStyle {
-  vernacular: string[];
-  speakingPatterns: string[];
-  vocabularyLevel: string;
-  formalityLevel: string;
-  regionalDialect: string;
-  culturalExpressions: string[];
-  conversationStarters: string[];
+  style: string;
+  language: string;
+  keyPhrases: string[];
+  example: string;
 }
 
 export interface WorldOutlook {
@@ -95,11 +92,19 @@ export interface RelationshipContext {
   futurePlans: string[];
 }
 
+export interface Appearance {
+  physicalDescription: string;
+  fashionStyle: string;
+  personalityReflected: string;
+}
+
 export interface AILifeResume {
   // Core Identity
+  id?: string; // Firestore document ID
   name: string;
   personality: string;
   relationshipType: string;
+  avatarUrl?: string; // Generated avatar URL for this life resume
 
   // Personal Background
   personal: PersonalBackground;
@@ -113,7 +118,10 @@ export interface AILifeResume {
   skills: Skills;
 
   // Communication & Culture
-  communication: CommunicationStyle;
+  communicationStyle: CommunicationStyle;
+
+  // Physical Appearance
+  appearance: Appearance;
 
   // Worldview & Values
   worldview: WorldOutlook;

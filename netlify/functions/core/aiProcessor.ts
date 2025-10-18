@@ -1090,55 +1090,6 @@ Analyze the conversation deeply and extract as much meaningful information as po
       }
     }
 
-    const relationshipKey = updatedProfile.relationship || "Friend";
-    const defaultPersonalityByRelationship = {
-      Mom: "NurturingMom",
-      Dad: "WiseDad",
-      Therapist: "CognitiveTherapist",
-      Coach: "Coach",
-      Friend: "Friendly",
-      Cousin: "Friendly",
-      Girlfriend: "Friendly",
-      Boyfriend: "Friendly",
-    };
-    let personalityKey = updatedProfile.personality;
-    if (!personalityKey || !personalityProfiles[personalityKey]) {
-      personalityKey =
-        defaultPersonalityByRelationship[relationshipKey] || "Friendly";
-    }
-    const personalityProfile =
-      personalityProfiles[personalityKey] || personalityProfiles["Friendly"];
-    const relationshipProfile =
-      relationshipProfiles[relationshipKey] || relationshipProfiles["Friend"];
-
-    // Choose a display name that matches the relationship when appropriate
-    let displayName = personalityProfile.name;
-    if (relationshipKey === "Mom") displayName = "Maria Garcia";
-    if (relationshipKey === "Dad") displayName = "James Wilson";
-
-    // NEW: Filter user profile based on relationship for knowledge isolation
-    const filteredProfile = filterProfileForRelationship(
-      updatedProfile,
-      relationshipKey
-    );
-    console.log(`Profile filtered for relationship: ${relationshipKey}`);
-    console.log(
-      `- Original topics: ${
-        updatedProfile.preferences?.topics_of_interest?.length || 0
-      }`
-    );
-    console.log(
-      `- Filtered topics: ${
-        filteredProfile.preferences?.topics_of_interest?.length || 0
-      }`
-    );
-    console.log(
-      `- Original goals: ${updatedProfile.personal_info?.goals?.length || 0}`
-    );
-    console.log(
-      `- Filtered goals: ${filteredProfile.personal_info?.goals?.length || 0}`
-    );
-
     // Get user's location and calculate current time
     const userLocation = userData.location || {};
     const userCity = userLocation.city || "Unknown";
@@ -1311,53 +1262,195 @@ Analyze the conversation deeply and extract as much meaningful information as po
       personality: string,
       relationship: string
     ) => {
-      // For now, we'll generate a simple life resume inline
-      // In the future, this will integrate with the full life resume system
+      try {
+        // Try to fetch the actual life resume from Firestore
+        console.log(`🔍 Fetching life resume for user ${userId}`);
+        const lifeResumeRef = doc(db, "ai_life_resumes", userId);
+        const lifeResumeSnap = await getDoc(lifeResumeRef);
 
-      const lifeResume = {
-        name: personalityProfile.name,
-        age: personalityProfile.personalLife?.age || 30,
-        background: personalityProfile.background,
-        education:
-          personalityProfile.personalLife?.education || "Bachelor's degree",
-        workExperience:
-          personalityProfile.personalLife?.workExperience ||
-          "Professional experience",
-        skills: personalityProfile.personalLife?.skills || [
-          "Communication",
-          "Problem Solving",
-        ],
-        interests: personalityProfile.personalLife?.hobbies || [
-          "Reading",
-          "Traveling",
-        ],
-        communicationStyle: personalityProfile.talkingStyle,
-        values: personalityProfile.personalLife?.values || [
-          "Growth",
-          "Connection",
-        ],
-        currentActivity: generateDayInLifeDescription(
-          personalityKey,
-          timeOfDay
-        ),
-        mood:
-          timeOfDay === "morning"
-            ? "energetic and ready"
-            : timeOfDay === "afternoon"
-            ? "productive and focused"
-            : timeOfDay === "evening"
-            ? "accomplished and satisfied"
-            : "reflective and content",
-      };
+        if (lifeResumeSnap.exists()) {
+          const storedLifeResume = lifeResumeSnap.data();
+          console.log(
+            `✅ Found stored life resume for user ${userId}:`,
+            storedLifeResume.name
+          );
 
-      return lifeResume;
+          // Add current activity and mood based on time
+          const currentActivity = generateDayInLifeDescription(
+            personality,
+            timeOfDay
+          );
+          const mood =
+            timeOfDay === "morning"
+              ? "energetic and ready"
+              : timeOfDay === "afternoon"
+              ? "productive and focused"
+              : timeOfDay === "evening"
+              ? "accomplished and satisfied"
+              : "reflective and content";
+
+          return {
+            ...storedLifeResume,
+            currentActivity,
+            mood,
+            personality: storedLifeResume.personality || personality,
+            relationship: storedLifeResume.relationship || relationship,
+          };
+        } else {
+          console.log(
+            `⚠️ No stored life resume found for user ${userId}, using fallback`
+          );
+
+          // Fallback to simple life resume if none exists
+          const lifeResume = {
+            name: personalityProfile.name,
+            age: personalityProfile.personalLife?.age || 30,
+            background: personalityProfile.background,
+            education:
+              personalityProfile.personalLife?.education || "Bachelor's degree",
+            workExperience:
+              personalityProfile.personalLife?.workExperience ||
+              "Professional experience",
+            skills: personalityProfile.personalLife?.skills || [
+              "Communication",
+              "Problem Solving",
+            ],
+            interests: personalityProfile.personalLife?.hobbies || [
+              "Reading",
+              "Traveling",
+            ],
+            communicationStyle: personalityProfile.talkingStyle,
+            values: personalityProfile.personalLife?.values || [
+              "Growth",
+              "Connection",
+            ],
+            currentActivity: generateDayInLifeDescription(
+              personalityKey,
+              timeOfDay
+            ),
+            mood:
+              timeOfDay === "morning"
+                ? "energetic and ready"
+                : timeOfDay === "afternoon"
+                ? "productive and focused"
+                : timeOfDay === "evening"
+                ? "accomplished and satisfied"
+                : "reflective and content",
+          };
+
+          return lifeResume;
+        }
+      } catch (error) {
+        console.error("❌ Error fetching life resume:", error);
+
+        // Fallback to simple life resume on error
+        const fallbackPersonalityProfile =
+          personalityProfiles[personality] || personalityProfiles["Friendly"];
+        const lifeResume = {
+          name: fallbackPersonalityProfile.name,
+          age: fallbackPersonalityProfile.personalLife?.age || 30,
+          background: fallbackPersonalityProfile.background,
+          education:
+            fallbackPersonalityProfile.personalLife?.education ||
+            "Bachelor's degree",
+          workExperience:
+            fallbackPersonalityProfile.personalLife?.workExperience ||
+            "Professional experience",
+          skills: fallbackPersonalityProfile.personalLife?.skills || [
+            "Communication",
+            "Problem Solving",
+          ],
+          interests: fallbackPersonalityProfile.personalLife?.hobbies || [
+            "Reading",
+            "Traveling",
+          ],
+          communicationStyle: fallbackPersonalityProfile.talkingStyle,
+          values: fallbackPersonalityProfile.personalLife?.values || [
+            "Growth",
+            "Connection",
+          ],
+          currentActivity: generateDayInLifeDescription(personality, timeOfDay),
+          mood:
+            timeOfDay === "morning"
+              ? "energetic and ready"
+              : timeOfDay === "afternoon"
+              ? "productive and focused"
+              : timeOfDay === "evening"
+              ? "accomplished and satisfied"
+              : "reflective and content",
+        };
+
+        return lifeResume;
+      }
     };
 
+    // First, get a temporary personality/relationship to fetch the life resume
+    const tempRelationshipKey = updatedProfile.relationship || "Friend";
+    const defaultPersonalityByRelationship = {
+      Mom: "NurturingMom",
+      Dad: "WiseDad",
+      Therapist: "CognitiveTherapist",
+      Coach: "Coach",
+      Friend: "Friendly",
+      Cousin: "Friendly",
+      Girlfriend: "Friendly",
+      Boyfriend: "Friendly",
+    };
+    let tempPersonalityKey = updatedProfile.personality;
+    if (!tempPersonalityKey || !personalityProfiles[tempPersonalityKey]) {
+      tempPersonalityKey =
+        defaultPersonalityByRelationship[tempRelationshipKey] || "Friendly";
+    }
+
+    // Fetch the life resume using temp keys
     const lifeResume = await generateOrRetrieveLifeResume(
       userId,
-      personalityKey,
+      tempPersonalityKey,
+      tempRelationshipKey
+    );
+
+    // Now use personality and relationship from life resume if available, otherwise fall back to user profile
+    const relationshipKey = lifeResume.relationship || tempRelationshipKey;
+    let personalityKey = lifeResume.personality || tempPersonalityKey;
+    if (!personalityKey || !personalityProfiles[personalityKey]) {
+      personalityKey =
+        defaultPersonalityByRelationship[relationshipKey] || "Friendly";
+    }
+
+    const personalityProfile =
+      personalityProfiles[personalityKey] || personalityProfiles["Friendly"];
+    const relationshipProfile =
+      relationshipProfiles[relationshipKey] || relationshipProfiles["Friend"];
+
+    // Choose a display name that matches the relationship when appropriate
+    let displayName = personalityProfile.name;
+    if (relationshipKey === "Mom") displayName = "Maria Garcia";
+    if (relationshipKey === "Dad") displayName = "James Wilson";
+
+    // NEW: Filter user profile based on relationship for knowledge isolation
+    const filteredProfile = filterProfileForRelationship(
+      updatedProfile,
       relationshipKey
     );
+
+    console.log(`Profile filtered for relationship: ${relationshipKey}`);
+    console.log(
+      `- Original topics: ${
+        updatedProfile.preferences?.topics_of_interest?.length || 0
+      }`
+    );
+    console.log(
+      `- Filtered topics: ${
+        filteredProfile.preferences?.topics_of_interest?.length || 0
+      }`
+    );
+    console.log(
+      `- Original goals: ${updatedProfile.personal_info?.goals?.length || 0}`
+    );
+    console.log(
+      `- Filtered goals: ${filteredProfile.personal_info?.goals?.length || 0}`
+    );
+
     const currentActivity = lifeResume.currentActivity;
     const mood = lifeResume.mood;
 
@@ -1404,7 +1497,15 @@ ${
 - Work Experience: ${lifeResume.workExperience}
 - Skills: ${lifeResume.skills.join(", ")}
 - Interests: ${lifeResume.interests.join(", ")}
-- Communication Style: ${lifeResume.communicationStyle}
+- Communication Style: ${
+          typeof lifeResume.communicationStyle === "object"
+            ? `Style: ${lifeResume.communicationStyle.style}, Language: ${
+                lifeResume.communicationStyle.language
+              }, Key Phrases: ${
+                lifeResume.communicationStyle.keyPhrases?.join(", ") || "N/A"
+              }, Example: "${lifeResume.communicationStyle.example || "N/A"}"`
+            : lifeResume.communicationStyle
+        }
 - Values: ${lifeResume.values.join(", ")}
 
 **Your Current Day:**

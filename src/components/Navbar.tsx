@@ -40,6 +40,7 @@ export default function Navbar() {
 
   const authLinks = [
     { name: "Dashboard", path: "/dashboard" },
+    { name: "Chat", path: "/chat" },
     { name: "Analytics", path: "/analytics" },
     { name: "About", path: "/about" },
   ];
@@ -63,10 +64,10 @@ export default function Navbar() {
         {user ? (
           <div className="hidden md:flex items-center bg-white border border-gray-200 rounded-full px-4 py-2 space-x-4">
             <Link
-              to="/dashboard"
+              to="/chat"
               className="text-gray-700 hover:text-indigo-600 font-medium"
             >
-              Dashboard
+              Chat
             </Link>
             <Link
               to="/docs"
@@ -90,26 +91,18 @@ export default function Navbar() {
                 aria-expanded="false"
                 aria-haspopup="true"
               >
-                <svg
-                  className="w-7 h-7 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M5.121 17.804A9 9 0 1 1 18.88 17.804M15 11a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"
-                  />
-                </svg>
+                <img
+                  src="/images/punkgirl.png"
+                  alt="User Avatar"
+                  className="w-7 h-7 rounded-full object-cover"
+                />
                 <span className="font-medium text-gray-700">
                   {userData?.firstName ||
                     user?.displayName?.split(" ")[0] ||
                     user?.email?.split("@")[0]}
                 </span>
                 <svg
-                  className="w-4 h-4 ml-1 text-gray-400"
+                  className="w-4 h-4 text-gray-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -122,12 +115,12 @@ export default function Navbar() {
                   />
                 </svg>
               </button>
-              <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-100 rounded-lg shadow-lg z-50 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto transition-opacity duration-150">
+              <div className="absolute right-0 mt-0 w-40 bg-white border border-gray-100 rounded-lg shadow-lg z-50 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto transition-opacity duration-150 before:absolute before:-top-1 before:left-0 before:right-0 before:h-1 before:bg-transparent">
                 <Link
                   to="/dashboard"
                   className="block px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-t-lg"
                 >
-                  Profile
+                  Dashboard
                 </Link>
                 <button
                   onClick={() => signOut(auth)}

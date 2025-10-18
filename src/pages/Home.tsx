@@ -21,29 +21,38 @@ export default function Home() {
         <div className="absolute inset-0 bg-white/60 z-0" />
         {/* Left: Headline and CTA */}
         <div className="flex-1 flex flex-col items-start justify-center max-w-xl z-10">
-          <h1 className="text-5xl md:text-6xl font-extrabold leading-tight mb-6 bg-gradient-to-r from-purple-500 to-black text-transparent bg-clip-text">
-            Your Personal AI
-            <br />
-            Companion Platform
+          <h1 className="text-5xl md:text-6xl font-extrabold leading-tight mb-6 text-gray-800">
+            Are you{" "}
+            <span className="relative">
+              <span className="underline decoration-red-400 decoration-2 underline-offset-4">
+                ready
+              </span>
+            </span>{" "}
+            to{" "}
+            <span className="bg-teal-200 px-2 py-1 rounded-md">embark on</span>{" "}
+            the journey of a{" "}
+            <span className="bg-orange-200 px-2 py-1 rounded-md">
+              lifetime?
+            </span>
           </h1>
           <p className="text-lg text-gray-600 mb-8">
-            Choose your perfect AI companion and build meaningful relationships.
-            Chat on the web or text your companion anytime—they're always there
-            to support, encourage, and connect with you.
+            Say goodbye to materialism, rigid religious dogma, and ineffective
+            therapy. Choose SwanAI for a direct, practical, and enlightening
+            approach to personal transformation.
           </p>
           <Link
             to="/login?mode=signup"
-            className="inline-flex items-center px-7 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg font-semibold text-lg shadow-sm hover:shadow-md transition-all duration-200 hover:opacity-90 mb-10"
+            className="inline-flex items-center px-8 py-3 bg-gray-200 border border-gray-400 text-gray-800 rounded-lg font-semibold text-lg hover:bg-gray-300 transition-all duration-200 mb-10"
           >
-            Meet Your Companion
+            Discover Today
             <ArrowRightIcon className="w-5 h-5 ml-2" />
           </Link>
           {/* Supporting text block */}
           <div className="mb-8">
             <p className="text-base text-gray-700 mb-6">
-              Trusted by teams and individuals to automate, personalize, and
-              secure SMS communication. Boost productivity, save time, and keep
-              your data private with SwanAI.
+              Trusted by thousands of people seeking meaningful connections and
+              emotional support. Find your perfect AI companion, build authentic
+              relationships, and experience genuine care with SwanAI.
             </p>
             <div className="border-t border-gray-200 my-4"></div>
             <div className="flex items-center space-x-8 mt-4">
@@ -120,7 +129,10 @@ export default function Home() {
             <img
               src="/images/punkgirl.png"
               alt="Punk Girl"
-              className="w-full h-full object-cover rounded-[2.5rem] shadow-xl"
+              className="w-full h-full object-cover"
+              style={{
+                borderBottom: "1px solid #eaeaea",
+              }}
             />
             {/* Floating Chat Bubbles */}
             <div className="absolute inset-0">

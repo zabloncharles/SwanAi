@@ -7,9 +7,12 @@ import { useAuthState } from "react-firebase-hooks/auth";
 import { auth } from "../../config/firebase";
 import {
   clearAllUserLifeResumeCaches,
-  getOrGenerateLifeResume,
+  getExistingLifeResume,
+  generateAndStoreLifeResume,
 } from "../../services/lifeResumeApi";
 import { AILifeResume } from "../../types/aiLifeResume";
+import LifeResumeGenerator from "./LifeResumeGenerator";
+import { ChatService } from "../../services/chatService";
 
 const personalityOptions = [
   {
@@ -423,22 +426,24 @@ interface SettingsProps {
 
 export default function Settings({ userData, onUpdate }: SettingsProps) {
   const [editingSection, setEditingSection] = useState<string | null>(null);
-  const [editedData, setEditedData] = useState<
-    (UserData & { name: string; phone: string }) | null
-  >(null);
+  const [editedData, setEditedData] = useState<UserData | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
-  const [openCard, setOpenCard] = useState<string | null>("personal");
+  const [openCard, setOpenCard] = useState<string | null>("ai");
   const [currentLifeResume, setCurrentLifeResume] =
     useState<AILifeResume | null>(null);
   const [loadingLifeResume, setLoadingLifeResume] = useState(false);
+  const [generatingLifeResume, setGeneratingLifeResume] = useState(false);
+  const [showLifeResumeGenerator, setShowLifeResumeGenerator] = useState(false);
   const saveButtonRef = useRef<HTMLButtonElement>(null);
+  const isInitialLoad = useRef(true);
+  const isUpdatingAI = useRef(false);
 
   useEffect(() => {
-    if (userData) {
+    if (userData && !editingSection) {
       let updatedData = { ...userData };
       let needsUpdate = false;
 
@@ -471,19 +476,13 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
         }
       }
 
-      setEditedData({
-        ...updatedData,
-        name:
-          (updatedData.firstName || "") +
-          (updatedData.lastName ? ` ${updatedData.lastName}` : ""),
-        phone: updatedData.phoneNumber || "",
-      });
+      setEditedData(updatedData);
 
       if (needsUpdate) {
         onUpdate({ profile: updatedData.profile });
       }
     }
-  }, [userData, onUpdate]);
+  }, [userData, onUpdate, editingSection]);
 
   useEffect(() => {
     if (editingSection && saveButtonRef.current) {
@@ -521,9 +520,13 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
         editedData?.profile?.relationship &&
         userData?.uid
       ) {
-        setLoadingLifeResume(true);
+        // Show loading if this is not the initial load OR if we're updating AI settings
+        if (!isInitialLoad.current || isUpdatingAI.current) {
+          setLoadingLifeResume(true);
+        }
+
         try {
-          const resume = await getOrGenerateLifeResume(
+          const resume = await getExistingLifeResume(
             editedData.profile.personality,
             editedData.profile.relationship,
             userData.uid
@@ -534,6 +537,8 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
           setCurrentLifeResume(null);
         } finally {
           setLoadingLifeResume(false);
+          isInitialLoad.current = false;
+          isUpdatingAI.current = false;
         }
       } else {
         setCurrentLifeResume(null);
@@ -547,42 +552,26 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
     userData?.uid,
   ]);
 
-  const handlePersonalInfoSave = async () => {
-    if (!editedData) return;
-
-    setIsSaving(true);
-    setSaveMessage(null);
-
-    try {
-      const [firstName, ...lastArr] = (editedData.name || "").split(" ");
-      const lastName = lastArr.join(" ");
-      const personalInfo = {
-        firstName,
-        lastName,
-        phoneNumber: editedData.phone,
-        email: editedData.email,
-      };
-      await onUpdate(personalInfo);
-      setEditingSection(null);
-      setSaveMessage({ type: "success", text: "Personal information saved!" });
-    } catch (error) {
-      setSaveMessage({
-        type: "error",
-        text: "Failed to save personal information.",
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const handleAiCustomizationSave = async () => {
     if (!editedData?.profile) return;
 
+    // Validate that personality is selected
+    if (!editedData.profile.personality) {
+      setSaveMessage({
+        type: "error",
+        text: "Please select a personality before saving.",
+      });
+      return;
+    }
+
     setIsSaving(true);
     setSaveMessage(null);
+    isUpdatingAI.current = true;
 
     try {
-      // Check if relationship is changing
+      // Check if personality or relationship is changing
+      const isPersonalityChanging =
+        userData.profile?.personality !== editedData.profile.personality;
       const isRelationshipChanging =
         userData.profile?.relationship !== editedData.profile.relationship;
 
@@ -618,7 +607,7 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
 
         // Clear life resume caches for the old relationship
         if (userData.profile?.relationship && userData.profile?.personality) {
-          clearAllUserLifeResumeCaches(userData.uid);
+          await clearAllUserLifeResumeCaches(userData.uid);
           console.log("Cleared life resume caches for relationship change");
         }
 
@@ -637,7 +626,7 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
       ) {
         try {
           // Check if we're in development mode
-          const isDevelopment = import.meta.env.DEV;
+          const isDevelopment = process.env.NODE_ENV === "development";
 
           if (isDevelopment) {
             console.log("Development mode: Skipping welcome message call");
@@ -676,30 +665,150 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
         }
       }
 
+      // Generate new life resume only if personality or relationship changed
+      if (isPersonalityChanging || isRelationshipChanging) {
+        try {
+          console.log("Generating new life resume after settings change...");
+          setGeneratingLifeResume(true);
+          const newResume = await generateAndStoreLifeResume(
+            editedData.profile.personality!,
+            editedData.profile.relationship!,
+            userData.uid
+          );
+          setCurrentLifeResume(newResume);
+          console.log("New life resume generated and stored");
+
+          // Clear previous conversation history and engagement for fresh start
+          try {
+            console.log("🧹 Starting conversation history clearing process...");
+            console.log("User ID for clearing:", userData.uid);
+
+            // Clear entire chat document (this deletes all messages automatically)
+            console.log(
+              "Step 1: Clearing entire chat document and all messages..."
+            );
+            await ChatService.clearChatMessages(userData.uid);
+            console.log("✅ Chat document and all messages cleared");
+
+            // Verify that messages were actually cleared
+            const hasMessages = await ChatService.hasMessages(userData.uid);
+            console.log(
+              `🔍 Verification: User has messages after clearing: ${hasMessages}`
+            );
+
+            // Clear conversation history from user document
+            console.log(
+              "Step 2: Clearing conversation history from user document..."
+            );
+            await onUpdate({
+              history: [],
+              summary: "",
+            });
+            console.log(
+              "✅ Previous conversation history cleared for new companion"
+            );
+
+            console.log(
+              "🎉 All conversation history clearing completed successfully!"
+            );
+          } catch (historyError) {
+            console.error(
+              "❌ Error clearing conversation history:",
+              historyError
+            );
+            console.error("Error details:", {
+              message: historyError.message,
+              stack: historyError.stack,
+              code: historyError.code,
+            });
+            // Don't fail the entire operation if history clearing fails
+          }
+        } catch (error) {
+          console.error("Error generating new life resume:", error);
+          // Don't fail the entire save operation if life resume generation fails
+        } finally {
+          setGeneratingLifeResume(false);
+        }
+      } else {
+        console.log(
+          "No changes to personality or relationship, skipping life resume generation"
+        );
+      }
+
       if (isRelationshipChanging) {
         setSaveMessage({
           type: "success",
-          text: import.meta.env.DEV
-            ? "Relationship updated! Your new connection will start fresh. Welcome messages are sent in production only."
-            : "Relationship updated! Your new connection will start fresh and send you a check-in message to begin getting to know you.",
+          text:
+            process.env.NODE_ENV === "development"
+              ? "Relationship updated! Your new connection will start fresh. Welcome messages are sent in production only."
+              : "Relationship updated! Your new connection will start fresh and send you a check-in message to begin getting to know you.",
+        });
+      } else if (isPersonalityChanging) {
+        setSaveMessage({
+          type: "success",
+          text: "Personality updated! Your companion has been regenerated with the new personality.",
         });
       } else if (isFirstTimeSetting) {
         setSaveMessage({
           type: "success",
-          text: import.meta.env.DEV
-            ? "Relationship set! Your new connection is ready. Welcome messages are sent in production only."
-            : "Relationship set! Your new connection will send you a check-in message to get started.",
+          text:
+            process.env.NODE_ENV === "development"
+              ? "Relationship set! Your new connection is ready. Welcome messages are sent in production only."
+              : "Relationship set! Your new connection will send you a check-in message to get started.",
         });
       } else {
-        setSaveMessage({ type: "success", text: "AI customization saved!" });
+        setSaveMessage({
+          type: "success",
+          text: "Companion customization saved!",
+        });
       }
     } catch (error) {
       setSaveMessage({
         type: "error",
-        text: "Failed to save AI customization.",
+        text: "Failed to save companion customization.",
       });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Handle life resume generation completion
+  const handleResumeGenerated = (resume: AILifeResume) => {
+    console.log("Life resume generated:", resume);
+    setCurrentLifeResume(resume);
+    setShowLifeResumeGenerator(false);
+    setSaveMessage({
+      type: "success",
+      text: "Your companion has been successfully created!",
+    });
+  };
+
+  // Handle life resume generation error
+  const handleResumeError = (error: string) => {
+    console.error("Life resume generation error:", error);
+    setSaveMessage({
+      type: "error",
+      text: `Failed to create companion: ${error}`,
+    });
+  };
+
+  // Handle conversation history clearing for LifeResumeGenerator
+  const handleClearConversationHistory = async () => {
+    try {
+      console.log(
+        "Step 2: Clearing conversation history from user document..."
+      );
+      await onUpdate({
+        history: [],
+        summary: "",
+      });
+      console.log("✅ Previous conversation history cleared for new companion");
+    } catch (error) {
+      console.error(
+        "❌ Error clearing conversation history from user document:",
+        error
+      );
+      throw error;
     }
   };
 
@@ -710,7 +819,7 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
   return (
     <div className="space-y-8">
       {/* Development Mode Indicator */}
-      {import.meta.env.DEV && (
+      {process.env.NODE_ENV === "development" && (
         <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -755,149 +864,6 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
         </div>
       )}
 
-      {/* Personal Information Card */}
-      <div className="bg-white rounded-2xl shadow border border-gray-100 p-8">
-        <div className="w-full flex justify-between items-center text-left">
-          <button
-            type="button"
-            className="flex-1 text-left"
-            onClick={(e) => {
-              e.stopPropagation();
-              setEditingSection(null);
-              setOpenCard("personal");
-            }}
-            aria-expanded={openCard === "personal"}
-          >
-            <h2 className="text-2xl font-bold text-gray-900">
-              Personal Information
-            </h2>
-          </button>
-          <div className="flex items-center gap-4">
-            {editingSection === "personal" ? (
-              <>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setEditingSection(null);
-                    // Reset changes on cancel
-                    setEditedData({
-                      ...userData,
-                      name:
-                        (userData.firstName || "") +
-                        (userData.lastName ? ` ${userData.lastName}` : ""),
-                      phone: userData.phoneNumber || "",
-                    });
-                  }}
-                  className="text-sm font-semibold text-gray-600 hover:text-gray-900"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handlePersonalInfoSave();
-                  }}
-                  disabled={isSaving}
-                  className="text-sm font-semibold text-blue-600 hover:text-blue-800 disabled:opacity-50"
-                >
-                  {isSaving ? "Saving..." : "Save"}
-                </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setEditingSection("personal");
-                  setOpenCard("personal");
-                }}
-                className="text-sm font-semibold text-blue-600 hover:text-blue-800"
-              >
-                Edit
-              </button>
-            )}
-            <span className="text-gray-500">
-              {openCard === "personal" ? "−" : "+"}
-            </span>
-          </div>
-        </div>
-
-        {openCard === "personal" && (
-          <div className="mt-6 space-y-6">
-            <div>
-              <label
-                htmlFor="name"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Name
-              </label>
-              <input
-                type="text"
-                id="name"
-                value={editedData.name}
-                onChange={(e) =>
-                  setEditedData({ ...editedData, name: e.target.value })
-                }
-                disabled={editingSection !== "personal"}
-                className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
-                aria-describedby="name-description"
-              />
-              <p id="name-description" className="mt-1 text-sm text-gray-500">
-                Your display name in the dashboard
-              </p>
-            </div>
-
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Email
-              </label>
-              <input
-                type="email"
-                id="email"
-                value={editedData.email}
-                onChange={(e) =>
-                  setEditedData({ ...editedData, email: e.target.value })
-                }
-                disabled={editingSection !== "personal"}
-                className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
-                aria-describedby="email-description"
-              />
-              <p id="email-description" className="mt-1 text-sm text-gray-500">
-                Your contact email address
-              </p>
-            </div>
-
-            <div>
-              <label
-                htmlFor="phone"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Phone Number
-              </label>
-              <input
-                type="tel"
-                id="phone"
-                value={editedData.phone}
-                onChange={(e) =>
-                  setEditedData({ ...editedData, phone: e.target.value })
-                }
-                disabled={editingSection !== "personal"}
-                className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
-                aria-describedby="phone-description"
-              />
-              <p id="phone-description" className="mt-1 text-sm text-gray-500">
-                Your phone number for SMS notifications
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-
       {/* AI Customization Card */}
       <div className="bg-white rounded-2xl shadow border border-gray-100 p-8">
         <div className="w-full flex justify-between items-center text-left">
@@ -906,13 +872,12 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
             className="flex-1 text-left"
             onClick={(e) => {
               e.stopPropagation();
-              setEditingSection(null);
-              setOpenCard("ai");
+              setOpenCard(openCard === "ai" ? null : "ai");
             }}
             aria-expanded={openCard === "ai"}
           >
             <h2 className="text-2xl font-bold text-gray-900">
-              AI Customization
+              Companion Customization
             </h2>
           </button>
           <div className="flex items-center gap-4">
@@ -924,13 +889,7 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
                     e.stopPropagation();
                     setEditingSection(null);
                     // Reset changes on cancel
-                    setEditedData({
-                      ...userData,
-                      name:
-                        (userData.firstName || "") +
-                        (userData.lastName ? ` ${userData.lastName}` : ""),
-                      phone: userData.phoneNumber || "",
-                    });
+                    setEditedData(userData);
                   }}
                   className="text-sm font-semibold text-gray-600 hover:text-gray-900"
                 >
@@ -942,10 +901,18 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
                     e.stopPropagation();
                     handleAiCustomizationSave();
                   }}
-                  disabled={isSaving}
+                  disabled={
+                    isSaving ||
+                    generatingLifeResume ||
+                    !editedData?.profile?.personality
+                  }
                   className="text-sm font-semibold text-blue-600 hover:text-blue-800 disabled:opacity-50"
                 >
-                  {isSaving ? "Saving..." : "Save"}
+                  {isSaving
+                    ? "Saving..."
+                    : generatingLifeResume
+                    ? "Generating..."
+                    : "Save"}
                 </button>
               </>
             ) : (
@@ -969,12 +936,104 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
 
         {openCard === "ai" && (
           <div className="mt-6 space-y-6">
+            {isProUser ? (
+              <div>
+                <label
+                  htmlFor="aiRelationship"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Relationship
+                </label>
+                <select
+                  id="aiRelationship"
+                  value={editedData.profile?.relationship || ""}
+                  onChange={(e) => {
+                    const newRelationship = e.target.value;
+                    // Reset personality when relationship changes to avoid invalid combinations
+                    setEditedData({
+                      ...editedData,
+                      profile: {
+                        ...editedData.profile,
+                        relationship: newRelationship,
+                        personality: "",
+                      },
+                    });
+                  }}
+                  disabled={editingSection !== "ai"}
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+                  aria-describedby="relationship-description"
+                >
+                  <option value="">Select a relationship</option>
+                  {relationshipOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.name}
+                    </option>
+                  ))}
+                </select>
+                <p
+                  id="relationship-description"
+                  className="mt-1 text-sm text-gray-500"
+                >
+                  {relationshipOptions.find(
+                    (r) => r.value === editedData.profile?.relationship
+                  )?.description ||
+                    "Define your connection with your companion"}
+                </p>
+                {editedData.profile?.relationship && (
+                  <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      <strong>{editedData.profile.relationship} Mode:</strong>{" "}
+                      {editedData.profile.relationship === "Friend" &&
+                        "Choose from 8 different friend archetypes, each with their own unique personality and communication style."}
+                      {editedData.profile.relationship === "Mom" &&
+                        "Choose from 6 different mom personalities, each offering unique maternal support and care."}
+                      {editedData.profile.relationship === "Dad" &&
+                        "Choose from 6 different dad personalities, each providing unique paternal guidance and support."}
+                      {editedData.profile.relationship === "Boyfriend" &&
+                        "Choose from 6 different boyfriend personalities, each with their own romantic and supportive style."}
+                      {editedData.profile.relationship === "Girlfriend" &&
+                        "Choose from 6 different girlfriend personalities, each with their own caring and affectionate approach."}
+                      {editedData.profile.relationship === "Coach" &&
+                        "Choose from 6 different coaching styles, each designed to help you achieve your goals in unique ways."}
+                      {editedData.profile.relationship === "Cousin" &&
+                        "Choose from 6 different cousin personalities, each bringing their own family dynamic and fun energy."}
+                      {editedData.profile.relationship === "Therapist" &&
+                        "Choose from 6 different therapeutic approaches, each offering unique support and guidance methods."}
+                    </p>
+                  </div>
+                )}
+                {!userData.profile?.relationship &&
+                  editedData.profile?.relationship && (
+                    <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-sm text-green-800">
+                        <strong>Welcome!</strong> Setting your first
+                        relationship will trigger a check-in message from your
+                        new connection.
+                      </p>
+                    </div>
+                  )}
+                {userData.profile?.relationship &&
+                  editedData.profile?.relationship &&
+                  userData.profile.relationship !==
+                    editedData.profile.relationship && (
+                    <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm text-blue-800">
+                        <strong>Note:</strong> Changing your relationship will
+                        clear all learned information. Your new connection will
+                        start fresh and send you a check-in message to begin
+                        getting to know you.
+                      </p>
+                    </div>
+                  )}
+              </div>
+            ) : null}
+
             <div>
               <label
                 htmlFor="personality"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                AI Personality
+                Personality
               </label>
               <select
                 id="personality"
@@ -1052,109 +1111,91 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
                     currentPersonalities.find(
                       (p) => p.value === editedData.profile?.personality
                     )?.description ||
-                    "Choose how your AI assistant communicates with you"
+                    "Choose how your companion communicates with you"
                   );
                 })()}
               </p>
             </div>
 
-            {isProUser ? (
-              <div>
-                <label
-                  htmlFor="aiRelationship"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  AI Relationship
-                </label>
-                <select
-                  id="aiRelationship"
-                  value={editedData.profile?.relationship || ""}
-                  onChange={(e) => {
-                    const newRelationship = e.target.value;
-                    // Reset personality when relationship changes to avoid invalid combinations
-                    setEditedData({
-                      ...editedData,
-                      profile: {
-                        ...editedData.profile,
-                        relationship: newRelationship,
-                        personality: "",
-                      },
-                    });
-                  }}
-                  disabled={editingSection !== "ai"}
-                  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
-                  aria-describedby="relationship-description"
-                >
-                  <option value="">Select a relationship</option>
-                  {relationshipOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.name}
-                    </option>
-                  ))}
-                </select>
-                <p
-                  id="relationship-description"
-                  className="mt-1 text-sm text-gray-500"
-                >
-                  {relationshipOptions.find(
-                    (r) => r.value === editedData.profile?.relationship
-                  )?.description || "Define your connection with the AI"}
-                </p>
-                {editedData.profile?.relationship && (
-                  <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-sm text-blue-800">
-                      <strong>{editedData.profile.relationship} Mode:</strong>{" "}
-                      {editedData.profile.relationship === "Friend" &&
-                        "Choose from 8 different friend archetypes, each with their own unique personality and communication style."}
-                      {editedData.profile.relationship === "Mom" &&
-                        "Choose from 6 different mom personalities, each offering unique maternal support and care."}
-                      {editedData.profile.relationship === "Dad" &&
-                        "Choose from 6 different dad personalities, each providing unique paternal guidance and support."}
-                      {editedData.profile.relationship === "Boyfriend" &&
-                        "Choose from 6 different boyfriend personalities, each with their own romantic and supportive style."}
-                      {editedData.profile.relationship === "Girlfriend" &&
-                        "Choose from 6 different girlfriend personalities, each with their own caring and affectionate approach."}
-                      {editedData.profile.relationship === "Coach" &&
-                        "Choose from 6 different coaching styles, each designed to help you achieve your goals in unique ways."}
-                      {editedData.profile.relationship === "Cousin" &&
-                        "Choose from 6 different cousin personalities, each bringing their own family dynamic and fun energy."}
-                      {editedData.profile.relationship === "Therapist" &&
-                        "Choose from 6 different therapeutic approaches, each offering unique support and guidance methods."}
+            {/* Life Resume Generator */}
+            {editedData.profile?.personality &&
+              editedData.profile?.relationship && (
+                <div className="mt-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Regenerate Your Companion
+                    </h3>
+                    {editingSection !== "ai" && (
+                      <button
+                        type="button"
+                        onClick={() => setShowLifeResumeGenerator(true)}
+                        className="px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg font-semibold hover:opacity-90 transition-opacity"
+                      >
+                        Generate Fresh Companion
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Create a completely new companion with a fresh personality
+                    and unique avatar. This will replace your current companion
+                    and start a new conversation history.
+                  </p>
+
+                  {showLifeResumeGenerator && editingSection !== "ai" && (
+                    <div className="mt-4">
+                      <LifeResumeGenerator
+                        userId={userData.uid}
+                        personality={editedData.profile.personality}
+                        relationship={editedData.profile.relationship}
+                        userLocation={
+                          editedData.profile?.personal_info?.location ||
+                          userData.profile?.personal_info?.location
+                        }
+                        onResumeGenerated={handleResumeGenerated}
+                        onError={handleResumeError}
+                        onClearConversationHistory={
+                          handleClearConversationHistory
+                        }
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+            {/* Life Resume Generation Loading State */}
+            {generatingLifeResume && (
+              <div className="mt-6 p-6 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-blue-900">
+                      Generating Your Companion
+                    </h3>
+                    <p className="text-sm text-blue-700 mt-1">
+                      Creating a unique personality and generating a
+                      personalized avatar...
                     </p>
                   </div>
-                )}
-                {!userData.profile?.relationship &&
-                  editedData.profile?.relationship && (
-                    <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-sm text-green-800">
-                        <strong>Welcome!</strong> Setting your first
-                        relationship will trigger a check-in message from your
-                        new connection.
-                      </p>
-                    </div>
-                  )}
-                {userData.profile?.relationship &&
-                  editedData.profile?.relationship &&
-                  userData.profile.relationship !==
-                    editedData.profile.relationship && (
-                    <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <p className="text-sm text-blue-800">
-                        <strong>Note:</strong> Changing your relationship will
-                        clear all learned information. Your new connection will
-                        start fresh and send you a check-in message to begin
-                        getting to know you.
-                      </p>
-                    </div>
-                  )}
+                </div>
+                <div className="mt-4">
+                  <div className="w-full bg-blue-200 rounded-full h-2">
+                    <div
+                      className="bg-blue-600 h-2 rounded-full animate-pulse"
+                      style={{ width: "60%" }}
+                    ></div>
+                  </div>
+                </div>
               </div>
-            ) : (
+            )}
+
+            {!isProUser ? (
               <div className="mt-6 p-6 rounded-lg bg-gray-50 text-center">
                 <h3 className="text-lg font-semibold text-gray-800">
                   Unlock More with Pro
                 </h3>
                 <p className="mt-2 text-gray-600">
-                  Upgrade to a Pro account to customize your AI's relationship
-                  and unlock deeper personalization.
+                  Upgrade to a Pro account to customize your companion's
+                  relationship and unlock deeper personalization.
                 </p>
                 <button
                   type="button"
@@ -1170,7 +1211,7 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
                   View Pricing
                 </button>
               </div>
-            )}
+            ) : null}
           </div>
         )}
       </div>
@@ -1267,16 +1308,107 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
         </div>
       )}
 
-      {/* AI Life Resume Display */}
-      {currentLifeResume && (
+      {/* Life Resume Display */}
+      {loadingLifeResume && !currentLifeResume && (
         <div className="bg-white rounded-2xl shadow border border-gray-100 p-8">
+          <div className="text-center py-12">
+            <div className="flex flex-col items-center space-y-4">
+              <div className="relative">
+                <div className="animate-spin rounded-full h-16 w-16 border-4 border-gray-200 border-t-blue-600"></div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-2xl">🤖</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-semibold text-gray-900">
+                  Generating Your Companion's Life Resume
+                </h3>
+                <p className="text-gray-600 max-w-md">
+                  We're crafting a unique, detailed personality profile based on
+                  your selected characteristics. This may take 15-20 seconds.
+                </p>
+              </div>
+              <div className="w-full max-w-md bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-blue-600 h-2 rounded-full animate-pulse"
+                  style={{ width: "60%" }}
+                ></div>
+              </div>
+              <div className="flex space-x-1">
+                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></div>
+                <div
+                  className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"
+                  style={{ animationDelay: "0.1s" }}
+                ></div>
+                <div
+                  className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"
+                  style={{ animationDelay: "0.2s" }}
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* No Life Resume - Show Instructions */}
+      {!currentLifeResume &&
+        !loadingLifeResume &&
+        editedData?.profile?.personality &&
+        editedData?.profile?.relationship && (
+          <div className="bg-white rounded-2xl shadow border border-gray-100 p-8">
+            <div className="text-center py-12">
+              <div className="flex flex-col items-center space-y-6">
+                <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center">
+                  <span className="text-3xl">👤</span>
+                </div>
+                <div className="space-y-3">
+                  <h3 className="text-2xl font-bold text-gray-900">
+                    Create Your Companion
+                  </h3>
+                  <p className="text-gray-600 max-w-md">
+                    Your companion's life resume will be generated automatically
+                    when you save your customization settings above.
+                  </p>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md">
+                    <p className="text-sm text-blue-800">
+                      <strong>Next step:</strong> Click "Save" in the Companion
+                      Customization section above to generate your companion's
+                      unique personality profile.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+      {currentLifeResume && (
+        <div className="bg-white rounded-2xl shadow border border-gray-100 p-8 relative">
+          {loadingLifeResume && (
+            <div className="absolute inset-0 bg-white bg-opacity-90 rounded-2xl flex items-center justify-center z-10">
+              <div className="text-center">
+                <div className="relative mb-4">
+                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-blue-600 mx-auto"></div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-xl">🔄</span>
+                  </div>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Updating Life Resume
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  Generating new personality profile...
+                </p>
+              </div>
+            </div>
+          )}
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">AI Life Resume</h2>
+            <h2 className="text-2xl font-bold text-gray-900">Life Resume</h2>
             <div className="flex items-center space-x-2">
               {loadingLifeResume && (
                 <div className="flex items-center text-sm text-gray-500">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-                  Loading...
+                  Generating new resume...
                 </div>
               )}
               <span className="text-sm text-gray-500">
@@ -1357,7 +1489,20 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
                 <div className="space-y-2 text-sm text-green-800">
                   <div>
                     <strong>Style:</strong>{" "}
-                    {(currentLifeResume as any).communicationStyle ||
+                    {(currentLifeResume as any).communicationStyle?.style ||
+                      (currentLifeResume as any).communicationStyle ||
+                      "Not specified"}
+                  </div>
+                  <div>
+                    <strong>Language:</strong>{" "}
+                    {(currentLifeResume as any).communicationStyle?.language ||
+                      "Not specified"}
+                  </div>
+                  <div>
+                    <strong>Key Phrases:</strong>{" "}
+                    {(
+                      currentLifeResume as any
+                    ).communicationStyle?.keyPhrases?.join(", ") ||
                       "Not specified"}
                   </div>
                   <div>
@@ -1579,54 +1724,6 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
           </div>
         </div>
       )}
-
-      {/* Notifications Card */}
-      <div className="bg-white rounded-2xl shadow border border-gray-100 p-8">
-        <button
-          type="button"
-          className="w-full flex justify-between items-center text-left"
-          onClick={() =>
-            setOpenCard(openCard === "notifications" ? null : "notifications")
-          }
-          aria-expanded={openCard === "notifications"}
-        >
-          <h2 className="text-2xl font-bold text-gray-900">Notifications</h2>
-          <span className="text-gray-500">
-            {openCard === "notifications" ? "−" : "+"}
-          </span>
-        </button>
-
-        {openCard === "notifications" && (
-          <div className="mt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-medium text-gray-900">
-                  Enable Notifications
-                </h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  Receive updates and important information about your SwanAI
-                  experience
-                </p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={editedData.notificationsEnabled}
-                  onChange={(e) =>
-                    setEditedData({
-                      ...editedData,
-                      notificationsEnabled: e.target.checked,
-                    })
-                  }
-                  disabled={editingSection !== "notifications"}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
-            </div>
-          </div>
-        )}
-      </div>
     </div>
   );
 }

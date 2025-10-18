@@ -12,9 +12,8 @@ import {
   getDocs,
 } from "firebase/firestore";
 import { Timestamp } from "firebase/firestore";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate, useSearchParams } from "react-router-dom";
 import { signOut } from "firebase/auth";
-import Login from "./Login";
 import PhoneRequiredModal from "../components/PhoneRequiredModal";
 import DashboardSidebar from "../components/dashboard/DashboardSidebar";
 import DashboardHeader from "../components/dashboard/DashboardHeader";
@@ -23,37 +22,17 @@ import DashboardCharts from "../components/dashboard/DashboardCharts";
 import ProfileInfo from "../components/dashboard/ProfileInfo";
 import ConversationSummary from "../components/dashboard/ConversationSummary";
 import AdminAnalytics from "../components/dashboard/AdminAnalytics";
-import Messages from "../components/dashboard/Messages";
 import Settings from "../components/dashboard/Settings";
+import Profile from "../components/dashboard/Profile";
 import PricingSection from "../components/dashboard/PricingSection";
 import SlimFooter from "../components/SlimFooter";
-
-interface UserData {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phoneNumber: string;
-  age?: string;
-  gender?: string;
-  personality?: string;
-  aiRelationship?: string;
-  createdAt: any;
-  lastLogin: any;
-  type?: string;
-  notificationsEnabled?: boolean;
-  tokensUsed: number;
-  responseTime?: number;
-  summary?: string;
-  uid?: string;
-  updatedAt: Date;
-  profile?: { personality: string; relationship: string };
-  isAdmin?: boolean;
-}
+import { UserData } from "../types/user";
 
 export default function Dashboard() {
   // --- Auth and navigation hooks ---
   const [user] = useAuthState(auth);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   // --- Local state for user data and analytics ---
   const [userData, setUserData] = useState<UserData>({
@@ -69,12 +48,16 @@ export default function Dashboard() {
     tokensUsed: 0,
     updatedAt: new Date(),
     uid: "",
+    type: "free",
   });
   const [loading, setLoading] = useState({
     userData: true,
     analytics: true,
   });
-  const [activeTab, setActiveTab] = useState("Overview");
+  const [activeTab, setActiveTab] = useState(() => {
+    const tabParam = searchParams.get("tab");
+    return tabParam || "Overview";
+  });
   const [justChangedRelationship, setJustChangedRelationship] = useState(false);
   const [messageStats, setMessageStats] = useState<
     { date: string; count: number }[]
@@ -97,6 +80,7 @@ export default function Dashboard() {
   const [remainingBalance, setRemainingBalance] = useState<number | undefined>(
     undefined
   );
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // --- Fetch user data from Firestore on mount or when user changes ---
   useEffect(() => {
@@ -165,7 +149,7 @@ export default function Dashboard() {
         setLoading((prev) => ({ ...prev, analytics: false }));
         return;
       }
-      
+
       try {
         console.log("Fetching analytics for user:", user.uid);
         const messagesRef = collection(db, "messages");
@@ -301,16 +285,18 @@ export default function Dashboard() {
     if (!user) return;
     try {
       // Check if relationship is changing
-      const isRelationshipChanging = 
-        dataToSave.profile?.relationship && 
+      const isRelationshipChanging =
+        dataToSave.profile?.relationship &&
         dataToSave.profile.relationship !== userData.profile?.relationship;
 
       let finalDataToSave = { ...dataToSave };
 
       // If relationship is changing, clear all context for fresh start
       if (isRelationshipChanging) {
-        console.log(`Relationship changing from ${userData.profile?.relationship} to ${dataToSave.profile?.relationship}`);
-        
+        console.log(
+          `Relationship changing from ${userData.profile?.relationship} to ${dataToSave.profile?.relationship}`
+        );
+
         // Clear all learned context and start fresh
         finalDataToSave = {
           ...dataToSave,
@@ -318,23 +304,28 @@ export default function Dashboard() {
           summary: "",
           // Clear detailed profile while keeping basic settings
           profile: {
-            personality: dataToSave.profile?.personality || userData.profile?.personality || "Friendly",
-            relationship: dataToSave.profile?.relationship || "Friend"
-          }
+            personality:
+              dataToSave.profile?.personality ||
+              userData.profile?.personality ||
+              "Friendly",
+            relationship: dataToSave.profile?.relationship || "Friend",
+          },
         };
 
         // Also clear the history field directly in Firebase
         try {
           const userRef = doc(db, "users", user.uid);
           await updateDoc(userRef, {
-            history: []
+            history: [],
           });
           console.log("Successfully cleared conversation history");
         } catch (historyError) {
           console.error("Error clearing history:", historyError);
         }
 
-        console.log("Relationship change detected - clearing all context for fresh start");
+        console.log(
+          "Relationship change detected - clearing all context for fresh start"
+        );
       }
 
       const userRef = doc(db, "users", user.uid);
@@ -385,11 +376,13 @@ export default function Dashboard() {
   const startStep = needsPhone ? 1 : 2;
 
   // --- Main dashboard layout ---
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
   return (
     <>
-      {!user ? (
-        <Login />
-      ) : (
+      {!showModal && (
         <div className="min-h-screen bg-white">
           {/* Main container for sidebar and content, aligned with navbar */}
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex pt-8 mt-10">
@@ -398,20 +391,25 @@ export default function Dashboard() {
               activeTab={activeTab}
               setActiveTab={setActiveTab}
               onSignOut={handleSignOut}
+              onCollapsedChange={setSidebarCollapsed}
             />
             {/* Main content area */}
-            <div className="flex-1 pl-8">
+            <div
+              className={`flex-1 transition-all duration-200 ${
+                sidebarCollapsed ? "pl-4" : "pl-8"
+              }`}
+            >
               <div className="py-8">
-                {/* Dashboard header with greeting */}
-                <DashboardHeader firstName={userData.firstName} />
                 <main>
                   {/* Overview tab content */}
                   {activeTab === "Overview" && (
                     <>
+                      {/* Dashboard header with greeting - only on Overview */}
+                      <DashboardHeader firstName={userData.firstName || ""} />
                       <StatCards
                         totalMessages={totalMessages}
                         averageResponseTime={averageResponseTime}
-                        tokensUsed={userData.tokensUsed}
+                        tokensUsed={userData.tokensUsed || 0}
                         notificationsEnabled={
                           userData.notificationsEnabled || false
                         }
@@ -426,7 +424,7 @@ export default function Dashboard() {
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                         <ProfileInfo
-                          phoneNumber={userData.phoneNumber}
+                          phoneNumber={userData.phoneNumber || ""}
                           personality={userData.profile?.personality || ""}
                           responseTime={userData.responseTime || 0}
                           notificationsEnabled={
@@ -437,88 +435,45 @@ export default function Dashboard() {
                         />
                         <ConversationSummary summary={userData.summary || ""} />
                       </div>
-                      {/* Admin analytics only for admin users */}
-                      {(userData.type === "admin" ||
-                        (userData as any).isAdmin === true) && (
+                    </>
+                  )}
+
+                  {/* Analytics tab content - only for admin users */}
+                  {activeTab === "Analytics" &&
+                    (userData.type === "admin" ||
+                      (userData as any).isAdmin === true) && (
+                      <>
+                        <h2 className="text-2xl font-bold text-gray-900 mb-1">
+                          Analytics
+                        </h2>
+                        <p className="text-gray-500 mb-4 text-sm">
+                          System analytics and user insights
+                        </p>
                         <AdminAnalytics
                           usersByDay={usersByDay}
                           tokensByDay={tokensByDay}
                           messagesByDay={messagesByDay}
                           remainingBalance={remainingBalance}
                         />
-                      )}
+                      </>
+                    )}
+
+                  {/* Profile tab content */}
+                  {activeTab === "Profile" && (
+                    <>
+                      <h2 className="text-2xl font-bold text-gray-900 mb-1">
+                        Profile
+                      </h2>
+                      <p className="text-gray-500 mb-4 text-sm">
+                        Manage your personal information and account details.
+                      </p>
+                      <Profile
+                        userData={userData}
+                        onUpdate={handleSettingsUpdate}
+                      />
                     </>
                   )}
-                  {/* Messages tab content */}
-                  {activeTab === "Messages" && userData.uid && (
-                    <div className="h-[calc(100vh-200px)]">
-                      <Messages 
-                        userId={userData.uid} 
-                        aiPersonality={{
-                          name: userData.profile?.personality === "Professional" ? "Alex Thompson" :
-                                userData.profile?.personality === "Friendly" ? "Sam Rodriguez" :
-                                userData.profile?.personality === "CognitiveTherapist" ? "Dr. Sarah Chen" :
-                                userData.profile?.personality === "MumFriend" ? "Emma Rodriguez" :
-                                userData.profile?.personality === "ChaoticFriend" ? "Zoe Thompson" :
-                                userData.profile?.personality === "Jokester" ? "Mike Chen" :
-                                userData.profile?.personality === "Bookworm" ? "Aria Patel" :
-                                userData.profile?.personality === "NurturingMom" ? "Maria Garcia" :
-                                userData.profile?.personality === "WiseDad" ? "James Wilson" :
-                                userData.profile?.personality === "EmpatheticTherapist" ? "Dr. Sarah Chen" :
-                                userData.profile?.personality === "SolutionFocusedTherapist" ? "Dr. Sarah Chen" :
-                                userData.profile?.personality === "MindfulnessTherapist" ? "Dr. Sarah Chen" :
-                                userData.profile?.personality === "SupportiveTherapist" ? "Dr. Sarah Chen" :
-                                userData.profile?.personality === "InsightfulTherapist" ? "Dr. Sarah Chen" :
-                                userData.profile?.personality === "Mentor" ? "Alex Thompson" :
-                                userData.profile?.personality === "Rick" ? "SwanAI" :
-                                userData.profile?.personality === "LateFriend" ? "Sam Rodriguez" :
-                                userData.profile?.personality === "FashionableFriend" ? "Emma Rodriguez" :
-                                userData.profile?.personality === "EmotionalFriend" ? "Aria Patel" :
-                                userData.profile?.personality === "LaidbackFriend" ? "Sam Rodriguez" :
-                                userData.profile?.personality === "BoJackHorseman" ? "Mike Chen" :
-                                userData.profile?.personality === "PracticalMom" ? "Maria Garcia" :
-                                userData.profile?.personality === "FunMom" ? "Emma Rodriguez" :
-                                userData.profile?.personality === "WiseMom" ? "Maria Garcia" :
-                                userData.profile?.personality === "ProtectiveMom" ? "Maria Garcia" :
-                                userData.profile?.personality === "EncouragingMom" ? "Maria Garcia" :
-                                userData.profile?.personality === "SteadyDad" ? "James Wilson" :
-                                userData.profile?.personality === "HandyDad" ? "James Wilson" :
-                                userData.profile?.personality === "FunDad" ? "James Wilson" :
-                                userData.profile?.personality === "ProtectiveDad" ? "James Wilson" :
-                                userData.profile?.personality === "SupportiveDad" ? "James Wilson" :
-                                userData.profile?.personality === "RomanticBoyfriend" ? "Sam Rodriguez" :
-                                userData.profile?.personality === "ProtectiveBoyfriend" ? "Sam Rodriguez" :
-                                userData.profile?.personality === "FunBoyfriend" ? "Mike Chen" :
-                                userData.profile?.personality === "SupportiveBoyfriend" ? "Sam Rodriguez" :
-                                userData.profile?.personality === "AmbitiousBoyfriend" ? "Alex Thompson" :
-                                userData.profile?.personality === "ChillBoyfriend" ? "Sam Rodriguez" :
-                                userData.profile?.personality === "CaringGirlfriend" ? "Emma Rodriguez" :
-                                userData.profile?.personality === "FunGirlfriend" ? "Zoe Thompson" :
-                                userData.profile?.personality === "SupportiveGirlfriend" ? "Emma Rodriguez" :
-                                userData.profile?.personality === "RomanticGirlfriend" ? "Emma Rodriguez" :
-                                userData.profile?.personality === "IndependentGirlfriend" ? "Aria Patel" :
-                                userData.profile?.personality === "AdventurousGirlfriend" ? "Zoe Thompson" :
-                                userData.profile?.personality === "MotivationalCoach" ? "Alex Thompson" :
-                                userData.profile?.personality === "StrategicCoach" ? "Alex Thompson" :
-                                userData.profile?.personality === "ToughLoveCoach" ? "James Wilson" :
-                                userData.profile?.personality === "EncouragingCoach" ? "Emma Rodriguez" :
-                                userData.profile?.personality === "AccountabilityCoach" ? "Alex Thompson" :
-                                userData.profile?.personality === "LifeCoach" ? "Alex Thompson" :
-                                userData.profile?.personality === "FunCousin" ? "Zoe Thompson" :
-                                userData.profile?.personality === "CloseCousin" ? "Sam Rodriguez" :
-                                userData.profile?.personality === "AdventurousCousin" ? "Zoe Thompson" :
-                                userData.profile?.personality === "SupportiveCousin" ? "Emma Rodriguez" :
-                                userData.profile?.personality === "WiseCousin" ? "James Wilson" :
-                                userData.profile?.personality === "PartnerInCrimeCousin" ? "Mike Chen" :
-                                "SwanAI",
-                          personality: userData.profile?.personality || "Friendly",
-                          relationship: userData.profile?.relationship || "Friend"
-                        }}
-                        justChangedRelationship={justChangedRelationship}
-                        onIntroductionComplete={() => setJustChangedRelationship(false)}
-                      />
-                    </div>
-                  )}
+
                   {/* Settings tab content */}
                   {activeTab === "Settings" && (
                     <>
@@ -526,13 +481,21 @@ export default function Dashboard() {
                         Settings
                       </h2>
                       <p className="text-gray-500 mb-4 text-sm">
-                        Edit your AI profile, update your personal information,
-                        and customize your SwanAI experience.
+                        Edit your companion profile and customize your SwanAI
+                        experience.
                       </p>
-                      <Settings
-                        userData={userData}
-                        onUpdate={handleSettingsUpdate}
-                      />
+                      {userData.uid ? (
+                        <Settings
+                          userData={userData}
+                          onUpdate={handleSettingsUpdate}
+                        />
+                      ) : (
+                        <div className="p-4">
+                          <div className="text-gray-500">
+                            Loading user data...
+                          </div>
+                        </div>
+                      )}
                     </>
                   )}
                   {/* Pricing tab content */}
@@ -556,6 +519,7 @@ export default function Dashboard() {
           <SlimFooter />
         </div>
       )}
+
       {/* Modal for required phone/name info */}
       {modalVisible && (
         <PhoneRequiredModal
