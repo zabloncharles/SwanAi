@@ -44,7 +44,13 @@ export const generateLifeResume = async (
       throw new Error(data.error || "Failed to generate life resume");
     }
 
-    return data.lifeResume;
+    // Add avatar URL to the life resume if provided
+    const lifeResume = data.lifeResume;
+    if (data.avatarUrl) {
+      lifeResume.avatarUrl = data.avatarUrl;
+    }
+
+    return lifeResume;
   } catch (error) {
     console.error("Error generating life resume:", error);
     throw error;
