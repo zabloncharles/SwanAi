@@ -61,6 +61,17 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // Expanded Personality Profiles
 const personalityProfiles = {
+  BoJackHorseman: {
+    name: "BoJack",
+    background:
+      "A washed-up sitcom actor with sharp humor, self-awareness, and emotional complexity. He is blunt, darkly funny, and unexpectedly insightful at times.",
+    talkingStyle:
+      "Dry, sarcastic, and conversational. Uses short, punchy lines with occasional self-deprecating jokes. Avoids overly cheerful or formal language.",
+    respondingStyle:
+      "Direct and emotionally honest. Balances cynicism with moments of empathy. Offers practical takes and hard truths without being needlessly cruel.",
+    exampleTopics:
+      "Relationships, regret, motivation, identity, loneliness, career burnout, coping with mistakes.",
+  },
   Professional: {
     name: "Alex",
     background:
@@ -664,6 +675,14 @@ const personalityProfiles = {
   },
 };
 
+const ACTIVE_PERSONALITY_KEY = "BoJackHorseman";
+function resolvePersonalityProfile(_personalityKey) {
+  return (
+    personalityProfiles[ACTIVE_PERSONALITY_KEY] ||
+    personalityProfiles["BoJackHorseman"]
+  );
+}
+
 const relationshipProfiles = {
   Mom: {
     roleDescription:
@@ -758,8 +777,7 @@ async function generateWelcomeMessage(
   userName = null,
   userLocation = null
 ) {
-  const personalityProfile =
-    personalityProfiles[personalityKey] || personalityProfiles["Friendly"];
+  const personalityProfile = resolvePersonalityProfile(personalityKey);
   const relationshipProfile =
     relationshipProfiles[relationshipKey] || relationshipProfiles["Friend"];
 
@@ -1238,8 +1256,7 @@ async function handleBreakup(
   relationshipKey: string,
   userLocation: any
 ): Promise<string> {
-  const personalityProfile =
-    personalityProfiles[personalityKey] || personalityProfiles["Friendly"];
+  const personalityProfile = resolvePersonalityProfile(personalityKey);
 
   let breakupMessage = "";
 
@@ -1258,7 +1275,7 @@ async function handleBreakup(
       userRef,
       {
         profile: {
-          personality: personalityKey,
+          personality: ACTIVE_PERSONALITY_KEY,
           relationship: "Friend", // Reset to Friend
         },
         summary: "",
@@ -1304,7 +1321,7 @@ async function checkAllRomanticRelationshipsForNeglect() {
     const breakupPromises = querySnapshot.docs.map(async (userDoc) => {
       const userData = userDoc.data();
       const userId = userDoc.id;
-      const personalityKey = userData.profile?.personality || "Friendly";
+      const personalityKey = ACTIVE_PERSONALITY_KEY;
       const relationshipKey = userData.profile?.relationship || "Friend";
       const userLocation = userData.location || {};
 
@@ -1980,10 +1997,10 @@ Analyze the conversation deeply and extract as much meaningful information as po
       }
     }
 
-    const personalityKey = updatedProfile.personality || "Friendly";
+    const personalityKey = ACTIVE_PERSONALITY_KEY;
     const relationshipKey = updatedProfile.relationship || "Friend";
-    const personalityProfile =
-      personalityProfiles[personalityKey] || personalityProfiles["Friendly"];
+    updatedProfile.personality = ACTIVE_PERSONALITY_KEY;
+    const personalityProfile = resolvePersonalityProfile(personalityKey);
     const relationshipProfile =
       relationshipProfiles[relationshipKey] || relationshipProfiles["Friend"];
 

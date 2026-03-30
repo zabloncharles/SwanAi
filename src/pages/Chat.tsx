@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth, db } from "../config/firebase";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, updateDoc } from "firebase/firestore";
 import { Navigate, useNavigate } from "react-router-dom";
 import { sendWebMessage } from "../services/messageApi";
 import { getExistingLifeResume } from "../services/lifeResumeApi";
-import { ChatService, ChatMessage } from "../services/chatService";
 import {
   Search,
   MessageCircle,
@@ -47,7 +46,6 @@ export default function Chat() {
   const [userData, setUserData] = useState<any>(null);
   const [currentLifeResume, setCurrentLifeResume] = useState<any>(null);
   const [showLifeResumeGenerator, setShowLifeResumeGenerator] = useState(false);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -156,6 +154,20 @@ export default function Chat() {
     if (user) {
       loadUserData();
     }
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const userRef = doc(db, "users", user.uid);
+    const unsubscribe = onSnapshot(userRef, (snapshot) => {
+      if (!snapshot.exists()) return;
+      const data = snapshot.data();
+      const formattedMessages = mapHistoryToMessages(data.history || []);
+      setMessages(formattedMessages);
+    });
+
+    return () => unsubscribe();
   }, [user]);
 
   // Check if life resume matches current AI settings when userData changes
@@ -329,21 +341,33 @@ export default function Chat() {
     }
   };
 
-  const loadConversationHistory = async (lifeResume?: any) => {
-    // Prevent multiple simultaneous calls
-    if (isLoadingHistory) {
-      console.log("Already loading history, skipping...");
-      return;
-    }
+  const mapHistoryToMessages = (history: any[]): Message[] => {
+    const now = Date.now();
+    return history
+      .filter(
+        (item) =>
+          item &&
+          (item.role === "user" || item.role === "assistant") &&
+          typeof item.content === "string" &&
+          item.content.trim() !== ""
+      )
+      .map((item, index) => ({
+        role: item.role,
+        content: item.content,
+        timestamp:
+          typeof item.timestamp === "number"
+            ? item.timestamp
+            : now - (history.length - index) * 1000,
+      }));
+  };
 
+  const loadConversationHistory = async (lifeResume?: any) => {
     try {
-      setIsLoadingHistory(true);
       console.log("Loading conversation history...");
       console.log("UserData:", userData);
       console.log("Current life resume:", currentLifeResume);
       console.log("Passed life resume:", lifeResume);
 
-      // Use the passed life resume or fall back to current state
       const resumeToUse = lifeResume || currentLifeResume;
 
       if (!resumeToUse || !user) {
@@ -352,43 +376,15 @@ export default function Chat() {
         return;
       }
 
-      const lifeResumeId = resumeToUse.id;
-      if (!lifeResumeId) {
-        console.error("No lifeResumeId found in resume:", resumeToUse);
-        setMessages([]);
-        return;
-      }
-      console.log("Loading messages for lifeResumeId:", lifeResumeId);
-
-      // Find or create chat for this user (userId is the chatId)
-      const chatId = await ChatService.findOrCreateChat(
-        user.uid,
-        user.uid, // lifeResumeId is now userId
-        resumeToUse.name,
-        resumeToUse.relationship
-      );
-
-      // Load messages from the user's chat
-      const chatMessages = await ChatService.getMessages(user.uid);
-
-      if (chatMessages.length > 0) {
-        console.log(
-          `Loaded ${chatMessages.length} messages from chat ${chatId}`
-        );
-        // Convert ChatMessage format to the expected format
-        const formattedMessages = chatMessages.map((msg: ChatMessage) => ({
-          role: msg.role,
-          content: msg.content,
-          timestamp: msg.timestamp.toMillis(),
-          seen: msg.seen,
-          metadata: msg.metadata,
-        }));
+      const userSnapshot = await getDoc(doc(db, "users", user.uid));
+      if (userSnapshot.exists()) {
+        const userFirestoreData = userSnapshot.data();
+        const history = userFirestoreData.history || [];
+        const formattedMessages = mapHistoryToMessages(history);
         setMessages(formattedMessages);
-        // Scroll to bottom after loading messages
         setTimeout(() => scrollToBottom(), 100);
       } else {
         console.log("No conversation history found, adding welcome message");
-        // Only add welcome message if we don't already have messages
         if (messages.length === 0) {
           const welcomeMessage: Message = {
             role: "assistant",
@@ -398,7 +394,6 @@ export default function Chat() {
             timestamp: Date.now(),
           };
           setMessages([welcomeMessage]);
-          // Scroll to bottom after adding welcome message
           setTimeout(() => scrollToBottom(), 100);
         } else {
           console.log("Messages already exist, skipping welcome message");
@@ -407,8 +402,6 @@ export default function Chat() {
     } catch (error) {
       console.error("Error loading conversation history:", error);
       setMessages([]);
-    } finally {
-      setIsLoadingHistory(false);
     }
   };
 
@@ -452,72 +445,6 @@ export default function Chat() {
     return finalDelay;
   };
 
-  // Function to split long messages into multiple bubbles for more human-like texting
-  const splitMessageIntoBubbles = (message: string): string[] => {
-    // Split by sentences (periods, exclamation marks, question marks)
-    const sentences = message.split(/([.!?]+)/).filter((s) => s.trim());
-
-    // Rejoin sentences with their punctuation
-    const completeSentences: string[] = [];
-    for (let i = 0; i < sentences.length; i += 2) {
-      if (sentences[i] && sentences[i + 1]) {
-        completeSentences.push((sentences[i] + sentences[i + 1]).trim());
-      } else if (sentences[i]) {
-        completeSentences.push(sentences[i].trim());
-      }
-    }
-
-    // If only 1-2 sentences, return as single message
-    if (completeSentences.length <= 2) {
-      return [message];
-    }
-
-    // Group sentences into multiple bubbles (2-3 sentences per bubble)
-    const bubbles: string[] = [];
-    for (let i = 0; i < completeSentences.length; i += 2) {
-      const bubble = completeSentences.slice(i, i + 2).join(" ");
-      if (bubble.trim()) {
-        bubbles.push(bubble.trim());
-      }
-    }
-
-    return bubbles.length > 1 ? bubbles : [message];
-  };
-
-  const saveConversationHistory = async (updatedMessages: Message[]) => {
-    try {
-      if (user && updatedMessages.length > 0 && currentLifeResume) {
-        console.log("Saving conversation history:", updatedMessages);
-
-        // Use the actual document ID from the life resume
-        const lifeResumeId = currentLifeResume?.id;
-        if (!lifeResumeId) {
-          console.error(
-            "No lifeResumeId found in currentLifeResume:",
-            currentLifeResume
-          );
-          return;
-        }
-
-        // Save the latest message to the user's chat
-        const latestMessage = updatedMessages[updatedMessages.length - 1];
-        if (latestMessage) {
-          await ChatService.saveMessage(
-            user.uid,
-            latestMessage.role as "user" | "assistant",
-            latestMessage.content,
-            latestMessage.metadata || null,
-            currentLifeResume.name,
-            currentLifeResume.relationship
-          );
-          console.log("Message saved to user's chat");
-        }
-      }
-    } catch (error) {
-      console.error("Error saving conversation history:", error);
-    }
-  };
-
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return;
 
@@ -531,136 +458,22 @@ export default function Chat() {
     setMessages(updatedMessages);
     setInputMessage("");
     setIsLoading(true);
-    // Don't show typing indicator yet - wait for API response
-
-    // Save user message to user's chat
-    if (currentLifeResume) {
-      await ChatService.saveMessage(
-        user!.uid,
-        "user",
-        inputMessage.trim(),
-        null,
-        currentLifeResume.name,
-        currentLifeResume.relationship
-      );
-    }
 
     try {
       const response = await sendWebMessage(user!.uid, inputMessage.trim());
 
       if (response.success && response.message) {
-        // Split long AI responses into multiple bubbles for more human-like texting
-        const messageBubbles = splitMessageIntoBubbles(response.message);
-
-        // Calculate total typing time: minimum 5 seconds + word count time for first bubble
-        const firstBubbleWordCount = messageBubbles[0]
-          .trim()
-          .split(/\s+/)
-          .filter((word) => word.length > 0).length;
-        const wordCountDelay = calculateTypingDelay(messageBubbles[0]);
-        const totalTypingTime = Math.max(5000, wordCountDelay); // Minimum 5 seconds
-
-        console.log(
-          `🎯 CHAT: Total typing time: ${totalTypingTime}ms (min 5s + ${wordCountDelay}ms for ${firstBubbleWordCount} words)`
-        );
-
-        // Show typing indicator now that we have a response
-        console.log("🎯 CHAT: Setting typing indicator to TRUE");
         setAiTyping(true);
-
-        // Wait for calculated time before showing the response
+        const typingDelay = calculateTypingDelay(response.message);
         setTimeout(() => {
-          console.log(
-            "🎯 CHAT: Message split into bubbles:",
-            messageBubbles.length,
-            "bubbles"
-          );
-          messageBubbles.forEach((bubble, index) => {
-            const wordCount = bubble
-              .trim()
-              .split(/\s+/)
-              .filter((word) => word.length > 0).length;
-            console.log(
-              `🎯 CHAT: Bubble ${index + 1}: "${bubble}" (${wordCount} words)`
-            );
-          });
-
-          // Add first bubble immediately (we already waited the total typing time)
-          console.log(
-            "🎯 CHAT: First bubble appearing now (after total typing time)"
-          );
-          const firstBubble: Message = {
+          const assistantMessage: Message = {
             role: "assistant",
-            content: messageBubbles[0],
+            content: response.message,
             timestamp: Date.now(),
           };
-
-          const firstBubbleMessages = [...updatedMessages, firstBubble];
-          setMessages(firstBubbleMessages);
-
-          // Save conversation history for the first bubble
-          saveConversationHistory(firstBubbleMessages);
-
-          // If there are more bubbles, keep typing indicator visible
-          if (messageBubbles.length === 1) {
-            console.log(
-              "🎯 CHAT: Single bubble response - hiding typing indicator"
-            );
-            setAiTyping(false); // Only hide typing indicator if this is the last bubble
-          } else {
-            console.log(
-              "🎯 CHAT: Multiple bubbles - keeping typing indicator visible"
-            );
-          }
-
-          // Add remaining bubbles with realistic typing delays
-          if (messageBubbles.length > 1) {
-            let cumulativeDelay = 0; // Start from 0 since first bubble already appeared
-            for (let i = 1; i < messageBubbles.length; i++) {
-              const typingDelay = calculateTypingDelay(messageBubbles[i]);
-              const wordCount = messageBubbles[i]
-                .trim()
-                .split(/\s+/)
-                .filter((word) => word.length > 0).length;
-              cumulativeDelay += typingDelay;
-
-              console.log(
-                `🎯 CHAT: Bubble ${
-                  i + 1
-                } scheduled for ${cumulativeDelay}ms (${typingDelay}ms delay for ${wordCount} words)`
-              );
-
-              setTimeout(() => {
-                console.log(`🎯 CHAT: Bubble ${i + 1} appearing now`);
-                const nextBubble: Message = {
-                  role: "assistant",
-                  content: messageBubbles[i],
-                  timestamp: Date.now(),
-                };
-                setMessages((prev) => {
-                  const updatedMessages = [...prev, nextBubble];
-                  // Save conversation history after each bubble is added
-                  saveConversationHistory(updatedMessages);
-                  return updatedMessages;
-                });
-
-                // Hide typing indicator only if this is the last bubble
-                if (i === messageBubbles.length - 1) {
-                  console.log(
-                    "🎯 CHAT: Last bubble appeared - hiding typing indicator"
-                  );
-                  setAiTyping(false);
-                } else {
-                  console.log(
-                    `🎯 CHAT: Bubble ${
-                      i + 1
-                    } appeared - keeping typing indicator visible for next bubble`
-                  );
-                }
-              }, cumulativeDelay);
-            }
-          }
-        }, totalTypingTime); // Calculated typing time (min 5s + word count)
+          setMessages([...updatedMessages, assistantMessage]);
+          setAiTyping(false);
+        }, typingDelay);
       } else {
         const errorMessage: Message = {
           role: "assistant",
@@ -670,7 +483,6 @@ export default function Chat() {
         };
         const errorMessages = [...updatedMessages, errorMessage];
         setMessages(errorMessages);
-        await saveConversationHistory(errorMessages);
       }
     } catch (error) {
       console.error("Error sending message:", error);
@@ -682,10 +494,8 @@ export default function Chat() {
       };
       const finalMessages = [...updatedMessages, errorMessage];
       setMessages(finalMessages);
-      await saveConversationHistory(finalMessages);
     } finally {
       setIsLoading(false);
-      // Don't set typing indicator to false here - let the message flow handle it
     }
   };
 
