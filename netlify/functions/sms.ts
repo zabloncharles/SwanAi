@@ -29,18 +29,30 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Helper to send SMS via Vonage API
-async function sendSms({ apiKey, apiSecret, from, to, text }) {
-  const url = "https://rest.nexmo.com/sms/json";
-  const response = await axios.post(url, null, {
-    params: {
-      api_key: apiKey,
-      api_secret: apiSecret,
-      to,
+async function sendWhatsAppMessage({ apiKey, apiSecret, from, to, text }) {
+  const baseUrl =
+    process.env.VONAGE_MESSAGES_BASE_URL || "https://messages-sandbox.nexmo.com";
+  const url = `${baseUrl}/v1/messages`;
+  const response = await axios.post(
+    url,
+    {
       from,
+      to,
+      message_type: "text",
       text,
+      channel: "whatsapp",
     },
-  });
+    {
+      auth: {
+        username: apiKey,
+        password: apiSecret,
+      },
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    }
+  );
   return response.data;
 }
 
@@ -963,10 +975,10 @@ async function sendWelcomeMessage(
     );
 
     // Send SMS response via Vonage API
-    const smsResponse = await sendSms({
+    const smsResponse = await sendWhatsAppMessage({
       apiKey: process.env.VONAGE_API_KEY,
       apiSecret: process.env.VONAGE_API_SECRET,
-      from: process.env.VONAGE_PHONE_NUMBER,
+      from: process.env.VONAGE_WHATSAPP_FROM || process.env.VONAGE_PHONE_NUMBER,
       to: normalizedPhone,
       text: welcomeMessage,
     });
@@ -1318,10 +1330,11 @@ async function checkAllRomanticRelationshipsForNeglect() {
         // Send breakup SMS
         const phoneNumber = userData.phoneNumber;
         if (phoneNumber) {
-          const smsResponse = await sendSms({
+          const smsResponse = await sendWhatsAppMessage({
             apiKey: process.env.VONAGE_API_KEY,
             apiSecret: process.env.VONAGE_API_SECRET,
-            from: process.env.VONAGE_PHONE_NUMBER,
+            from:
+              process.env.VONAGE_WHATSAPP_FROM || process.env.VONAGE_PHONE_NUMBER,
             to: phoneNumber,
             text: breakupMessage,
           });
@@ -1505,10 +1518,14 @@ const handler = async (event) => {
   let from, text;
   if (event.httpMethod === "POST") {
     const body = JSON.parse(event.body || "{}");
-    from = body.from;
-    text = body.text;
+    from = body.from || body.msisdn || body.sender?.number || body.sender?.id;
+    text =
+      body.text ||
+      body.message?.content?.text ||
+      body.message?.text ||
+      body.content?.text ||
+      body.whatsapp?.text?.body;
   } else {
-    // GET: Vonage sends params in the query string
     const params = event.queryStringParameters || {};
     from = params.msisdn || params.from;
     text = params.text;
@@ -2256,10 +2273,10 @@ Remember: Be natural, be yourself (as ${personalityProfile.name})`,
       console.log(`Sending breakup message: ${breakupMessage}`);
 
       // Send breakup SMS
-      const smsResponse = await sendSms({
+      const smsResponse = await sendWhatsAppMessage({
         apiKey: process.env.VONAGE_API_KEY,
         apiSecret: process.env.VONAGE_API_SECRET,
-        from: process.env.VONAGE_PHONE_NUMBER,
+        from: process.env.VONAGE_WHATSAPP_FROM || process.env.VONAGE_PHONE_NUMBER,
         to: normalizedPhone,
         text: breakupMessage,
       });
@@ -2286,14 +2303,14 @@ Remember: Be natural, be yourself (as ${personalityProfile.name})`,
     );
 
     // Send SMS response via Vonage API
-    const smsResponse = await sendSms({
+    const smsResponse = await sendWhatsAppMessage({
       apiKey: process.env.VONAGE_API_KEY,
       apiSecret: process.env.VONAGE_API_SECRET,
-      from: process.env.VONAGE_PHONE_NUMBER,
+      from: process.env.VONAGE_WHATSAPP_FROM || process.env.VONAGE_PHONE_NUMBER,
       to: normalizedPhone,
       text: smsText,
     });
-    console.log("Vonage SMS API response:", JSON.stringify(smsResponse));
+    console.log("Vonage Messages API response:", JSON.stringify(smsResponse));
 
     // Store Vonage remaining balance in analytics/global costPerDay map and increment tokensByDay
     const remainingBalance = smsResponse?.messages?.[0]?.["remaining-balance"];
