@@ -179,32 +179,32 @@ export default function Chat() {
 
   useEffect(() => {
     console.log("UserData changed:", userData);
-    if (userData && userData.personality && userData.aiRelationship) {
+    if (userData && userData.profile?.personality && userData.profile?.relationship) {
       console.log(
         "Loading life resume with:",
-        userData.personality,
-        userData.aiRelationship
+        userData.profile.personality,
+        userData.profile.relationship
       );
       loadLifeResume();
     } else {
       console.log(
         "Missing required fields - personality:",
-        userData?.personality,
-        "aiRelationship:",
-        userData?.aiRelationship
+        userData?.profile?.personality,
+        "relationship:",
+        userData?.profile?.relationship
       );
     }
   }, [userData]);
 
   // Check for life resume updates when the page becomes visible
   useEffect(() => {
-    if (!userData || !userData.personality || !userData.aiRelationship) return;
+    if (!userData || !userData.profile?.personality || !userData.profile?.relationship) return;
 
     const checkForLifeResumeUpdates = async () => {
       try {
         const latestLifeResume = await getExistingLifeResume(
-          userData.personality,
-          userData.aiRelationship,
+          userData.profile.personality,
+          userData.profile.relationship,
           user!.uid
         );
 
@@ -260,21 +260,24 @@ export default function Chat() {
         console.log("Loaded user data from Firestore:", data);
         console.log("Available fields:", Object.keys(data));
 
-        // Check if personality and aiRelationship are empty, and update them
-        if (
-          (!data.personality || data.personality === "") &&
-          (!data.aiRelationship || data.aiRelationship === "")
-        ) {
-          console.log("Updating user data with correct values from backend");
+        if (!data.profile?.personality || !data.profile?.relationship) {
+          const normalizedProfile = {
+            personality: data.profile?.personality || "BoJackHorseman",
+            relationship: data.profile?.relationship || "Friend",
+          };
           await updateDoc(doc(db, "users", user!.uid), {
-            personality: "Jokester",
-            aiRelationship: "Friend",
+            profile: {
+              ...(data.profile || {}),
+              ...normalizedProfile,
+            },
           });
-          // Reload the data after updating
-          const updatedDoc = await getDoc(doc(db, "users", user!.uid));
-          if (updatedDoc.exists()) {
-            setUserData(updatedDoc.data());
-          }
+          setUserData({
+            ...data,
+            profile: {
+              ...(data.profile || {}),
+              ...normalizedProfile,
+            },
+          });
         } else {
           setUserData(data);
         }
@@ -291,8 +294,8 @@ export default function Chat() {
       console.log("User ID:", user!.uid);
       // Get the user's life resume (single resume per user)
       const lifeResume = await getExistingLifeResume(
-        userData.personality,
-        userData.aiRelationship,
+        userData.profile?.personality,
+        userData.profile?.relationship,
         user!.uid
       );
 
@@ -798,7 +801,7 @@ export default function Chat() {
                   type="text"
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
+                  onKeyDown={handleKeyPress}
                   placeholder="Let's ask SwanAI..."
                   className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   disabled={isLoading}
