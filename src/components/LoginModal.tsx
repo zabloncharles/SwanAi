@@ -48,6 +48,14 @@ const getFirebaseErrorMessage = (errorCode: string): string => {
     "auth/requires-recent-login":
       "Please sign out and sign in again to perform this action.",
     "auth/invalid-credential": "Invalid login credentials. Please try again.",
+    "auth/invalid-login-credentials":
+      "Invalid email or password. Please try again.",
+    "firestore/permission-denied":
+      "Account signed in, but profile access is blocked. Contact support.",
+    "permission-denied":
+      "Account signed in, but profile access is blocked. Contact support.",
+    "unavailable":
+      "Service is temporarily unavailable. Please try again in a moment.",
   };
 
   return (
@@ -129,7 +137,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
           profile: {
             name: "",
             phone: "",
-            personality: "Friendly",
+            personality: "BoJackHorseman",
             relationship: "Friend",
             avatar: "",
           },
@@ -185,19 +193,23 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         );
         const existingUser = userCredential.user;
 
-        // Update user's last login and increment login count
-        const userRef = doc(db, "users", existingUser.uid);
-        const userDoc = await getDoc(userRef);
+        // Best-effort profile tracking. Never block successful auth on this.
+        try {
+          const userRef = doc(db, "users", existingUser.uid);
+          const userDoc = await getDoc(userRef);
 
-        if (userDoc.exists()) {
-          await setDoc(
-            userRef,
-            {
-              lastLoginAt: serverTimestamp(),
-              loginCount: increment(1),
-            },
-            { merge: true }
-          );
+          if (userDoc.exists()) {
+            await setDoc(
+              userRef,
+              {
+                lastLoginAt: serverTimestamp(),
+                loginCount: increment(1),
+              },
+              { merge: true }
+            );
+          }
+        } catch (trackingError) {
+          console.error("Login metadata update failed:", trackingError);
         }
       }
 
