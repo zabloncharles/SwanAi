@@ -1,5 +1,5 @@
 import React from "react";
-import { FaTwitter, FaLinkedin, FaInstagram } from "react-icons/fa";
+import { Twitter, Linkedin, Instagram } from "lucide-react";
 import SlimFooter from "../components/SlimFooter";
 
 const team = [
@@ -8,9 +8,9 @@ const team = [
     role: "Founder & CEO",
     image: "/images/p1.png",
     socials: [
-      { icon: <FaTwitter />, url: "#" },
-      { icon: <FaLinkedin />, url: "#" },
-      { icon: <FaInstagram />, url: "#" },
+      { icon: <Twitter />, url: "#" },
+      { icon: <Linkedin />, url: "#" },
+      { icon: <Instagram />, url: "#" },
     ],
   },
   {
@@ -18,9 +18,9 @@ const team = [
     role: "Chief Technology Officer",
     image: "/images/p2.png",
     socials: [
-      { icon: <FaTwitter />, url: "#" },
-      { icon: <FaLinkedin />, url: "#" },
-      { icon: <FaInstagram />, url: "#" },
+      { icon: <Twitter />, url: "#" },
+      { icon: <Linkedin />, url: "#" },
+      { icon: <Instagram />, url: "#" },
     ],
   },
   {
@@ -28,9 +28,9 @@ const team = [
     role: "Chief Technology Officer",
     image: "/images/p3.png",
     socials: [
-      { icon: <FaTwitter />, url: "#" },
-      { icon: <FaLinkedin />, url: "#" },
-      { icon: <FaInstagram />, url: "#" },
+      { icon: <Twitter />, url: "#" },
+      { icon: <Linkedin />, url: "#" },
+      { icon: <Instagram />, url: "#" },
     ],
   },
 ];

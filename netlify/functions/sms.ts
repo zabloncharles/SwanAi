@@ -1455,11 +1455,20 @@ function cleanCache() {
 }
 
 const handler = async (event) => {
+  const parseJsonBody = (raw) => {
+    try {
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) {
+      return {};
+    }
+  };
+  const postBody = event.httpMethod === "POST" ? parseJsonBody(event.body) : {};
+
   console.log(`=== SMS Function Triggered ===`);
   console.log(`Method: ${event.httpMethod}`);
   console.log(`Path: ${event.path}`);
   console.log(`Query params:`, event.queryStringParameters);
-  console.log(`Body:`, event.body ? JSON.parse(event.body) : "No body");
+  console.log(`Body:`, event.httpMethod === "POST" ? postBody : "No body");
   console.log(`Headers:`, event.headers);
   console.log(`==============================`);
 
@@ -1473,7 +1482,7 @@ const handler = async (event) => {
 
   // Handle welcome message requests
   if (event.httpMethod === "POST") {
-    const body = JSON.parse(event.body || "{}");
+    const body = postBody;
 
     // Check if this is a welcome message request
     if (body.action === "send_welcome_message") {
@@ -1517,7 +1526,7 @@ const handler = async (event) => {
 
   let from, text;
   if (event.httpMethod === "POST") {
-    const body = JSON.parse(event.body || "{}");
+    const body = postBody;
     from = body.from || body.msisdn || body.sender?.number || body.sender?.id;
     text =
       body.text ||
@@ -1532,22 +1541,32 @@ const handler = async (event) => {
   }
 
   // Check if this is a delivery receipt from Vonage
-  const isDeliveryReceipt =
-    event.queryStringParameters?.status === "delivered" ||
-    event.queryStringParameters?.status === "failed" ||
-    event.queryStringParameters?.status === "rejected";
+  const queryStatus = event.queryStringParameters?.status?.toLowerCase?.();
+  const bodyStatus = postBody?.status?.toLowerCase?.();
+  const deliveryStatus = queryStatus || bodyStatus;
+  const isDeliveryReceipt = [
+    "submitted",
+    "delivered",
+    "failed",
+    "rejected",
+    "read",
+  ].includes(deliveryStatus);
+  const deliveryMessageId =
+    event.queryStringParameters?.messageId ||
+    postBody?.message_uuid ||
+    postBody?.messageId;
 
   if (isDeliveryReceipt) {
     console.log(
-      `Processing delivery receipt - Status: ${event.queryStringParameters?.status}, Message ID: ${event.queryStringParameters?.messageId}`
+      `Processing delivery receipt - Status: ${deliveryStatus}, Message ID: ${deliveryMessageId}`
     );
     return {
       statusCode: 200,
       body: JSON.stringify({
         success: true,
         message: "Delivery receipt processed",
-        status: event.queryStringParameters?.status,
-        messageId: event.queryStringParameters?.messageId,
+        status: deliveryStatus,
+        messageId: deliveryMessageId,
       }),
     };
   }
