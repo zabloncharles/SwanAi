@@ -1494,6 +1494,22 @@ Analyze the conversation deeply and extract as much meaningful information as po
 
     const currentActivity = lifeResume.currentActivity;
     const mood = lifeResume.mood;
+    const normalizeToArray = (value, fallback = []) => {
+      if (Array.isArray(value)) return value;
+      if (typeof value === "string" && value.trim()) return [value.trim()];
+      return fallback;
+    };
+    const lifeResumeSkills = normalizeToArray(lifeResume.skills, [
+      "Communication",
+      "Problem Solving",
+    ]);
+    const lifeResumeInterests = normalizeToArray(lifeResume.interests, [
+      "Conversation",
+    ]);
+    const lifeResumeValues = normalizeToArray(lifeResume.values, [
+      "Honesty",
+      "Connection",
+    ]);
 
     const chatPrompt = [
       {
@@ -1536,8 +1552,8 @@ ${
 - Background: ${lifeResume.background}
 - Education: ${lifeResume.education}
 - Work Experience: ${lifeResume.workExperience}
-- Skills: ${lifeResume.skills.join(", ")}
-- Interests: ${lifeResume.interests.join(", ")}
+- Skills: ${lifeResumeSkills.join(", ")}
+- Interests: ${lifeResumeInterests.join(", ")}
 - Communication Style: ${
           typeof lifeResume.communicationStyle === "object"
             ? `Style: ${lifeResume.communicationStyle.style}, Language: ${
@@ -1547,7 +1563,7 @@ ${
               }, Example: "${lifeResume.communicationStyle.example || "N/A"}"`
             : lifeResume.communicationStyle
         }
-- Values: ${lifeResume.values.join(", ")}
+- Values: ${lifeResumeValues.join(", ")}
 
 **Your Current Day:**
 - Current Activity: ${currentActivity}

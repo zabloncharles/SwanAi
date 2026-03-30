@@ -28,8 +28,12 @@ export async function sendWebMessage(
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      const detailsSuffix = errorData.details
+        ? `: ${String(errorData.details)}`
+        : "";
       throw new Error(
-        errorData.error || `HTTP error! status: ${response.status}`
+        (errorData.error || `HTTP error! status: ${response.status}`) +
+          detailsSuffix
       );
     }
 
