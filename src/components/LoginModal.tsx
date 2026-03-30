@@ -50,6 +50,10 @@ const getFirebaseErrorMessage = (errorCode: string): string => {
     "auth/invalid-credential": "Invalid login credentials. Please try again.",
     "auth/invalid-login-credentials":
       "Invalid email or password. Please try again.",
+    "auth/api-key-not-valid.-please-pass-a-valid-api-key.":
+      "Firebase auth is misconfigured in production (invalid API key). Update VITE_FIREBASE_API_KEY in Netlify and redeploy.",
+    "auth/api-key-not-valid":
+      "Firebase auth is misconfigured in production (invalid API key). Update VITE_FIREBASE_API_KEY in Netlify and redeploy.",
     "firestore/permission-denied":
       "Account signed in, but profile access is blocked. Contact support.",
     "permission-denied":
