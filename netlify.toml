@@ -20,6 +20,10 @@
   node_bundler = "esbuild"
   external_node_modules = ["@vonage/server-sdk"]
 
+[[scheduled.functions]]
+  name = "send_daily_checkins"
+  cron = "*/5 * * * *"
+
 [build.environment]
   NODE_VERSION = "18"
   # Disable secrets scanning for Firebase config values (these are public)

@@ -13,7 +13,7 @@ import Navbar from "./components/Navbar";
 import LoginModal from "./components/LoginModal";
 import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
-import Chat from "./pages/Chat";
+import HealthDashboard from "./pages/HealthDashboard";
 import Analytics from "./pages/Analytics";
 import Docs from "./pages/Docs";
 import Privacy from "./pages/Privacy";
@@ -71,7 +71,8 @@ function AppContent() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Home />} />
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/chat" element={<Chat />} />
+        <Route path="/chat" element={<HealthDashboard />} />
+        <Route path="/health" element={<HealthDashboard />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/docs" element={<Docs />} />
         <Route path="/privacy" element={<Privacy />} />

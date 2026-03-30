@@ -40,7 +40,7 @@ export default function Navbar() {
 
   const authLinks = [
     { name: "Dashboard", path: "/dashboard" },
-    { name: "Chat", path: "/chat" },
+    { name: "Health", path: "/chat" },
     { name: "Analytics", path: "/analytics" },
     { name: "About", path: "/about" },
   ];
@@ -67,7 +67,7 @@ export default function Navbar() {
               to="/chat"
               className="text-gray-700 hover:text-indigo-600 font-medium"
             >
-              Chat
+              Health
             </Link>
             <Link
               to="/docs"
