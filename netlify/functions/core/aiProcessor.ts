@@ -30,8 +30,9 @@ const db = getFirestore(app);
 
 // Initialize OpenAI (v4+)
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const ACTIVE_PERSONALITY_KEY = "BoJackHorseman";
 
-// Import personality profiles and relationship profiles from sms_new.ts
+// Personality and relationship profile definitions
 const personalityProfiles = {
   Professional: {
     name: "Alex Thompson",
@@ -1368,7 +1369,8 @@ Analyze the conversation deeply and extract as much meaningful information as po
 
         // Fallback to simple life resume on error
         const fallbackPersonalityProfile =
-          personalityProfiles[personality] || personalityProfiles["Friendly"];
+          personalityProfiles[personality] ||
+          personalityProfiles["BoJackHorseman"];
         const lifeResume = {
           name: fallbackPersonalityProfile.name,
           age: fallbackPersonalityProfile.personalLife?.age || 30,
@@ -1410,20 +1412,16 @@ Analyze the conversation deeply and extract as much meaningful information as po
     // First, get a temporary personality/relationship to fetch the life resume
     const tempRelationshipKey = updatedProfile.relationship || "Friend";
     const defaultPersonalityByRelationship = {
-      Mom: "NurturingMom",
-      Dad: "WiseDad",
-      Therapist: "CognitiveTherapist",
-      Coach: "Coach",
-      Friend: "Friendly",
-      Cousin: "Friendly",
-      Girlfriend: "Friendly",
-      Boyfriend: "Friendly",
+      Mom: "BoJackHorseman",
+      Dad: "BoJackHorseman",
+      Therapist: "BoJackHorseman",
+      Coach: "BoJackHorseman",
+      Friend: "BoJackHorseman",
+      Cousin: "BoJackHorseman",
+      Girlfriend: "BoJackHorseman",
+      Boyfriend: "BoJackHorseman",
     };
-    let tempPersonalityKey = updatedProfile.personality;
-    if (!tempPersonalityKey || !personalityProfiles[tempPersonalityKey]) {
-      tempPersonalityKey =
-        defaultPersonalityByRelationship[tempRelationshipKey] || "Friendly";
-    }
+    let tempPersonalityKey = ACTIVE_PERSONALITY_KEY;
 
     // Fetch the life resume using temp keys
     const lifeResume = await generateOrRetrieveLifeResume(
@@ -1434,14 +1432,11 @@ Analyze the conversation deeply and extract as much meaningful information as po
 
     // Now use personality and relationship from life resume if available, otherwise fall back to user profile
     const relationshipKey = lifeResume.relationship || tempRelationshipKey;
-    let personalityKey = lifeResume.personality || tempPersonalityKey;
-    if (!personalityKey || !personalityProfiles[personalityKey]) {
-      personalityKey =
-        defaultPersonalityByRelationship[relationshipKey] || "Friendly";
-    }
+    let personalityKey = ACTIVE_PERSONALITY_KEY;
 
     const personalityProfile =
-      personalityProfiles[personalityKey] || personalityProfiles["Friendly"];
+      personalityProfiles[personalityKey] ||
+      personalityProfiles["BoJackHorseman"];
     const relationshipProfile =
       relationshipProfiles[relationshipKey] || relationshipProfiles["Friend"];
 
@@ -1728,7 +1723,7 @@ Remember: Be natural, be yourself (as ${personalityProfile.name})`,
         // Generate POV image based on personality and context
         const currentTime = new Date().getHours();
         const povRequest = {
-          personality: filteredProfile.personality || "Friendly",
+          personality: ACTIVE_PERSONALITY_KEY,
           userProfile: {
             hobbies: filteredProfile.personal_info?.hobbies || [],
             location: filteredProfile.personal_info?.location || "",

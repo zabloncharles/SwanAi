@@ -254,6 +254,7 @@ const handler: Handler = async (event) => {
 // Helper functions for generating life resume components
 function getPersonalityName(personality: string): string {
   const names = {
+    BoJackHorseman: ["BoJack Horseman", "BoJack H.", "BoJack"],
     Professional: [
       "Alex Thompson",
       "Sarah Chen",
@@ -317,7 +318,7 @@ function getPersonalityName(personality: string): string {
   };
 
   const personalityNames =
-    names[personality as keyof typeof names] || names.Friendly;
+    names[personality as keyof typeof names] || names.BoJackHorseman;
   return personalityNames[Math.floor(Math.random() * personalityNames.length)];
 }
 

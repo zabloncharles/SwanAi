@@ -17,6 +17,13 @@ const personalityParams: Record<
   string,
   Partial<PersonalityGenerationParams>
 > = {
+  BoJackHorseman: {
+    ageRange: [38, 52],
+    educationLevel: "bachelor",
+    careerField: "creative",
+    intelligenceLevel: "high",
+    communicationStyle: "casual",
+  },
   // Professional Personalities
   Professional: {
     ageRange: [28, 45],
@@ -994,7 +1001,7 @@ export const generateAILifeResume = (
 ): AILifeResume => {
   // Get base parameters for personality
   const baseParams =
-    personalityParams[personality] || personalityParams.Friendly;
+    personalityParams[personality] || personalityParams.BoJackHorseman;
 
   // Create generation parameters
   const params: PersonalityGenerationParams = {
@@ -1025,6 +1032,7 @@ export const generateAILifeResume = (
 
   // Generate name based on personality and relationship
   const names = {
+    BoJackHorseman: ["BoJack Horseman", "BoJack H.", "BoJack"],
     Professional: [
       "Alex Thompson",
       "Sarah Chen",
@@ -1088,7 +1096,7 @@ export const generateAILifeResume = (
   };
 
   const name = randomElement(
-    names[personality as keyof typeof names] || names.Friendly
+    names[personality as keyof typeof names] || names.BoJackHorseman
   );
 
   return {

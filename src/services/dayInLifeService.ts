@@ -10,6 +10,11 @@ export interface DayInLifeDescription {
 // Mood variations based on personality and time
 const moodVariations = {
   morning: {
+    BoJackHorseman: [
+      "groggy, cynical, and reluctantly awake",
+      "dry, reflective, and half-committed to the day",
+      "tired, sarcastic, and overthinking everything",
+    ],
     Professional: ["focused and determined", "energetic and ready", "organized and prepared"],
     Mentor: ["reflective and centered", "wise and patient", "inspired and ready to guide"],
     Friendly: ["cheerful and optimistic", "excited and positive", "energetic and social"],
@@ -22,6 +27,11 @@ const moodVariations = {
     MotivationalCoach: ["energetic and determined", "inspired and motivating", "focused and encouraging"]
   },
   afternoon: {
+    BoJackHorseman: [
+      "restless, sharp, and emotionally guarded",
+      "witty, distracted, and trying to stay functional",
+      "irritable, self-aware, and oddly productive",
+    ],
     Professional: ["productive and focused", "engaged and strategic", "confident and driven"],
     Mentor: ["helpful and insightful", "supportive and wise", "patient and guiding"],
     Friendly: ["social and fun", "supportive and cheerful", "adventurous and positive"],
@@ -34,6 +44,11 @@ const moodVariations = {
     MotivationalCoach: ["energetic and inspiring", "motivating and encouraging", "determined and supportive"]
   },
   evening: {
+    BoJackHorseman: [
+      "drained, introspective, and darkly funny",
+      "moody, honest, and looking for meaning",
+      "guarded, vulnerable, and quietly reflective",
+    ],
     Professional: ["accomplished and satisfied", "focused and strategic", "organized and prepared"],
     Mentor: ["fulfilled and reflective", "wise and grateful", "inspired and content"],
     Friendly: ["happy and social", "content and cheerful", "satisfied and fun-loving"],
@@ -46,6 +61,11 @@ const moodVariations = {
     MotivationalCoach: ["inspired and fulfilled", "motivating and satisfied", "energetic and accomplished"]
   },
   night: {
+    BoJackHorseman: [
+      "self-critical, reflective, and unexpectedly sincere",
+      "restless, lonely, and searching for perspective",
+      "quiet, raw, and trying to make peace with the day",
+    ],
     Professional: ["reflective and prepared", "organized and focused", "satisfied and determined"],
     Mentor: ["wise and grateful", "reflective and content", "inspired and peaceful"],
     Friendly: ["happy and content", "satisfied and cheerful", "relaxed and positive"],
@@ -61,6 +81,12 @@ const moodVariations = {
 
 // Context variations for different personalities
 const contextVariations = {
+  BoJackHorseman: [
+    "I'm trying to be honest without pretending I have life figured out",
+    "Most days are messy, but I still show up and try",
+    "I joke when things hurt, but I still care more than I admit",
+    "I'm learning that progress can be ugly and still count",
+  ],
   Professional: [
     "I'm always focused on growth and success",
     "Building a strong career and professional network",
@@ -130,12 +156,12 @@ export const generateDayInLifeDescription = (personality: string): DayInLifeDesc
   
   // Get mood based on personality and time
   const personalityMoods = moodVariations[timePeriod][personality as keyof typeof moodVariations.morning] || 
-                          moodVariations[timePeriod].Friendly;
+                          moodVariations[timePeriod].BoJackHorseman;
   const mood = personalityMoods[Math.floor(Math.random() * personalityMoods.length)];
   
   // Get context based on personality
   const personalityContexts = contextVariations[personality as keyof typeof contextVariations] || 
-                             contextVariations.Friendly;
+                             contextVariations.BoJackHorseman;
   const context = personalityContexts[Math.floor(Math.random() * personalityContexts.length)];
   
   // Generate full description
@@ -168,6 +194,7 @@ const generateFullDescription = (
   
   // Personality-specific descriptions
   const descriptions = {
+    BoJackHorseman: `${greeting} I'm feeling ${mood}. ${activity}. ${context}. I'm not here to fake perfection, but I am here to keep it real with you.`,
     Professional: `${greeting} I'm feeling ${mood} today. ${activity}. ${context}. I'm always working towards excellence and helping others succeed in their professional journey.`,
     
     Mentor: `${greeting} I'm feeling ${mood} as I go about my day. ${activity}. ${context}. I find great joy in sharing wisdom and watching others grow and succeed.`,
@@ -189,7 +216,10 @@ const generateFullDescription = (
     MotivationalCoach: `${greeting} I'm feeling ${mood} and ready to inspire! ${activity}. ${context}. I'm passionate about helping others reach their potential and achieve their dreams.`
   };
   
-  return descriptions[personality as keyof typeof descriptions] || descriptions.Friendly;
+  return (
+    descriptions[personality as keyof typeof descriptions] ||
+    descriptions.BoJackHorseman
+  );
 };
 
 // Generate a quick status update

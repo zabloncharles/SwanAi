@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "check:env": "node scripts/check-env.cjs",
+    "dev": "npm run check:env && vite",
+    "build": "npm run check:env && vite build",
     "preview": "vite preview"
   },
   "dependencies": {

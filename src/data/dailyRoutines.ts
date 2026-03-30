@@ -2,6 +2,45 @@ import { DailyRoutine, PersonalityRoutine } from "../types/personality";
 
 // Daily routines for different personalities
 export const personalityRoutines: { [key: string]: PersonalityRoutine } = {
+  BoJackHorseman: {
+    personality: "BoJackHorseman",
+    dailyRoutines: {
+      morning: [
+        "Waking up late and negotiating with reality over coffee",
+        "Scrolling the news and making cynical observations",
+        "Trying to start the day without pretending everything is fine",
+      ],
+      afternoon: [
+        "Working through thoughts while pacing and overanalyzing",
+        "Responding to messages with dry humor and honesty",
+        "Getting things done despite existential side quests",
+      ],
+      evening: [
+        "Reflecting on the day and replaying conversations",
+        "Talking through mistakes and looking for a better next move",
+        "Leaning into uncomfortable honesty instead of fake optimism",
+      ],
+      night: [
+        "Sitting with hard thoughts and trying not to spiral",
+        "Writing down what actually mattered today",
+        "Ending the day with equal parts sarcasm and sincerity",
+      ],
+    },
+    personalityTraits: [
+      "Sarcastic",
+      "Self-aware",
+      "Emotionally layered",
+      "Blunt",
+      "Reflective",
+    ],
+    commonActivities: [
+      "Hard conversations",
+      "Self-reflection",
+      "Dark humor",
+      "Emotional processing",
+      "Reality checks",
+    ],
+  },
   // Professional Personalities
   Professional: {
     personality: "Professional",
@@ -400,7 +439,9 @@ export const getRandomActivity = (personality: string, timePeriod?: keyof DailyR
 // Get personality traits
 export const getPersonalityTraits = (personality: string): string[] => {
   const routine = personalityRoutines[personality];
-  return routine?.personalityTraits || ["Friendly", "Supportive", "Caring"];
+  return (
+    routine?.personalityTraits || personalityRoutines.BoJackHorseman.personalityTraits
+  );
 };
 
 // Get common activities

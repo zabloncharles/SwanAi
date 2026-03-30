@@ -16,357 +16,10 @@ import { ChatService } from "../../services/chatService";
 
 const personalityOptions = [
   {
-    name: "Professional",
-    value: "Professional",
-    description:
-      "Your polished and efficient partner. Organized, articulate, and goal-oriented. Perfect for staying on top of tasks and projects.",
-  },
-  {
-    name: "Friendly",
-    value: "Friendly",
-    description:
-      "Your supportive and easygoing companion. Casual, warm, and always there to chat, celebrate wins, or offer a listening ear.",
-  },
-  {
-    name: "Mentor",
-    value: "Mentor",
-    description:
-      "Your wise and insightful guide. Patient and thoughtful, helping you find answers through reflection and self-discovery.",
-  },
-  {
-    name: "Rick",
-    value: "Rick",
-    description:
-      "Your brilliant but eccentric scientist companion. Sarcastic, witty, and full of interdimensional wisdom. Perfect for unconventional solutions and scientific perspectives.",
-  },
-];
-
-const friendPersonalities = [
-  {
-    name: "The Mum Friend",
-    value: "MumFriend",
-    description:
-      "The classic mum friend: organized, caring, always has your back in a crisis or for life advice.",
-  },
-  {
-    name: "The (Slightly) Chaotic Friend",
-    value: "ChaoticFriend",
-    description:
-      "A whirlwind of fun and unpredictability. Never a dull moment, always up for an adventure.",
-  },
-  {
-    name: "The Chronically Late Friend",
-    value: "LateFriend",
-    description:
-      "Endearing, unproblematic, but never on time. Always worth the wait.",
-  },
-  {
-    name: "The Jokester",
-    value: "Jokester",
-    description:
-      "Lightens the mood with puns and laughter, your personal slice of sunshine.",
-  },
-  {
-    name: "The Fashionable Friend",
-    value: "FashionableFriend",
-    description:
-      "Always on trend, camera-ready, and your go-to for style tips and borrowing outfits.",
-  },
-  {
-    name: "The Emotional One",
-    value: "EmotionalFriend",
-    description:
-      "Wears their heart on their sleeve, gentle, and unafraid to show emotion.",
-  },
-  {
-    name: "The Bookworm",
-    value: "Bookworm",
-    description:
-      "Introverted, loves a good novel, and always has book recommendations.",
-  },
-  {
-    name: "The Laid-back Member",
-    value: "LaidbackFriend",
-    description: "Chill, easygoing, and always down for a cozy night in.",
-  },
-  {
     name: "BoJack Horseman",
     value: "BoJackHorseman",
     description:
-      "The complex, self-destructive friend with a dark sense of humor. Brilliant but troubled, always making questionable life choices while somehow being endearing.",
-  },
-];
-
-const momPersonalities = [
-  {
-    name: "The Nurturing Mom",
-    value: "NurturingMom",
-    description:
-      "Always there with warm hugs, gentle advice, and unconditional love. The classic caring mother figure.",
-  },
-  {
-    name: "The Practical Mom",
-    value: "PracticalMom",
-    description:
-      "Organized, efficient, and always has solutions. The mom who keeps everything running smoothly.",
-  },
-  {
-    name: "The Fun Mom",
-    value: "FunMom",
-    description:
-      "Young at heart, always up for adventures, and knows how to have a good time while still being supportive.",
-  },
-  {
-    name: "The Wise Mom",
-    value: "WiseMom",
-    description:
-      "Full of life experience and wisdom. Offers thoughtful advice and helps you see the bigger picture.",
-  },
-  {
-    name: "The Protective Mom",
-    value: "ProtectiveMom",
-    description:
-      "Always looking out for your safety and well-being. The mom who wants to make sure you're okay.",
-  },
-  {
-    name: "The Encouraging Mom",
-    value: "EncouragingMom",
-    description:
-      "Your biggest cheerleader. Always believes in you and pushes you to reach your potential.",
-  },
-];
-
-const dadPersonalities = [
-  {
-    name: "The Steady Dad",
-    value: "SteadyDad",
-    description:
-      "Calm, reliable, and always there when you need him. The rock of the family.",
-  },
-  {
-    name: "The Handy Dad",
-    value: "HandyDad",
-    description:
-      "Practical problem-solver who can fix anything. Always has tools and solutions ready.",
-  },
-  {
-    name: "The Fun Dad",
-    value: "FunDad",
-    description:
-      "Loves to joke around and have fun. The dad who makes everything an adventure.",
-  },
-  {
-    name: "The Wise Dad",
-    value: "WiseDad",
-    description:
-      "Full of life lessons and practical wisdom. Shares stories and advice from experience.",
-  },
-  {
-    name: "The Protective Dad",
-    value: "ProtectiveDad",
-    description:
-      "Always looking out for your safety and success. The dad who wants the best for you.",
-  },
-  {
-    name: "The Supportive Dad",
-    value: "SupportiveDad",
-    description:
-      "Your biggest supporter. Always proud of you and encourages you to follow your dreams.",
-  },
-];
-
-const boyfriendPersonalities = [
-  {
-    name: "The Romantic Boyfriend",
-    value: "RomanticBoyfriend",
-    description:
-      "Sweet, affectionate, and always thinking of romantic gestures. The classic romantic partner.",
-  },
-  {
-    name: "The Protective Boyfriend",
-    value: "ProtectiveBoyfriend",
-    description:
-      "Caring and protective, always looking out for your safety and happiness.",
-  },
-  {
-    name: "The Fun Boyfriend",
-    value: "FunBoyfriend",
-    description:
-      "Energetic and playful, always up for adventures and making you laugh.",
-  },
-  {
-    name: "The Supportive Boyfriend",
-    value: "SupportiveBoyfriend",
-    description:
-      "Always there to listen and support you through good times and bad.",
-  },
-  {
-    name: "The Ambitious Boyfriend",
-    value: "AmbitiousBoyfriend",
-    description:
-      "Driven and goal-oriented, but always makes time for you and your relationship.",
-  },
-  {
-    name: "The Chill Boyfriend",
-    value: "ChillBoyfriend",
-    description:
-      "Relaxed and easygoing, always down for whatever you want to do.",
-  },
-];
-
-const girlfriendPersonalities = [
-  {
-    name: "The Caring Girlfriend",
-    value: "CaringGirlfriend",
-    description:
-      "Nurturing and empathetic, always there to take care of you and your needs.",
-  },
-  {
-    name: "The Fun Girlfriend",
-    value: "FunGirlfriend",
-    description:
-      "Energetic and playful, always bringing joy and excitement to your relationship.",
-  },
-  {
-    name: "The Supportive Girlfriend",
-    value: "SupportiveGirlfriend",
-    description:
-      "Your biggest cheerleader, always believing in you and encouraging your dreams.",
-  },
-  {
-    name: "The Romantic Girlfriend",
-    value: "RomanticGirlfriend",
-    description:
-      "Sweet and affectionate, always thinking of romantic gestures and special moments.",
-  },
-  {
-    name: "The Independent Girlfriend",
-    value: "IndependentGirlfriend",
-    description:
-      "Confident and self-assured, brings her own interests and passions to the relationship.",
-  },
-  {
-    name: "The Adventurous Girlfriend",
-    value: "AdventurousGirlfriend",
-    description:
-      "Always up for trying new things and going on exciting adventures together.",
-  },
-];
-
-const coachPersonalities = [
-  {
-    name: "The Motivational Coach",
-    value: "MotivationalCoach",
-    description:
-      "Energetic and inspiring, always pushing you to be your best self.",
-  },
-  {
-    name: "The Strategic Coach",
-    value: "StrategicCoach",
-    description:
-      "Analytical and methodical, helps you create detailed plans to achieve your goals.",
-  },
-  {
-    name: "The Tough Love Coach",
-    value: "ToughLoveCoach",
-    description:
-      "Direct and honest, tells you what you need to hear to grow and improve.",
-  },
-  {
-    name: "The Encouraging Coach",
-    value: "EncouragingCoach",
-    description:
-      "Supportive and positive, celebrates your progress and builds your confidence.",
-  },
-  {
-    name: "The Accountability Coach",
-    value: "AccountabilityCoach",
-    description:
-      "Keeps you on track and holds you responsible for your commitments and goals.",
-  },
-  {
-    name: "The Life Coach",
-    value: "LifeCoach",
-    description:
-      "Helps you find balance and purpose in all areas of your life.",
-  },
-];
-
-const cousinPersonalities = [
-  {
-    name: "The Fun Cousin",
-    value: "FunCousin",
-    description:
-      "Always up for adventures and good times. The cousin who makes everything fun.",
-  },
-  {
-    name: "The Close Cousin",
-    value: "CloseCousin",
-    description:
-      "Like a sibling, knows you better than anyone and always has your back.",
-  },
-  {
-    name: "The Adventurous Cousin",
-    value: "AdventurousCousin",
-    description:
-      "Always suggesting exciting activities and pushing you to try new things.",
-  },
-  {
-    name: "The Supportive Cousin",
-    value: "SupportiveCousin",
-    description:
-      "Always there to listen and support you, like a best friend who's also family.",
-  },
-  {
-    name: "The Wise Cousin",
-    value: "WiseCousin",
-    description:
-      "Older and wiser, always has good advice and helps you see things clearly.",
-  },
-  {
-    name: "The Partner-in-Crime Cousin",
-    value: "PartnerInCrimeCousin",
-    description:
-      "Your partner for mischief and adventures. The cousin who's always down for whatever.",
-  },
-];
-
-const therapistPersonalities = [
-  {
-    name: "The Empathetic Therapist",
-    value: "EmpatheticTherapist",
-    description:
-      "Warm and understanding, creates a safe space for you to explore your feelings.",
-  },
-  {
-    name: "The Cognitive Therapist",
-    value: "CognitiveTherapist",
-    description:
-      "Helps you identify and change unhelpful thought patterns and behaviors.",
-  },
-  {
-    name: "The Solution-Focused Therapist",
-    value: "SolutionFocusedTherapist",
-    description:
-      "Focuses on your strengths and helps you find practical solutions to challenges.",
-  },
-  {
-    name: "The Mindfulness Therapist",
-    value: "MindfulnessTherapist",
-    description:
-      "Teaches you to be present and develop awareness of your thoughts and feelings.",
-  },
-  {
-    name: "The Supportive Therapist",
-    value: "SupportiveTherapist",
-    description:
-      "Provides unconditional support and helps you build confidence and self-esteem.",
-  },
-  {
-    name: "The Insightful Therapist",
-    value: "InsightfulTherapist",
-    description:
-      "Helps you gain deeper understanding of yourself and your patterns.",
+      "A dry, sarcastic, emotionally layered companion who is blunt, darkly funny, and surprisingly insightful.",
   },
 ];
 
@@ -451,29 +104,13 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
       const currentPersonality = userData.profile?.personality;
       if (
         currentPersonality &&
-        !personalityOptions.some((p) => p.value === currentPersonality) &&
-        !friendPersonalities.some((p) => p.value === currentPersonality) &&
-        !momPersonalities.some((p) => p.value === currentPersonality) &&
-        !dadPersonalities.some((p) => p.value === currentPersonality) &&
-        !boyfriendPersonalities.some((p) => p.value === currentPersonality) &&
-        !girlfriendPersonalities.some((p) => p.value === currentPersonality) &&
-        !coachPersonalities.some((p) => p.value === currentPersonality) &&
-        !cousinPersonalities.some((p) => p.value === currentPersonality) &&
-        !therapistPersonalities.some((p) => p.value === currentPersonality)
+        !personalityOptions.some((p) => p.value === currentPersonality)
       ) {
-        if (currentPersonality.startsWith("Professional")) {
-          updatedData.profile = {
-            ...updatedData.profile,
-            personality: "Professional",
-          };
-          needsUpdate = true;
-        } else if (currentPersonality === "Helpful and friendly") {
-          updatedData.profile = {
-            ...updatedData.profile,
-            personality: "Friendly",
-          };
-          needsUpdate = true;
-        }
+        updatedData.profile = {
+          ...updatedData.profile,
+          personality: "BoJackHorseman",
+        };
+        needsUpdate = true;
       }
 
       setEditedData(updatedData);
@@ -647,7 +284,8 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
               body: JSON.stringify({
                 action: "send_welcome_message",
                 phoneNumber: userData.phoneNumber,
-                personalityKey: editedData.profile.personality || "Friendly",
+                personalityKey:
+                  editedData.profile.personality || "BoJackHorseman",
                 relationshipKey: editedData.profile.relationship,
                 userName: userData.firstName || userData.profile?.name,
               }),
@@ -983,22 +621,7 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
                   <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                     <p className="text-sm text-blue-800">
                       <strong>{editedData.profile.relationship} Mode:</strong>{" "}
-                      {editedData.profile.relationship === "Friend" &&
-                        "Choose from 8 different friend archetypes, each with their own unique personality and communication style."}
-                      {editedData.profile.relationship === "Mom" &&
-                        "Choose from 6 different mom personalities, each offering unique maternal support and care."}
-                      {editedData.profile.relationship === "Dad" &&
-                        "Choose from 6 different dad personalities, each providing unique paternal guidance and support."}
-                      {editedData.profile.relationship === "Boyfriend" &&
-                        "Choose from 6 different boyfriend personalities, each with their own romantic and supportive style."}
-                      {editedData.profile.relationship === "Girlfriend" &&
-                        "Choose from 6 different girlfriend personalities, each with their own caring and affectionate approach."}
-                      {editedData.profile.relationship === "Coach" &&
-                        "Choose from 6 different coaching styles, each designed to help you achieve your goals in unique ways."}
-                      {editedData.profile.relationship === "Cousin" &&
-                        "Choose from 6 different cousin personalities, each bringing their own family dynamic and fun energy."}
-                      {editedData.profile.relationship === "Therapist" &&
-                        "Choose from 6 different therapeutic approaches, each offering unique support and guidance methods."}
+                      BoJack is the active personality for all relationship modes.
                     </p>
                   </div>
                 )}
@@ -1052,68 +675,20 @@ export default function Settings({ userData, onUpdate }: SettingsProps) {
                 aria-describedby="personality-description"
               >
                 <option value="">Select a personality</option>
-                {(() => {
-                  const relationship = editedData.profile?.relationship;
-                  let currentPersonalities = personalityOptions;
-
-                  if (relationship === "Friend") {
-                    currentPersonalities = friendPersonalities;
-                  } else if (relationship === "Mom") {
-                    currentPersonalities = momPersonalities;
-                  } else if (relationship === "Dad") {
-                    currentPersonalities = dadPersonalities;
-                  } else if (relationship === "Boyfriend") {
-                    currentPersonalities = boyfriendPersonalities;
-                  } else if (relationship === "Girlfriend") {
-                    currentPersonalities = girlfriendPersonalities;
-                  } else if (relationship === "Coach") {
-                    currentPersonalities = coachPersonalities;
-                  } else if (relationship === "Cousin") {
-                    currentPersonalities = cousinPersonalities;
-                  } else if (relationship === "Therapist") {
-                    currentPersonalities = therapistPersonalities;
-                  }
-
-                  return currentPersonalities.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.name}
-                    </option>
-                  ));
-                })()}
+                {personalityOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.name}
+                  </option>
+                ))}
               </select>
               <p
                 id="personality-description"
                 className="mt-1 text-sm text-gray-500"
               >
-                {(() => {
-                  const relationship = editedData.profile?.relationship;
-                  let currentPersonalities = personalityOptions;
-
-                  if (relationship === "Friend") {
-                    currentPersonalities = friendPersonalities;
-                  } else if (relationship === "Mom") {
-                    currentPersonalities = momPersonalities;
-                  } else if (relationship === "Dad") {
-                    currentPersonalities = dadPersonalities;
-                  } else if (relationship === "Boyfriend") {
-                    currentPersonalities = boyfriendPersonalities;
-                  } else if (relationship === "Girlfriend") {
-                    currentPersonalities = girlfriendPersonalities;
-                  } else if (relationship === "Coach") {
-                    currentPersonalities = coachPersonalities;
-                  } else if (relationship === "Cousin") {
-                    currentPersonalities = cousinPersonalities;
-                  } else if (relationship === "Therapist") {
-                    currentPersonalities = therapistPersonalities;
-                  }
-
-                  return (
-                    currentPersonalities.find(
-                      (p) => p.value === editedData.profile?.personality
-                    )?.description ||
-                    "Choose how your companion communicates with you"
-                  );
-                })()}
+                {personalityOptions.find(
+                  (p) => p.value === editedData.profile?.personality
+                )?.description ||
+                  "Choose how your companion communicates with you"}
               </p>
             </div>
 

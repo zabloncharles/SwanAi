@@ -101,7 +101,7 @@ export default function Dashboard() {
             ...data,
             uid: user.uid,
             profile: data.profile || {
-              personality: "Friendly",
+              personality: "BoJackHorseman",
               relationship: "Friend",
             },
             notificationsEnabled: data.notificationsEnabled || false,
@@ -307,7 +307,7 @@ export default function Dashboard() {
             personality:
               dataToSave.profile?.personality ||
               userData.profile?.personality ||
-              "Friendly",
+              "BoJackHorseman",
             relationship: dataToSave.profile?.relationship || "Friend",
           },
         };
