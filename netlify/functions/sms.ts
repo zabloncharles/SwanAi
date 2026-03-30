@@ -1,6 +1,7 @@
 const axios = require("axios");
 const { Handler } = require("@netlify/functions");
 const OpenAI = require("openai");
+const { processUserMessage } = require("./core/aiProcessor");
 const { initializeApp } = require("firebase/app");
 const {
   getFirestore,
@@ -1833,6 +1834,50 @@ const handler = async (event) => {
         }),
       };
     }
+
+    const sharedResult = await processUserMessage(userId, sanitizedText);
+    const outboundText = truncateForSMS(
+      sharedResult?.message || "Sorry, I could not process your request."
+    );
+
+    const outboundResponse = await sendWhatsAppMessage({
+      apiKey: process.env.VONAGE_API_KEY,
+      apiSecret: process.env.VONAGE_API_SECRET,
+      from: process.env.VONAGE_WHATSAPP_FROM || process.env.VONAGE_PHONE_NUMBER,
+      to: normalizedPhone,
+      text: outboundText,
+    });
+    console.log(
+      "Vonage Messages API response:",
+      JSON.stringify(outboundResponse)
+    );
+
+    const remainingBalanceShared =
+      outboundResponse?.messages?.[0]?.["remaining-balance"];
+    if (remainingBalanceShared !== undefined) {
+      const today = new Date().toISOString().split("T")[0];
+      const analyticsRef = doc(db, "analytics", "global");
+      await setDoc(
+        analyticsRef,
+        {
+          costPerDay: {
+            [today]: parseFloat(remainingBalanceShared),
+          },
+          tokensByDay: {
+            [today]: increment(sharedResult?.tokensUsed || 0),
+          },
+        },
+        { merge: true }
+      );
+    }
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        success: true,
+        unifiedCore: true,
+      }),
+    };
 
     // Fetch or initialize summary, history, and profile from the initial query
     let summary = userData.summary || "";
